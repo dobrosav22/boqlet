@@ -1,0 +1,823 @@
+{
+  "schemaVersion": "1.0",
+  "id": "as-modelled",
+  "name": "As modelled",
+  "version": "1.0.0",
+  "meta": {
+    "unitSystem": "metric",
+    "locale": "en",
+    "description": "Net quantities as modelled; all openings deducted."
+  },
+  "defaults": {
+    "rounding": {
+      "step": 0.01,
+      "mode": "nearest",
+      "at": "line"
+    },
+    "onMissing": "flag",
+    "breakdown": "element"
+  },
+  "params": {
+    "wall_opening_mode": {
+      "type": "choice",
+      "value": "all",
+      "options": [
+        "none",
+        "all",
+        "over_threshold",
+        "excess_only",
+        "per_element_sum"
+      ],
+      "label": "Wall opening deduction"
+    },
+    "wall_opening_threshold": {
+      "type": "number",
+      "value": 0,
+      "unit": "m2",
+      "label": "Wall opening threshold"
+    },
+    "wall_surface": {
+      "type": "choice",
+      "value": "main",
+      "options": [
+        "main",
+        "side_a",
+        "side_b",
+        "both",
+        "larger",
+        "smaller",
+        "mean"
+      ],
+      "label": "Wall face measured"
+    },
+    "wall_add_reveals": {
+      "type": "boolean",
+      "value": false,
+      "label": "Add reveals of deducted openings"
+    },
+    "masonry_volume_from": {
+      "type": "number",
+      "value": 99,
+      "unit": "m",
+      "label": "Measure walls in m3 from this thickness (99 = never)"
+    },
+    "slab_opening_mode": {
+      "type": "choice",
+      "value": "all",
+      "options": [
+        "none",
+        "all",
+        "over_threshold",
+        "excess_only"
+      ],
+      "label": "Slab opening deduction"
+    },
+    "slab_opening_threshold": {
+      "type": "number",
+      "value": 0,
+      "unit": "m2",
+      "label": "Slab opening threshold"
+    },
+    "deduct_embedded": {
+      "type": "choice",
+      "value": "none",
+      "options": [
+        "none",
+        "all",
+        "over_threshold"
+      ],
+      "label": "Deduct columns/beams passing through"
+    },
+    "roof_surface": {
+      "type": "choice",
+      "value": "developed",
+      "options": [
+        "developed",
+        "footprint"
+      ],
+      "label": "Roof area basis"
+    },
+    "steel_mass_basis": {
+      "type": "choice",
+      "value": "nominal_per_length",
+      "options": [
+        "nominal_per_length",
+        "volume_density",
+        "reported"
+      ],
+      "label": "Steel mass basis"
+    },
+    "steel_density": {
+      "type": "number",
+      "value": 7850,
+      "unit": "kg/m3",
+      "label": "Steel density"
+    },
+    "linear_basis": {
+      "type": "choice",
+      "value": "axis",
+      "options": [
+        "axis",
+        "overall",
+        "clear"
+      ],
+      "label": "Length basis for beams/columns"
+    },
+    "window_measure": {
+      "type": "choice",
+      "value": "count",
+      "options": [
+        "count",
+        "area",
+        "perimeter"
+      ],
+      "label": "Windows measured by"
+    },
+    "door_measure": {
+      "type": "choice",
+      "value": "count",
+      "options": [
+        "count",
+        "area"
+      ],
+      "label": "Doors measured by"
+    },
+    "formwork_factor": {
+      "type": "number",
+      "value": 1,
+      "label": "Formwork factor"
+    },
+    "rebar_slab_kg_m3": {
+      "type": "number",
+      "value": 0,
+      "unit": "kg/m3",
+      "label": "Reinforcement estimate, slabs (0 = off)"
+    },
+    "rebar_wall_kg_m3": {
+      "type": "number",
+      "value": 0,
+      "unit": "kg/m3",
+      "label": "Reinforcement estimate, walls (0 = off)"
+    },
+    "rebar_footing_kg_m3": {
+      "type": "number",
+      "value": 0,
+      "unit": "kg/m3",
+      "label": "Reinforcement estimate, footings (0 = off)"
+    },
+    "include_furniture": {
+      "type": "boolean",
+      "value": false,
+      "label": "Include loose furniture"
+    },
+    "rebar_estimates": {
+      "type": "boolean",
+      "value": false,
+      "label": "Add reinforcement estimates from concrete volumes"
+    }
+  },
+  "items": [
+    {
+      "id": "walls",
+      "label": "Walls",
+      "family": "planar",
+      "match": {
+        "ifcClass": "IfcWall"
+      },
+      "quantity": {
+        "kind": "when",
+        "if": "thickness >= p.masonry_volume_from",
+        "then": {
+          "kind": "volume",
+          "start": "gross",
+          "deductions": [
+            {
+              "what": "openings",
+              "mode": {
+                "param": "wall_opening_mode"
+              },
+              "threshold": {
+                "param": "wall_opening_threshold"
+              },
+              "compareBy": "area"
+            }
+          ]
+        },
+        "else": {
+          "kind": "area",
+          "surface": {
+            "param": "wall_surface"
+          },
+          "start": "gross",
+          "deductions": [
+            {
+              "what": "openings",
+              "mode": {
+                "param": "wall_opening_mode"
+              },
+              "threshold": {
+                "param": "wall_opening_threshold"
+              },
+              "compareBy": "area",
+              "addReveals": {
+                "param": "wall_add_reveals"
+              }
+            }
+          ]
+        }
+      },
+      "lineKey": [
+        "type_name",
+        "is_external"
+      ],
+      "description": "Wall, {type_name}, {thickness*1000} mm",
+      "claims": [
+        "body"
+      ],
+      "tags": [
+        "wall"
+      ]
+    },
+    {
+      "id": "slabs",
+      "label": "Floors and slabs",
+      "family": "planar",
+      "match": {
+        "all": [
+          {
+            "ifcClass": "IfcSlab"
+          },
+          {
+            "field": "predefined_type",
+            "op": "neq",
+            "value": "ROOF"
+          }
+        ]
+      },
+      "quantity": {
+        "kind": "area",
+        "surface": "top",
+        "start": "gross",
+        "deductions": [
+          {
+            "what": "openings",
+            "mode": {
+              "param": "slab_opening_mode"
+            },
+            "threshold": {
+              "param": "slab_opening_threshold"
+            },
+            "compareBy": "area"
+          },
+          {
+            "what": "embedded",
+            "mode": {
+              "param": "deduct_embedded"
+            }
+          }
+        ]
+      },
+      "lineKey": [
+        "type_name"
+      ],
+      "description": "Slab, {type_name}",
+      "claims": [
+        "body"
+      ],
+      "tags": [
+        "slab"
+      ]
+    },
+    {
+      "id": "slab-concrete",
+      "label": "Concrete in slabs",
+      "family": "planar",
+      "match": {
+        "all": [
+          {
+            "ifcClass": "IfcSlab"
+          },
+          {
+            "field": "material",
+            "op": "under",
+            "value": "concrete"
+          }
+        ]
+      },
+      "quantity": {
+        "kind": "volume",
+        "start": "net"
+      },
+      "lineKey": [
+        "type_name"
+      ],
+      "description": "In-situ concrete, {type_name}",
+      "claims": [
+        "concrete"
+      ],
+      "tags": [
+        "concrete"
+      ]
+    },
+    {
+      "id": "roofs",
+      "label": "Roofs",
+      "family": "assembly",
+      "match": {
+        "any": [
+          {
+            "ifcClass": "IfcRoof"
+          },
+          {
+            "field": "predefined_type",
+            "op": "eq",
+            "value": "ROOF"
+          }
+        ]
+      },
+      "quantity": {
+        "kind": "area",
+        "surface": {
+          "param": "roof_surface"
+        },
+        "start": "net"
+      },
+      "lineKey": [
+        "type_name"
+      ],
+      "description": "Roof, {type_name}",
+      "claims": [
+        "body"
+      ],
+      "tags": [
+        "roof"
+      ]
+    },
+    {
+      "id": "coverings",
+      "label": "Coverings: ceilings, floor finishes, cladding",
+      "family": "planar",
+      "match": {
+        "ifcClass": "IfcCovering"
+      },
+      "quantity": {
+        "kind": "area",
+        "surface": "main",
+        "start": "net"
+      },
+      "lineKey": [
+        "predefined_type",
+        "type_name"
+      ],
+      "description": "{predefined_type}, {type_name}",
+      "claims": [
+        "finish"
+      ],
+      "tags": [
+        "finish"
+      ]
+    },
+    {
+      "id": "footings",
+      "label": "Footings and piles",
+      "family": "volumetric",
+      "match": {
+        "ifcClass": [
+          "IfcFooting",
+          "IfcPile"
+        ]
+      },
+      "quantity": {
+        "kind": "volume",
+        "start": "net"
+      },
+      "lineKey": [
+        "type_name"
+      ],
+      "description": "Concrete foundation, {type_name}",
+      "claims": [
+        "body"
+      ],
+      "onMissing": "ask",
+      "tags": [
+        "concrete",
+        "substructure"
+      ]
+    },
+    {
+      "id": "steel-sections",
+      "label": "Structural steel",
+      "family": "linear",
+      "match": {
+        "all": [
+          {
+            "ifcClass": [
+              "IfcBeam",
+              "IfcColumn",
+              "IfcMember"
+            ]
+          },
+          {
+            "field": "material",
+            "op": "under",
+            "value": "metal.steel"
+          }
+        ]
+      },
+      "quantity": {
+        "kind": "mass",
+        "basis": {
+          "param": "steel_mass_basis"
+        },
+        "density": {
+          "param": "steel_density"
+        },
+        "unit": "t"
+      },
+      "lineKey": [
+        "profile"
+      ],
+      "description": "Structural steel {profile}",
+      "claims": [
+        "body"
+      ],
+      "onMissing": "ask",
+      "tags": [
+        "steel"
+      ]
+    },
+    {
+      "id": "linear-other",
+      "label": "Other beams, columns, members",
+      "family": "linear",
+      "match": {
+        "all": [
+          {
+            "ifcClass": [
+              "IfcBeam",
+              "IfcColumn",
+              "IfcMember"
+            ]
+          },
+          {
+            "not": {
+              "field": "material",
+              "op": "under",
+              "value": "metal.steel"
+            }
+          }
+        ]
+      },
+      "quantity": {
+        "kind": "length",
+        "basis": {
+          "param": "linear_basis"
+        }
+      },
+      "lineKey": [
+        "ifc_class",
+        "type_name"
+      ],
+      "description": "{ifc_class}, {type_name}",
+      "claims": [
+        "body"
+      ]
+    },
+    {
+      "id": "windows",
+      "label": "Windows",
+      "family": "countable",
+      "match": {
+        "ifcClass": "IfcWindow"
+      },
+      "quantity": {
+        "kind": "choose",
+        "pick": {
+          "param": "window_measure"
+        },
+        "options": {
+          "count": {
+            "kind": "count"
+          },
+          "area": {
+            "kind": "formula",
+            "expr": "width * height",
+            "unit": "m2"
+          },
+          "perimeter": {
+            "kind": "formula",
+            "expr": "2 * (width + height)",
+            "unit": "m"
+          }
+        }
+      },
+      "lineKey": [
+        "family_name",
+        "type_name"
+      ],
+      "description": "Window {family_name}, {type_name}",
+      "claims": [
+        "body"
+      ],
+      "tags": [
+        "window"
+      ]
+    },
+    {
+      "id": "doors",
+      "label": "Doors",
+      "family": "countable",
+      "match": {
+        "ifcClass": "IfcDoor"
+      },
+      "quantity": {
+        "kind": "choose",
+        "pick": {
+          "param": "door_measure"
+        },
+        "options": {
+          "count": {
+            "kind": "count"
+          },
+          "area": {
+            "kind": "formula",
+            "expr": "width * height",
+            "unit": "m2"
+          }
+        }
+      },
+      "lineKey": [
+        "family_name",
+        "type_name",
+        "is_external"
+      ],
+      "description": "Door {family_name}, {type_name}",
+      "claims": [
+        "body"
+      ],
+      "tags": [
+        "door"
+      ]
+    },
+    {
+      "id": "railings",
+      "label": "Railings",
+      "family": "linear",
+      "match": {
+        "ifcClass": "IfcRailing"
+      },
+      "quantity": {
+        "kind": "length",
+        "basis": "overall"
+      },
+      "lineKey": [
+        "type_name"
+      ],
+      "description": "Railing {type_name}",
+      "claims": [
+        "body"
+      ],
+      "parts": "include"
+    },
+    {
+      "id": "stairs",
+      "label": "Stairs",
+      "family": "assembly",
+      "match": {
+        "ifcClass": "IfcStair"
+      },
+      "quantity": {
+        "kind": "count"
+      },
+      "lineKey": [
+        "type_name"
+      ],
+      "description": "Stair {type_name}",
+      "claims": [
+        "body"
+      ]
+    },
+    {
+      "id": "rebar",
+      "label": "Modelled reinforcement",
+      "family": "reinforcement",
+      "match": {
+        "ifcClass": [
+          "IfcReinforcingBar",
+          "IfcReinforcingMesh"
+        ]
+      },
+      "quantity": {
+        "kind": "mass",
+        "basis": "volume_density",
+        "density": {
+          "param": "steel_density"
+        },
+        "unit": "t"
+      },
+      "lineKey": [
+        "bar_diameter"
+      ],
+      "description": "Reinforcement, dia {bar_diameter*1000} mm",
+      "claims": [
+        "body"
+      ],
+      "tags": [
+        "rebar"
+      ]
+    },
+    {
+      "id": "pipes",
+      "label": "Pipes, ducts, cables",
+      "family": "linear",
+      "match": {
+        "ifcClass": [
+          "IfcPipeSegment",
+          "IfcDuctSegment",
+          "IfcCableSegment",
+          "IfcCableCarrierSegment"
+        ]
+      },
+      "quantity": {
+        "kind": "length",
+        "basis": "axis"
+      },
+      "lineKey": [
+        "ifc_class",
+        "system",
+        "nominal_size"
+      ],
+      "description": "{ifc_class} {nominal_size}, system {system}",
+      "claims": [
+        "body"
+      ],
+      "tags": [
+        "mep"
+      ]
+    },
+    {
+      "id": "mep-items",
+      "label": "Fittings, terminals, equipment",
+      "family": "countable",
+      "match": {
+        "family": "countable"
+      },
+      "partFilter": "discipline = \"mep\"",
+      "quantity": {
+        "kind": "count"
+      },
+      "lineKey": [
+        "ifc_class",
+        "predefined_type",
+        "nominal_size"
+      ],
+      "description": "{ifc_class} {predefined_type} {nominal_size}",
+      "claims": [
+        "body"
+      ],
+      "tags": [
+        "mep"
+      ]
+    },
+    {
+      "id": "furniture",
+      "label": "Furniture and fittings",
+      "family": "countable",
+      "match": {
+        "ifcClass": [
+          "IfcFurnishingElement",
+          "IfcFurniture"
+        ]
+      },
+      "quantity": {
+        "kind": "count"
+      },
+      "lineKey": [
+        "type_name"
+      ],
+      "description": "{type_name}",
+      "claims": [
+        "body"
+      ],
+      "enabled": {
+        "param": "include_furniture"
+      }
+    },
+    {
+      "id": "unmatched-proxies",
+      "label": "Unknown objects",
+      "match": {
+        "ifcClass": "IfcBuildingElementProxy"
+      },
+      "quantity": {
+        "kind": "count"
+      },
+      "lineKey": [
+        "type_name"
+      ],
+      "description": "Unclassified object {type_name}",
+      "onMissing": "ask"
+    }
+  ],
+  "derived": [
+    {
+      "id": "formwork-walls",
+      "label": "Formwork to concrete walls",
+      "from": [
+        "walls"
+      ],
+      "scope": "element",
+      "where": "UNDER(src.material, \"concrete\")",
+      "quantity": "SUM(src.faces.gross_area WHERE side = \"a\" OR side = \"b\") * p.formwork_factor",
+      "unit": "m2",
+      "description": "Formwork to walls, both faces",
+      "tags": [
+        "formwork"
+      ],
+      "lineKey": []
+    },
+    {
+      "id": "formwork-slab-edges",
+      "label": "Slab edge formwork",
+      "from": [
+        "slab-concrete"
+      ],
+      "scope": "element",
+      "quantity": "src.perimeter * src.thickness * p.formwork_factor",
+      "unit": "m2",
+      "description": "Edge formwork to slabs",
+      "tags": [
+        "formwork"
+      ]
+    },
+    {
+      "id": "formwork-footings",
+      "label": "Formwork to footings",
+      "from": [
+        "footings"
+      ],
+      "scope": "element",
+      "quantity": "2 * src.length * src.height * p.formwork_factor",
+      "unit": "m2",
+      "description": "Formwork to sides of foundations",
+      "onMissing": "flag",
+      "tags": [
+        "formwork"
+      ]
+    },
+    {
+      "id": "rebar-estimate-slabs",
+      "label": "Reinforcement estimate, slabs",
+      "from": [
+        "slab-concrete"
+      ],
+      "scope": "line",
+      "quantity": "src.qty * p.rebar_slab_kg_m3 / 1000",
+      "unit": "t",
+      "description": "Reinforcement to slabs (estimated)",
+      "enabled": {
+        "param": "rebar_estimates"
+      },
+      "tags": [
+        "rebar",
+        "estimate"
+      ]
+    },
+    {
+      "id": "paint-walls",
+      "label": "Paint to plasterboard",
+      "from": [
+        "walls"
+      ],
+      "scope": "element",
+      "quantity": "SUM(src.layers.area WHERE UNDER(material, \"board.plasterboard\"))",
+      "unit": "m2",
+      "description": "Paint to plasterboard wall surfaces",
+      "tags": [
+        "finish"
+      ],
+      "where": "COUNT(src.layers WHERE UNDER(material, \"board.plasterboard\")) > 0",
+      "lineKey": []
+    }
+  ],
+  "manual": [
+    {
+      "id": "prelims-site-setup",
+      "kind": "preliminary",
+      "description": "Site setup and welfare",
+      "unit": "item"
+    },
+    {
+      "id": "prelims-scaffolding",
+      "kind": "preliminary",
+      "description": "Scaffolding",
+      "unit": "item"
+    },
+    {
+      "id": "ps-landscaping",
+      "kind": "provisional_sum",
+      "description": "Landscaping (provisional)",
+      "unit": "sum"
+    }
+  ]
+}

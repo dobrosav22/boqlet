@@ -1,0 +1,175 @@
+{
+  "IFC_FAMILIES": {
+    "IfcWall": "planar",
+    "IfcCurtainWall": "assembly",
+    "IfcSlab": "planar",
+    "IfcRoof": "assembly",
+    "IfcCovering": "planar",
+    "IfcPlate": "planar",
+    "IfcBeam": "linear",
+    "IfcColumn": "linear",
+    "IfcMember": "linear",
+    "IfcRailing": "linear",
+    "IfcFooting": "volumetric",
+    "IfcPile": "volumetric",
+    "IfcChimney": "volumetric",
+    "IfcStair": "assembly",
+    "IfcStairFlight": "countable",
+    "IfcRamp": "assembly",
+    "IfcRampFlight": "planar",
+    "IfcDoor": "countable",
+    "IfcWindow": "countable",
+    "IfcShadingDevice": "countable",
+    "IfcBuildingElementProxy": "countable",
+    "IfcBuildingElementPart": "planar",
+    "IfcReinforcingBar": "reinforcement",
+    "IfcReinforcingMesh": "reinforcement",
+    "IfcTendon": "reinforcement",
+    "IfcTendonAnchor": "countable",
+    "IfcFastener": "countable",
+    "IfcMechanicalFastener": "countable",
+    "IfcDiscreteAccessory": "countable",
+    "IfcVibrationIsolator": "countable",
+    "IfcFurnishingElement": "countable",
+    "IfcFurniture": "countable",
+    "IfcSystemFurnitureElement": "countable",
+    "IfcTransportElement": "countable",
+    "IfcGeographicElement": "countable",
+    "IfcPipeSegment": "linear",
+    "IfcDuctSegment": "linear",
+    "IfcCableSegment": "linear",
+    "IfcCableCarrierSegment": "linear",
+    "IfcFlowSegment": "linear",
+    "IfcPipeFitting": "countable",
+    "IfcDuctFitting": "countable",
+    "IfcCableFitting": "countable",
+    "IfcCableCarrierFitting": "countable",
+    "IfcJunctionBox": "countable",
+    "IfcFlowFitting": "countable",
+    "IfcFlowTerminal": "countable",
+    "IfcFlowController": "countable",
+    "IfcFlowMovingDevice": "countable",
+    "IfcFlowStorageDevice": "countable",
+    "IfcFlowTreatmentDevice": "countable",
+    "IfcEnergyConversionDevice": "countable",
+    "IfcDistributionControlElement": "countable",
+    "IfcDistributionChamberElement": "countable",
+    "IfcEarthworksCut": "volumetric",
+    "IfcEarthworksFill": "volumetric",
+    "IfcReinforcedSoil": "volumetric",
+    "IfcCourse": "planar",
+    "IfcPavement": "planar",
+    "IfcKerb": "linear",
+    "IfcRail": "linear",
+    "IfcTrackElement": "countable",
+    "IfcBearing": "countable",
+    "IfcDeepFoundation": "volumetric",
+    "IfcCaissonFoundation": "volumetric",
+    "IfcSign": "countable",
+    "IfcSignal": "countable",
+    "IfcSpace": "space",
+    "IfcZone": "space",
+    "IfcOpeningElement": "void",
+    "IfcVoidingFeature": "void"
+  },
+  "FAMILY_INFO": {
+    "linear": {
+      "kinds": [
+        "length",
+        "count",
+        "mass",
+        "volume",
+        "area"
+      ],
+      "default": "length",
+      "breakdowns": [
+        "element",
+        "material"
+      ]
+    },
+    "planar": {
+      "kinds": [
+        "area",
+        "volume",
+        "count",
+        "perimeter"
+      ],
+      "default": "area",
+      "breakdowns": [
+        "element",
+        "layer",
+        "face",
+        "material"
+      ]
+    },
+    "volumetric": {
+      "kinds": [
+        "volume",
+        "area",
+        "count",
+        "mass"
+      ],
+      "default": "volume",
+      "breakdowns": [
+        "element",
+        "layer",
+        "material"
+      ]
+    },
+    "countable": {
+      "kinds": [
+        "count",
+        "area",
+        "length",
+        "perimeter"
+      ],
+      "default": "count",
+      "breakdowns": [
+        "element"
+      ]
+    },
+    "reinforcement": {
+      "kinds": [
+        "mass",
+        "length",
+        "count",
+        "area"
+      ],
+      "default": "mass",
+      "breakdowns": [
+        "element"
+      ]
+    },
+    "assembly": {
+      "kinds": [
+        "count",
+        "area",
+        "length",
+        "volume"
+      ],
+      "default": "count",
+      "breakdowns": [
+        "element",
+        "child"
+      ]
+    },
+    "space": {
+      "kinds": [
+        "area",
+        "perimeter",
+        "volume",
+        "count"
+      ],
+      "default": "area",
+      "breakdowns": [
+        "element",
+        "face"
+      ]
+    },
+    "void": {
+      "kinds": [],
+      "default": "count",
+      "breakdowns": []
+    }
+  }
+}

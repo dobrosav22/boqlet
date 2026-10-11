@@ -1,0 +1,280 @@
+{
+  "schemaVersion": "1.0",
+  "id": "acme-map",
+  "name": "ACME lines to cost codes",
+  "version": "2026.1",
+  "codeList": "acme-cost-codes",
+  "sources": [
+    "decision",
+    "map"
+  ],
+  "rules": [
+    {
+      "id": "prelims",
+      "match": {
+        "manualKind": "preliminary"
+      },
+      "code": {
+        "lookup": "rule_id",
+        "table": {
+          "prelims-site-setup": "A.01",
+          "prelims-scaffolding": "A.02"
+        },
+        "default": "A.01"
+      }
+    },
+    {
+      "id": "cleaning",
+      "match": {
+        "ruleId": "acme-cleaning"
+      },
+      "code": "A.03"
+    },
+    {
+      "id": "provisional",
+      "match": {
+        "manualKind": "provisional_sum"
+      },
+      "code": "X.01"
+    },
+    {
+      "id": "footings",
+      "match": {
+        "ruleId": "footings"
+      },
+      "code": "B.01"
+    },
+    {
+      "id": "foundation-walls",
+      "match": {
+        "all": [
+          {
+            "tag": "wall"
+          },
+          {
+            "where": "UNDER(element_type, \"wall.foundation\")"
+          }
+        ]
+      },
+      "code": "B.01",
+      "priority": 2
+    },
+    {
+      "id": "ground-slabs",
+      "match": {
+        "all": [
+          {
+            "ruleId": [
+              "slabs",
+              "slab-concrete"
+            ]
+          },
+          {
+            "where": "storey_elevation <= 0 AND NOT (UNDER(material, \"finish\") OR UNDER(material, \"timber.flooring\"))"
+          }
+        ]
+      },
+      "code": "B.02",
+      "priority": 1
+    },
+    {
+      "id": "formwork-sub",
+      "match": {
+        "ruleId": "formwork-footings"
+      },
+      "code": "B.03"
+    },
+    {
+      "id": "formwork-sub-other",
+      "match": {
+        "all": [
+          {
+            "tag": "formwork"
+          },
+          {
+            "where": "UNDER(element_type, \"wall.foundation\") OR storey_elevation <= 0"
+          }
+        ]
+      },
+      "code": "B.03",
+      "priority": 1
+    },
+    {
+      "id": "steel",
+      "match": {
+        "ruleId": "steel-sections"
+      },
+      "code": "C.01"
+    },
+    {
+      "id": "concrete-slabs",
+      "match": {
+        "ruleId": "slab-concrete"
+      },
+      "code": "C.02"
+    },
+    {
+      "id": "rebar",
+      "match": {
+        "tag": "rebar"
+      },
+      "code": "C.03"
+    },
+    {
+      "id": "formwork-frame",
+      "match": {
+        "ruleId": [
+          "formwork-walls",
+          "formwork-slab-edges"
+        ]
+      },
+      "code": "C.04"
+    },
+    {
+      "id": "members",
+      "match": {
+        "ruleId": "linear-other"
+      },
+      "code": "C.05"
+    },
+    {
+      "id": "external-walls",
+      "match": {
+        "all": [
+          {
+            "tag": "wall"
+          },
+          {
+            "where": "UNDER(element_type, \"wall.external\")"
+          }
+        ]
+      },
+      "code": "D.01",
+      "priority": 1
+    },
+    {
+      "id": "internal-walls",
+      "match": {
+        "tag": "wall"
+      },
+      "code": "D.02"
+    },
+    {
+      "id": "windows",
+      "match": {
+        "ruleId": "windows"
+      },
+      "code": "E.01"
+    },
+    {
+      "id": "doors",
+      "match": {
+        "ruleId": "doors"
+      },
+      "code": "E.02"
+    },
+    {
+      "id": "roofs",
+      "match": {
+        "ruleId": "roofs"
+      },
+      "code": "F.01"
+    },
+    {
+      "id": "floor-finish-slabs",
+      "match": {
+        "all": [
+          {
+            "ruleId": "slabs"
+          },
+          {
+            "where": "UNDER(material, \"finish\") OR UNDER(material, \"timber.flooring\")"
+          }
+        ]
+      },
+      "code": "H.01",
+      "priority": 2
+    },
+    {
+      "id": "upper-floors",
+      "match": {
+        "ruleId": "slabs"
+      },
+      "code": "G.01"
+    },
+    {
+      "id": "stairs",
+      "match": {
+        "ruleId": "stairs"
+      },
+      "code": "G.02"
+    },
+    {
+      "id": "railings",
+      "match": {
+        "ruleId": "railings"
+      },
+      "code": "G.03"
+    },
+    {
+      "id": "coverings",
+      "match": {
+        "ruleId": "coverings"
+      },
+      "code": {
+        "lookup": "predefined_type",
+        "table": {
+          "CEILING": "H.02",
+          "FLOORING": "H.01",
+          "CLADDING": "D.01",
+          "ROOFING": "F.01"
+        },
+        "default": "H.02"
+      }
+    },
+    {
+      "id": "paint",
+      "match": {
+        "ruleId": "paint-walls"
+      },
+      "code": "H.03"
+    },
+    {
+      "id": "skirting",
+      "match": {
+        "ruleId": "skirting"
+      },
+      "code": "H.04"
+    },
+    {
+      "id": "furniture",
+      "match": {
+        "ruleId": "furniture"
+      },
+      "code": "J.01"
+    },
+    {
+      "id": "pipes",
+      "match": {
+        "ruleId": "pipes"
+      },
+      "code": "K.01"
+    },
+    {
+      "id": "mep-items",
+      "match": {
+        "ruleId": "mep-items"
+      },
+      "code": "K.02"
+    },
+    {
+      "id": "proxies",
+      "match": {
+        "ruleId": "unmatched-proxies"
+      },
+      "code": "Z.99"
+    }
+  ],
+  "onUnmapped": "ask",
+  "onConflict": "first"
+}

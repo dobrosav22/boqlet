@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0",
+  "id": "demo-tweaked",
+  "name": "Demo: as modelled, two slots changed",
+  "version": "0.1.0",
+  "extends": "as-modelled",
+  "meta": {
+    "description": "Shows the simplest kind of custom rules: same rules as 'as-modelled', only two slot values changed. Openings up to 1.0 m2 are no longer deducted from walls, and windows are measured in m2 instead of counted. Compare its BoQ with 'as-modelled'."
+  },
+  "params": {
+    "wall_opening_mode": { "value": "over_threshold" },
+    "wall_opening_threshold": { "value": 1.0 },
+    "window_measure": { "value": "area" }
+  }
+}

@@ -1,0 +1,13 @@
+# Engine runtime. Keep in sync with pyproject.toml.
+ifcopenshell>=0.8.0,<0.9.99
+numpy>=1.26
+trimesh>=4.4
+networkx>=3.0  # trimesh volume/watertight checks need it
+manifold3d>=2.5
+openpyxl>=3.1
+jsonschema>=4.21
+fastapi>=0.115
+uvicorn>=0.30
+python-multipart>=0.0.9
+# dev
+pytest>=8

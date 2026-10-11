@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ifc-boq-engine"
+version = "0.1.0"
+description = "IFC -> Bill of Quantities engine: parse, dictionaries, measure, rules, classification, Excel export."
+requires-python = ">=3.10,<3.14"
+dependencies = [
+  "ifcopenshell>=0.8.0,<0.9.99",
+  "numpy>=1.26",
+  "trimesh>=4.4",
+  "networkx>=3.0",
+  "manifold3d>=2.5",
+  "openpyxl>=3.1",
+  "jsonschema>=4.21",
+  "fastapi>=0.115",
+  "uvicorn>=0.30",
+  "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+ifc-boq = "ifc_boq.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["ifc_boq*"]
+
+[tool.setuptools.package-data]
+ifc_boq = ["data/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

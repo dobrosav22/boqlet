@@ -1,0 +1,924 @@
+{
+  "schemaVersion": "1.0",
+  "id": "global-seed",
+  "name": "Global seed dictionary",
+  "version": "0.1.0",
+  "layer": "global",
+  "locales": [
+    "en",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "sr",
+    "hr",
+    "bs"
+  ],
+  "terms": [
+    {
+      "id": "concrete",
+      "category": "material",
+      "label": "Concrete",
+      "labels": {
+        "de": "Beton",
+        "sr": "Beton"
+      },
+      "props": {
+        "density_kg_m3": 2400
+      }
+    },
+    {
+      "id": "concrete.in_situ",
+      "category": "material",
+      "label": "In-situ concrete",
+      "broader": "concrete"
+    },
+    {
+      "id": "concrete.precast",
+      "category": "material",
+      "label": "Precast concrete",
+      "broader": "concrete"
+    },
+    {
+      "id": "concrete.screed",
+      "category": "material",
+      "label": "Cement screed",
+      "labels": {
+        "de": "Estrich",
+        "sr": "Cementna košuljica"
+      },
+      "broader": "concrete"
+    },
+    {
+      "id": "masonry",
+      "category": "material",
+      "label": "Masonry"
+    },
+    {
+      "id": "masonry.brick",
+      "category": "material",
+      "label": "Brick",
+      "labels": {
+        "de": "Ziegel",
+        "sr": "Opeka"
+      },
+      "broader": "masonry"
+    },
+    {
+      "id": "masonry.block",
+      "category": "material",
+      "label": "Concrete block",
+      "broader": "masonry"
+    },
+    {
+      "id": "masonry.block.aac",
+      "category": "material",
+      "label": "Aerated concrete block",
+      "broader": "masonry.block"
+    },
+    {
+      "id": "masonry.mortar",
+      "category": "material",
+      "label": "Mortar / grout",
+      "broader": "masonry"
+    },
+    {
+      "id": "metal",
+      "category": "material",
+      "label": "Metal"
+    },
+    {
+      "id": "metal.steel",
+      "category": "material",
+      "label": "Steel",
+      "labels": {
+        "de": "Stahl",
+        "sr": "Čelik"
+      },
+      "broader": "metal",
+      "props": {
+        "density_kg_m3": 7850
+      }
+    },
+    {
+      "id": "metal.steel.stud",
+      "category": "product",
+      "label": "Light-gauge steel stud",
+      "broader": "metal.steel"
+    },
+    {
+      "id": "metal.aluminium",
+      "category": "material",
+      "label": "Aluminium",
+      "broader": "metal",
+      "props": {
+        "density_kg_m3": 2700
+      }
+    },
+    {
+      "id": "timber",
+      "category": "material",
+      "label": "Timber",
+      "labels": {
+        "de": "Holz",
+        "sr": "Drvo"
+      }
+    },
+    {
+      "id": "timber.lumber",
+      "category": "material",
+      "label": "Dimensional lumber",
+      "broader": "timber"
+    },
+    {
+      "id": "timber.plywood",
+      "category": "material",
+      "label": "Plywood",
+      "broader": "timber"
+    },
+    {
+      "id": "timber.flooring",
+      "category": "product",
+      "label": "Timber flooring",
+      "broader": "timber"
+    },
+    {
+      "id": "board",
+      "category": "product",
+      "label": "Board"
+    },
+    {
+      "id": "board.plasterboard",
+      "category": "product",
+      "label": "Plasterboard",
+      "labels": {
+        "de": "Gipskartonplatte",
+        "sr": "Gips-karton ploča"
+      },
+      "broader": "board"
+    },
+    {
+      "id": "insulation",
+      "category": "material",
+      "label": "Insulation",
+      "labels": {
+        "de": "Dämmung",
+        "sr": "Izolacija"
+      }
+    },
+    {
+      "id": "insulation.rigid",
+      "category": "material",
+      "label": "Rigid insulation (EPS/XPS/PIR)",
+      "broader": "insulation"
+    },
+    {
+      "id": "insulation.semi_rigid",
+      "category": "material",
+      "label": "Semi-rigid insulation",
+      "broader": "insulation"
+    },
+    {
+      "id": "insulation.mineral_wool",
+      "category": "material",
+      "label": "Mineral wool",
+      "broader": "insulation"
+    },
+    {
+      "id": "membrane",
+      "category": "material",
+      "label": "Membrane"
+    },
+    {
+      "id": "membrane.epdm",
+      "category": "material",
+      "label": "EPDM membrane",
+      "broader": "membrane"
+    },
+    {
+      "id": "membrane.vapour_control",
+      "category": "material",
+      "label": "Vapour control layer",
+      "broader": "membrane"
+    },
+    {
+      "id": "membrane.root_barrier",
+      "category": "material",
+      "label": "Root barrier",
+      "broader": "membrane"
+    },
+    {
+      "id": "finish",
+      "category": "material",
+      "label": "Finish"
+    },
+    {
+      "id": "finish.ceramic_tile",
+      "category": "product",
+      "label": "Ceramic tile",
+      "labels": {
+        "de": "Fliese",
+        "sr": "Keramička pločica"
+      },
+      "broader": "finish"
+    },
+    {
+      "id": "finish.paint",
+      "category": "material",
+      "label": "Paint",
+      "broader": "finish"
+    },
+    {
+      "id": "glass",
+      "category": "material",
+      "label": "Glass"
+    },
+    {
+      "id": "air_gap",
+      "category": "material",
+      "label": "Air gap"
+    },
+    {
+      "id": "landscape.grass",
+      "category": "material",
+      "label": "Grass / growing medium"
+    },
+    {
+      "id": "wall",
+      "category": "element_type",
+      "label": "Wall"
+    },
+    {
+      "id": "wall.party",
+      "category": "element_type",
+      "label": "Party / separating wall",
+      "broader": "wall"
+    },
+    {
+      "id": "wall.partition",
+      "category": "element_type",
+      "label": "Partition",
+      "broader": "wall"
+    },
+    {
+      "id": "wall.lining",
+      "category": "element_type",
+      "label": "Wall lining / furring",
+      "broader": "wall"
+    },
+    {
+      "id": "wall.foundation",
+      "category": "element_type",
+      "label": "Foundation wall",
+      "broader": "wall"
+    },
+    {
+      "id": "wall.external",
+      "category": "element_type",
+      "label": "External wall",
+      "broader": "wall"
+    },
+    {
+      "id": "space.bathroom",
+      "category": "space",
+      "label": "Bathroom / WC"
+    },
+    {
+      "id": "space.kitchen",
+      "category": "space",
+      "label": "Kitchen"
+    },
+    {
+      "id": "space.bedroom",
+      "category": "space",
+      "label": "Bedroom"
+    },
+    {
+      "id": "space.living",
+      "category": "space",
+      "label": "Living room"
+    },
+    {
+      "id": "space.circulation",
+      "category": "space",
+      "label": "Hall / corridor"
+    },
+    {
+      "id": "space.stair",
+      "category": "space",
+      "label": "Stair"
+    },
+    {
+      "id": "space.utility",
+      "category": "space",
+      "label": "Utility / storage"
+    }
+  ],
+  "entries": [
+    {
+      "id": "revit-brick",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "exact": "Masonry - Brick"
+      },
+      "term": "masonry.brick",
+      "source": "seed"
+    },
+    {
+      "id": "revit-block",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "exact": "Masonry - Concrete Block"
+      },
+      "term": "masonry.block",
+      "source": "seed"
+    },
+    {
+      "id": "revit-grout",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "exact": "Masonry - Grout"
+      },
+      "term": "masonry.mortar",
+      "source": "seed"
+    },
+    {
+      "id": "revit-concrete-cis",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "exact": "Concrete - Cast In Situ"
+      },
+      "term": "concrete.in_situ",
+      "source": "seed"
+    },
+    {
+      "id": "revit-stud",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "exact": "Metal - Stud Layer"
+      },
+      "term": "metal.steel.stud",
+      "source": "seed"
+    },
+    {
+      "id": "revit-air",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "exact": "Misc. Air Layers - Air Space"
+      },
+      "term": "air_gap",
+      "source": "seed"
+    },
+    {
+      "id": "revit-rigid",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "exact": "Insulation / Thermal Barriers - Rigid insulation"
+      },
+      "term": "insulation.rigid",
+      "source": "seed"
+    },
+    {
+      "id": "revit-semirigid",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "exact": "Insulation / Thermal Barriers - Semi-rigid insulation"
+      },
+      "term": "insulation.semi_rigid",
+      "source": "seed"
+    },
+    {
+      "id": "revit-plywood",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "exact": "Wood - Sheathing - plywood"
+      },
+      "term": "timber.plywood",
+      "source": "seed"
+    },
+    {
+      "id": "revit-lumber",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "exact": "Wood - Dimensional Lumber"
+      },
+      "term": "timber.lumber",
+      "source": "seed"
+    },
+    {
+      "id": "revit-flooring",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "exact": "Wood - Flooring"
+      },
+      "term": "timber.flooring",
+      "source": "seed"
+    },
+    {
+      "id": "revit-epdm",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "exact": "Roofing - EPDM Membrane"
+      },
+      "term": "membrane.epdm",
+      "source": "seed"
+    },
+    {
+      "id": "revit-grass",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "exact": "Site - Grass"
+      },
+      "term": "landscape.grass",
+      "source": "seed"
+    },
+    {
+      "id": "pfx-steel",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "startsWith": [
+          "Metal - Steel",
+          "Steel",
+          "Stahl",
+          "Čelik",
+          "Celik"
+        ]
+      },
+      "term": "metal.steel",
+      "source": "seed"
+    },
+    {
+      "id": "pfx-roofing-membrane",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "startsWith": "Roofing - "
+      },
+      "term": "membrane",
+      "source": "seed",
+      "note": "Generic roofing layer; projects usually refine it."
+    },
+    {
+      "id": "rx-screed",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(screed|estri(c)?h|ko[sš]uljica|chape|massetto)\\b"
+      },
+      "term": "concrete.screed",
+      "source": "seed"
+    },
+    {
+      "id": "rx-aac",
+      "field": [
+        "material",
+        "layer_material",
+        "type_name"
+      ],
+      "match": {
+        "regex": "\\b(ytong|siporex|xella|aerated|porobeton|gasbeton|aac)\\b"
+      },
+      "term": "masonry.block.aac",
+      "source": "seed"
+    },
+    {
+      "id": "rx-strength",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(C\\d{2,3}/\\d{2,3}|MB\\s?\\d{2,3})\\b"
+      },
+      "term": "concrete",
+      "source": "seed",
+      "note": "Concrete strength classes (EN 206 'C30/37', ex-YU 'MB30')"
+    },
+    {
+      "id": "rx-concrete",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(concrete|beton|b[eé]ton|hormig[oó]n|calcestruzzo|betong)\\b"
+      },
+      "term": "concrete",
+      "source": "seed"
+    },
+    {
+      "id": "rx-brick",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(brick|opeka|cigla|ziegel|ladrillo|mattone|brique)\\b"
+      },
+      "term": "masonry.brick",
+      "source": "seed"
+    },
+    {
+      "id": "rx-block",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(block|blok|cmu|hohlblock)\\b"
+      },
+      "term": "masonry.block",
+      "source": "seed"
+    },
+    {
+      "id": "rx-plasterboard",
+      "field": [
+        "material",
+        "layer_material",
+        "type_name"
+      ],
+      "match": {
+        "regex": "(plasterboard|gypsum (wall )?board|drywall|gips(ana)?[ -]?(karton)?[ -]?plo[cč]a|gipskarton|rigips|knauf|placo|pladur)"
+      },
+      "term": "board.plasterboard",
+      "source": "seed"
+    },
+    {
+      "id": "rx-mineral-wool",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "(mineral wool|rock ?wool|glass ?wool|kamena vuna|staklena vuna|mineralwolle|steinwolle)"
+      },
+      "term": "insulation.mineral_wool",
+      "source": "seed"
+    },
+    {
+      "id": "rx-rigid",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(xps|eps|pir|pur|stiropor|stirodur|styrofoam)\\b"
+      },
+      "term": "insulation.rigid",
+      "source": "seed"
+    },
+    {
+      "id": "rx-insulation",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "(insulation|izolacij|d[aä]mmung|isolant|aislamiento)"
+      },
+      "term": "insulation",
+      "source": "seed"
+    },
+    {
+      "id": "rx-tile",
+      "field": [
+        "material",
+        "layer_material",
+        "type_name"
+      ],
+      "match": {
+        "regex": "(ceramic|tile|plo[cč]ic|keramik|fliese|azulejo|piastrell)"
+      },
+      "term": "finish.ceramic_tile",
+      "source": "seed"
+    },
+    {
+      "id": "rx-plywood",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "(plywood|[sš]perplo[cč]a|sperrholz)"
+      },
+      "term": "timber.plywood",
+      "source": "seed"
+    },
+    {
+      "id": "rx-timber",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(wood|timber|drvo|holz|madera|legno|bois)\\b"
+      },
+      "term": "timber",
+      "source": "seed"
+    },
+    {
+      "id": "rx-vapour",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "(vapou?r (retarder|barrier|control)|parna brana|dampfbremse|dampfsperre)"
+      },
+      "term": "membrane.vapour_control",
+      "source": "seed"
+    },
+    {
+      "id": "rx-glass",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(glass|glazing|staklo|glas)\\b"
+      },
+      "term": "glass",
+      "source": "seed"
+    },
+    {
+      "id": "rx-air",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "(air (space|gap|layer)|vazdu[sš]ni sloj|zra[cč]ni sloj|luftschicht)"
+      },
+      "term": "air_gap",
+      "source": "seed"
+    },
+    {
+      "id": "rx-alu",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(alumin(i)?um|aluminij)\\b"
+      },
+      "term": "metal.aluminium",
+      "source": "seed"
+    },
+    {
+      "id": "rx-party-wall",
+      "field": "type_name",
+      "match": {
+        "regex": "(party wall|separating wall|di[mv]ising wall|demising|razdjelni zid|razdelni zid|wohnungstrennwand)"
+      },
+      "when": "ifc_class = \"IfcWall\"",
+      "term": "wall.party",
+      "source": "seed"
+    },
+    {
+      "id": "rx-partition",
+      "field": "type_name",
+      "match": {
+        "regex": "(partition|pregradn|trennwand|tabique)"
+      },
+      "when": "ifc_class = \"IfcWall\"",
+      "term": "wall.partition",
+      "source": "seed"
+    },
+    {
+      "id": "rx-services-wall",
+      "field": "type_name",
+      "match": {
+        "regex": "(plumbing|services wall|installation wall|instalacion|installationswand)"
+      },
+      "when": "ifc_class = \"IfcWall\"",
+      "term": "wall.partition",
+      "source": "seed"
+    },
+    {
+      "id": "rx-lining",
+      "field": "type_name",
+      "match": {
+        "regex": "(furring|lining|obloga|vorsatzschale)"
+      },
+      "when": "ifc_class = \"IfcWall\"",
+      "term": "wall.lining",
+      "source": "seed"
+    },
+    {
+      "id": "rx-foundation-wall",
+      "field": "type_name",
+      "match": {
+        "regex": "(foundation|temelj|fundament)"
+      },
+      "when": "ifc_class = \"IfcWall\"",
+      "term": "wall.foundation",
+      "source": "seed"
+    },
+    {
+      "id": "rx-external-wall",
+      "field": "type_name",
+      "match": {
+        "regex": "(exterior|external|fasad|au[sß]enwand)"
+      },
+      "when": "ifc_class = \"IfcWall\"",
+      "term": "wall.external",
+      "source": "seed"
+    },
+    {
+      "id": "rx-bath",
+      "field": "space_name",
+      "match": {
+        "regex": "\\b(bath(room)?|wc|toilet|kupatilo|kupaonica|bad(ezimmer)?|ba[nñ]o)\\b"
+      },
+      "term": "space.bathroom",
+      "source": "seed"
+    },
+    {
+      "id": "rx-kitchen",
+      "field": "space_name",
+      "match": {
+        "regex": "\\b(kitchen|kuhinja|k[uü]che|cocina|cucina)\\b"
+      },
+      "term": "space.kitchen",
+      "source": "seed"
+    },
+    {
+      "id": "rx-bedroom",
+      "field": "space_name",
+      "match": {
+        "regex": "\\b(bed ?room|spava[cć]a|schlafzimmer|dormitorio)\\b"
+      },
+      "term": "space.bedroom",
+      "source": "seed"
+    },
+    {
+      "id": "rx-living",
+      "field": "space_name",
+      "match": {
+        "regex": "\\b(living|lounge|dnevn|wohnzimmer|sal[oó]n)\\b"
+      },
+      "term": "space.living",
+      "source": "seed"
+    },
+    {
+      "id": "rx-stair",
+      "field": "space_name",
+      "match": {
+        "regex": "\\b(stair|stepeni[sš]te|treppe|escalera)\\b"
+      },
+      "term": "space.stair",
+      "source": "seed"
+    },
+    {
+      "id": "rx-utility",
+      "field": "space_name",
+      "match": {
+        "regex": "\\b(utility|laundry|storage|store|ostava|vešeraj|veseraj|abstellraum|hauswirtschaft)\\b"
+      },
+      "term": "space.utility",
+      "source": "seed"
+    },
+    {
+      "id": "rx-hall",
+      "field": "space_name",
+      "match": {
+        "regex": "\\b(hall(way)?|corridor|foyer|lobby|hodnik|entry|entrance|predsoblje|ulaz|flur|diele)\\b"
+      },
+      "term": "space.circulation",
+      "source": "seed"
+    }
+  ],
+  "extractors": [
+    {
+      "id": "revit-name",
+      "field": "name",
+      "regex": "^(?<family>[^:]+):(?<type>[^:]+)(?::[^:]+)*?:(?<rid>\\d+)(?::\\d+)?$",
+      "outputs": {
+        "family": {
+          "target": "family"
+        },
+        "type": {
+          "target": "type_name"
+        },
+        "rid": {
+          "target": "props.authoring_id"
+        }
+      },
+      "note": "Revit exports names as Family:Type[:Type]:ElementId"
+    },
+    {
+      "id": "thickness-mm",
+      "field": "type_name",
+      "regex": "(?<t>\\d+(?:[.,]\\d+)?)\\s?mm\\b",
+      "outputs": {
+        "t": {
+          "target": "thickness",
+          "unit": "mm"
+        }
+      },
+      "when": "ifc_class = \"IfcWall\" OR ifc_class = \"IfcSlab\"",
+      "note": "A hint only: '92mm Stud' is a stud size, not wall thickness, which is why geometry wins (override false)."
+    },
+    {
+      "id": "thickness-cm",
+      "field": [
+        "type_name",
+        "material"
+      ],
+      "regex": "(?<t>\\d+(?:[.,]\\d+)?)\\s?cm\\b",
+      "outputs": {
+        "t": {
+          "target": "thickness",
+          "unit": "cm"
+        }
+      }
+    },
+    {
+      "id": "strength-class",
+      "field": [
+        "material",
+        "layer_material",
+        "type_name"
+      ],
+      "regex": "\\b(?<sc>C\\d{2,3}/\\d{2,3}|MB\\s?\\d{2,3}|\\d{3}\\s?MPa)\\b",
+      "outputs": {
+        "sc": {
+          "target": "strength_class"
+        }
+      }
+    },
+    {
+      "id": "steel-profile",
+      "field": [
+        "type_name",
+        "name"
+      ],
+      "regex": "\\b(?<p>(W|HE[ABM]|IPE|UPN|UPE|HSS|SHS|RHS|CHS)\\s?\\d+(?:[xX×]\\d+(?:[.,]\\d+)?)*)\\b",
+      "outputs": {
+        "p": {
+          "target": "profile"
+        }
+      }
+    },
+    {
+      "id": "pipe-dn",
+      "field": [
+        "type_name",
+        "name",
+        "props.Pset_PipeSegmentTypeCommon.NominalDiameter"
+      ],
+      "regex": "\\bDN\\s?(?<dn>\\d+)\\b",
+      "outputs": {
+        "dn": {
+          "target": "nominal_size"
+        }
+      }
+    }
+  ]
+}

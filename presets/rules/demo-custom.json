@@ -1,0 +1,274 @@
+{
+  "schemaVersion": "1.0",
+  "id": "demo-custom",
+  "name": "Demo: small custom rule set",
+  "version": "0.1.0",
+  "meta": {
+    "unitSystem": "metric",
+    "locale": "en",
+    "description": "A complete, deliberately small rule set written from scratch (no 'extends'), to show what custom rules look like. Thick walls are measured in m3 and thin ones in m2 by element type; small openings are not deducted; all concrete is collected in one line per material; windows by area; doors counted; one derived item (formwork to footings) and one manual item. Everything else in the model is left unmeasured on purpose: see the 'unmatched' questions."
+  },
+  "defaults": {
+    "rounding": {
+      "step": 0.01,
+      "mode": "nearest",
+      "at": "line"
+    },
+    "onMissing": "flag"
+  },
+  "params": {
+    "thick_wall_from": {
+      "type": "number",
+      "value": 0.25,
+      "unit": "m",
+      "label": "Walls at least this thick are measured in m3"
+    },
+    "small_opening": {
+      "type": "number",
+      "value": 1.0,
+      "unit": "m2",
+      "label": "Openings up to this size are not deducted"
+    },
+    "window_measure": {
+      "type": "choice",
+      "value": "area",
+      "options": [
+        "count",
+        "area"
+      ],
+      "label": "Windows measured by"
+    },
+    "formwork_allowance": {
+      "type": "number",
+      "value": 1.05,
+      "label": "Formwork allowance factor"
+    }
+  },
+  "items": [
+    {
+      "id": "walls",
+      "label": "Walls by type",
+      "match": {
+        "all": [
+          {
+            "ifcClass": "IfcWall"
+          },
+          {
+            "not": {
+              "field": "material",
+              "op": "under",
+              "value": "concrete"
+            }
+          }
+        ]
+      },
+      "quantity": {
+        "kind": "when",
+        "if": "thickness >= p.thick_wall_from",
+        "then": {
+          "kind": "volume",
+          "start": "gross",
+          "deductions": [
+            {
+              "what": "openings",
+              "mode": "over_threshold",
+              "threshold": {
+                "param": "small_opening"
+              },
+              "compareBy": "area"
+            }
+          ]
+        },
+        "else": {
+          "kind": "area",
+          "surface": "main",
+          "start": "gross",
+          "deductions": [
+            {
+              "what": "openings",
+              "mode": "over_threshold",
+              "threshold": {
+                "param": "small_opening"
+              },
+              "compareBy": "area"
+            }
+          ]
+        }
+      },
+      "lineKey": [
+        "element_type",
+        "thickness"
+      ],
+      "description": "{element_type} wall, {thickness*1000} mm",
+      "claims": [
+        "body"
+      ],
+      "tags": [
+        "wall"
+      ]
+    },
+    {
+      "id": "concrete",
+      "label": "All in-situ concrete, by material",
+      "match": {
+        "all": [
+          {
+            "ifcClass": [
+              "IfcWall",
+              "IfcSlab",
+              "IfcFooting"
+            ]
+          },
+          {
+            "any": [
+              {
+                "field": "material",
+                "op": "under",
+                "value": "concrete"
+              },
+              {
+                "ifcClass": "IfcFooting"
+              }
+            ]
+          }
+        ]
+      },
+      "quantity": {
+        "kind": "volume",
+        "start": "net"
+      },
+      "lineKey": [
+        "ifc_class",
+        "material"
+      ],
+      "description": "Concrete ({material}) in {ifc_class}",
+      "claims": [
+        "body"
+      ],
+      "onMissing": "ask",
+      "tags": [
+        "concrete"
+      ]
+    },
+    {
+      "id": "floors",
+      "label": "Floors and finishes",
+      "match": {
+        "all": [
+          {
+            "ifcClass": "IfcSlab"
+          },
+          {
+            "field": "predefined_type",
+            "op": "neq",
+            "value": "ROOF"
+          },
+          {
+            "not": {
+              "field": "material",
+              "op": "under",
+              "value": "concrete"
+            }
+          }
+        ]
+      },
+      "quantity": {
+        "kind": "area",
+        "surface": "top",
+        "start": "net"
+      },
+      "lineKey": [
+        "material"
+      ],
+      "description": "Floor: {material}",
+      "claims": [
+        "body"
+      ],
+      "tags": [
+        "floor"
+      ]
+    },
+    {
+      "id": "windows",
+      "label": "Windows",
+      "match": {
+        "ifcClass": "IfcWindow"
+      },
+      "quantity": {
+        "kind": "choose",
+        "pick": {
+          "param": "window_measure"
+        },
+        "options": {
+          "count": {
+            "kind": "count"
+          },
+          "area": {
+            "kind": "formula",
+            "expr": "width * height",
+            "unit": "m2"
+          }
+        }
+      },
+      "lineKey": [
+        "is_external"
+      ],
+      "description": "Windows (external: {is_external})",
+      "claims": [
+        "body"
+      ],
+      "tags": [
+        "window"
+      ]
+    },
+    {
+      "id": "doors",
+      "label": "Doors",
+      "match": {
+        "ifcClass": "IfcDoor"
+      },
+      "quantity": {
+        "kind": "count"
+      },
+      "lineKey": [
+        "is_external"
+      ],
+      "description": "Doors (external: {is_external})",
+      "claims": [
+        "body"
+      ],
+      "tags": [
+        "door"
+      ]
+    }
+  ],
+  "derived": [
+    {
+      "id": "formwork-footings",
+      "label": "Formwork to footings",
+      "from": [
+        "concrete"
+      ],
+      "scope": "element",
+      "where": "src.ifc_class = \"IfcFooting\"",
+      "quantity": "2 * src.length * src.height",
+      "factor": {
+        "param": "formwork_allowance"
+      },
+      "unit": "m2",
+      "description": "Formwork to footing sides (incl. allowance)",
+      "tags": [
+        "formwork"
+      ]
+    }
+  ],
+  "manual": [
+    {
+      "id": "site-setup",
+      "kind": "preliminary",
+      "description": "Site setup",
+      "unit": "item",
+      "quantity": 1
+    }
+  ]
+}

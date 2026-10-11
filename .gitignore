@@ -1,0 +1,19 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Python engine
+engine/.venv/
+engine/.cache/
+engine/.pytest_cache/
+engine/*.egg-info/
+__pycache__/
+*.pyc
+
+# Downloaded by `npm run import:uniclass` (NBS terms apply; not redistributed here)
+presets/classifications/uniclass2015-ef/codelist.json
+
+# Local
+.env
+.DS_Store
+*.log

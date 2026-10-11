@@ -1,0 +1,182 @@
+{
+  "schemaVersion": "1.0",
+  "id": "uniclass-ef-map",
+  "name": "Lines to Uniclass 2015 EF",
+  "version": "0.1.0",
+  "codeList": "uniclass2015-ef",
+  "sources": [
+    "decision",
+    "ifc",
+    "map"
+  ],
+  "ifc": {
+    "systemNames": [
+      "Uniclass",
+      "Uniclass 2015",
+      "Uniclass2015"
+    ],
+    "agreement": "majority"
+  },
+  "rules": [
+    {
+      "id": "footings",
+      "match": {
+        "ruleId": "footings"
+      },
+      "code": "EF_20_05"
+    },
+    {
+      "id": "foundation-walls",
+      "match": {
+        "all": [
+          {
+            "tag": "wall"
+          },
+          {
+            "where": "UNDER(element_type, \"wall.foundation\")"
+          }
+        ]
+      },
+      "code": "EF_20_05",
+      "priority": 1
+    },
+    {
+      "id": "ground-slabs",
+      "match": {
+        "all": [
+          {
+            "ruleId": [
+              "slabs",
+              "slab-concrete"
+            ]
+          },
+          {
+            "where": "storey_elevation <= 0 AND NOT (UNDER(material, \"finish\") OR UNDER(material, \"timber.flooring\"))"
+          }
+        ]
+      },
+      "code": "EF_20_05",
+      "priority": 1
+    },
+    {
+      "id": "frame",
+      "match": {
+        "ruleId": [
+          "steel-sections",
+          "linear-other",
+          "rebar"
+        ]
+      },
+      "code": "EF_20_10"
+    },
+    {
+      "id": "walls",
+      "match": {
+        "tag": "wall"
+      },
+      "code": "EF_25_10"
+    },
+    {
+      "id": "openings",
+      "match": {
+        "ruleId": [
+          "windows",
+          "doors"
+        ]
+      },
+      "code": "EF_25_30"
+    },
+    {
+      "id": "railings",
+      "match": {
+        "ruleId": "railings"
+      },
+      "code": "EF_25_55"
+    },
+    {
+      "id": "roofs",
+      "match": {
+        "ruleId": "roofs"
+      },
+      "code": "EF_30_10"
+    },
+    {
+      "id": "floors",
+      "match": {
+        "ruleId": [
+          "slabs",
+          "slab-concrete"
+        ]
+      },
+      "code": "EF_30_20"
+    },
+    {
+      "id": "coverings",
+      "match": {
+        "ruleId": "coverings"
+      },
+      "code": {
+        "lookup": "predefined_type",
+        "table": {
+          "CEILING": "EF_30_25",
+          "FLOORING": "EF_30_20",
+          "CLADDING": "EF_25_10",
+          "ROOFING": "EF_30_10"
+        },
+        "default": "EF_30_25"
+      }
+    },
+    {
+      "id": "stairs",
+      "match": {
+        "ruleId": "stairs"
+      },
+      "code": "EF_35_10"
+    },
+    {
+      "id": "furniture",
+      "match": {
+        "ruleId": "furniture"
+      },
+      "code": "EF_40_30"
+    },
+    {
+      "id": "mep-items",
+      "match": {
+        "ruleId": "mep-items"
+      },
+      "code": "EF_40_40"
+    },
+    {
+      "id": "pipes",
+      "match": {
+        "ruleId": "pipes"
+      },
+      "code": {
+        "lookup": "ifc_class",
+        "table": {
+          "IfcPipeSegment": "EF_55",
+          "IfcDuctSegment": "EF_65",
+          "IfcCableSegment": "EF_70",
+          "IfcCableCarrierSegment": "EF_70"
+        }
+      }
+    },
+    {
+      "id": "derived-follow-source",
+      "match": {
+        "tag": [
+          "formwork",
+          "rebar",
+          "finish"
+        ]
+      },
+      "code": {
+        "fromSource": true
+      },
+      "priority": -1
+    }
+  ],
+  "onUnmapped": "flag",
+  "onConflict": "first"
+}

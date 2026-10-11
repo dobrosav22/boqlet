@@ -1,0 +1,2024 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/BoqResult",
+  "definitions": {
+    "BoqResult": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "needs_input"
+          ]
+        },
+        "log": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LogEntry"
+          },
+          "description": "Ordered calculation log (see LogEntry)."
+        },
+        "ruleSet": {
+          "$ref": "#/definitions/RuleSet",
+          "description": "Flattened rule set actually used (snapshot, for reproducibility)."
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/BoqLine"
+          }
+        },
+        "questions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Question"
+          },
+          "description": "All questions; `blocking` ones are why status is \"needs_input\"."
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Warning"
+          }
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Check"
+          },
+          "description": "Verification checks from parsing (volume mismatches, overlaps, ...)."
+        },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "elements": {
+              "type": "number"
+            },
+            "measuredElements": {
+              "type": "number"
+            },
+            "excludedElements": {
+              "type": "number"
+            },
+            "unmatchedElements": {
+              "type": "number"
+            },
+            "lines": {
+              "type": "number"
+            },
+            "flaggedLines": {
+              "type": "number"
+            },
+            "decisionsApplied": {
+              "type": "number"
+            },
+            "durationMs": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "elements",
+            "measuredElements",
+            "excludedElements",
+            "unmatchedElements",
+            "lines",
+            "flaggedLines",
+            "decisionsApplied",
+            "durationMs"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "status",
+        "log",
+        "ruleSet",
+        "lines",
+        "questions",
+        "warnings",
+        "checks",
+        "stats"
+      ],
+      "additionalProperties": false
+    },
+    "LogEntry": {
+      "type": "object",
+      "properties": {
+        "seq": {
+          "type": "number"
+        },
+        "stage": {
+          "$ref": "#/definitions/LogStage"
+        },
+        "level": {
+          "type": "string",
+          "enum": [
+            "info",
+            "detail",
+            "warning"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "ruleId": {
+          "type": "string"
+        },
+        "lineKey": {
+          "type": "string"
+        },
+        "guid": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "seq",
+        "stage",
+        "level",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "LogStage": {
+      "type": "string",
+      "enum": [
+        "parse",
+        "names",
+        "measure",
+        "match",
+        "quantity",
+        "derived",
+        "manual",
+        "classify",
+        "decision",
+        "summary"
+      ],
+      "description": "Calculation log: an ordered, human-readable record of what the engine did. Meant for developers and for users checking a number; not a debug dump."
+    },
+    "RuleSet": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "meta": {
+          "$ref": "#/definitions/RuleSetMeta"
+        },
+        "defaults": {
+          "$ref": "#/definitions/RuleSetDefaults"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Param"
+          },
+          "description": "The slots. A standard is mostly a set of values for these."
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ItemRule"
+          }
+        },
+        "derived": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DerivedRule"
+          }
+        },
+        "manual": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ManualItem"
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "name",
+        "version",
+        "meta",
+        "params",
+        "items"
+      ],
+      "additionalProperties": false,
+      "description": "OurRuleType: a complete, self-contained rule set."
+    },
+    "RuleSetMeta": {
+      "type": "object",
+      "properties": {
+        "basedOn": {
+          "type": "string",
+          "description": "Free text, e.g. \"Based on our reading of NRM2\". Not a compliance claim."
+        },
+        "author": {
+          "type": "string"
+        },
+        "locale": {
+          "type": "string"
+        },
+        "unitSystem": {
+          "type": "string",
+          "enum": [
+            "metric",
+            "imperial"
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "chain": {
+          "type": "string",
+          "description": "Set by the engine on flattened snapshots: \"as-modelled -> demo-tweaked\"."
+        }
+      },
+      "required": [
+        "unitSystem"
+      ],
+      "additionalProperties": false
+    },
+    "RuleSetDefaults": {
+      "type": "object",
+      "properties": {
+        "rounding": {
+          "$ref": "#/definitions/Rounding"
+        },
+        "onMissing": {
+          "$ref": "#/definitions/OnMissing"
+        },
+        "breakdown": {
+          "$ref": "#/definitions/Breakdown"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Rounding": {
+      "type": "object",
+      "properties": {
+        "step": {
+          "$ref": "#/definitions/Value%3Cnumber%3E"
+        },
+        "mode": {
+          "$ref": "#/definitions/Value%3C(%22nearest%22%7C%22up%22%7C%22down%22)%3E"
+        },
+        "at": {
+          "$ref": "#/definitions/Value%3C(%22element%22%7C%22line%22)%3E",
+          "description": "Round each element before summing, or the summed line."
+        }
+      },
+      "required": [
+        "step",
+        "mode",
+        "at"
+      ],
+      "additionalProperties": false
+    },
+    "Value<number>": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "$ref": "#/definitions/ParamRef"
+        }
+      ],
+      "description": "A literal value, or a slot to be filled from `params`."
+    },
+    "ParamRef": {
+      "type": "object",
+      "properties": {
+        "param": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "param"
+      ],
+      "additionalProperties": false,
+      "description": "Reference to a named parameter in `RuleSet.params`."
+    },
+    "Value<(\"nearest\"|\"up\"|\"down\")>": {
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "nearest"
+        },
+        {
+          "type": "string",
+          "const": "up"
+        },
+        {
+          "type": "string",
+          "const": "down"
+        },
+        {
+          "$ref": "#/definitions/ParamRef"
+        }
+      ],
+      "description": "A literal value, or a slot to be filled from `params`."
+    },
+    "Value<(\"element\"|\"line\")>": {
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "element"
+        },
+        {
+          "type": "string",
+          "const": "line"
+        },
+        {
+          "$ref": "#/definitions/ParamRef"
+        }
+      ],
+      "description": "A literal value, or a slot to be filled from `params`."
+    },
+    "OnMissing": {
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "flag"
+        },
+        {
+          "type": "string",
+          "const": "skip"
+        },
+        {
+          "type": "string",
+          "const": "ask"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "default": {
+              "$ref": "#/definitions/Value%3Cnumber%3E"
+            }
+          },
+          "required": [
+            "default"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "What happens when a needed value is missing on an element."
+    },
+    "Breakdown": {
+      "type": "string",
+      "enum": [
+        "element",
+        "layer",
+        "face",
+        "material",
+        "child"
+      ],
+      "description": "What one rule produces lines from."
+    },
+    "Param": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "number"
+            },
+            "value": {
+              "type": "number"
+            },
+            "unit": {
+              "$ref": "#/definitions/Unit"
+            },
+            "label": {
+              "type": "string"
+            },
+            "help": {
+              "type": "string"
+            },
+            "min": {
+              "type": "number"
+            },
+            "max": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "value",
+            "label"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "choice"
+            },
+            "value": {
+              "type": "string"
+            },
+            "options": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "label": {
+              "type": "string"
+            },
+            "help": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value",
+            "options",
+            "label"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            },
+            "value": {
+              "type": "boolean"
+            },
+            "label": {
+              "type": "string"
+            },
+            "help": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value",
+            "label"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "text"
+            },
+            "value": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "help": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value",
+            "label"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "A named, editable slot. This is what a standard \"fills in\"."
+    },
+    "Unit": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string",
+          "enum": [
+            "nr",
+            "item",
+            "sum",
+            "mm",
+            "m",
+            "km",
+            "m2",
+            "m3",
+            "kg",
+            "t",
+            "ft",
+            "ft2",
+            "ft3",
+            "yd2",
+            "yd3",
+            "lb",
+            "h"
+          ]
+        }
+      ]
+    },
+    "ItemRule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "family": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ElementFamily"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ElementFamily"
+              }
+            }
+          ],
+          "description": "Informative; also lets the editor offer only valid quantity kinds."
+        },
+        "match": {
+          "$ref": "#/definitions/Selector",
+          "description": "Which elements (or parts) this rule takes."
+        },
+        "parts": {
+          "type": "string",
+          "enum": [
+            "skip",
+            "include"
+          ],
+          "description": "Elements that are parts of an aggregate (a roof's slab, a stair's flights and railings) are skipped by default when some enabled rule measures the parent, to avoid counting twice. \"include\" measures them anyway (e.g. stair railings)."
+        },
+        "breakdown": {
+          "$ref": "#/definitions/Value%3CBreakdown%3E"
+        },
+        "partFilter": {
+          "$ref": "#/definitions/Expr",
+          "description": "Filter applied after breakdown, e.g. only layers with material = \"plasterboard\"."
+        },
+        "quantity": {
+          "$ref": "#/definitions/QuantitySpec",
+          "description": "How the quantity is measured."
+        },
+        "factor": {
+          "$ref": "#/definitions/Value%3Cnumber%3E",
+          "description": "Multiplier, e.g. allowance or overlap factor. Default 1."
+        },
+        "minimum": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "$ref": "#/definitions/Value%3Cnumber%3E"
+            },
+            "per": {
+              "$ref": "#/definitions/Value%3C(%22element%22%7C%22line%22)%3E"
+            }
+          },
+          "required": [
+            "value",
+            "per"
+          ],
+          "additionalProperties": false,
+          "description": "Minimum chargeable quantity per element or per line."
+        },
+        "rounding": {
+          "$ref": "#/definitions/Rounding"
+        },
+        "lineKey": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/SelectorField"
+              },
+              {
+                "$ref": "#/definitions/Expr"
+              }
+            ]
+          },
+          "description": "What splits elements into separate lines (same key = summed together)."
+        },
+        "bands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Band"
+          }
+        },
+        "description": {
+          "$ref": "#/definitions/Value%3CTemplate%3E",
+          "description": "Line text."
+        },
+        "claims": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Double-counting guard. Each element may be claimed once per claim name (e.g. \"structure\", \"finish_side_a\"). Two rules claiming the same name on the same element is a pre-flight warning."
+        },
+        "onMissing": {
+          "$ref": "#/definitions/OnMissing"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Free labels used by classification maps and grouping."
+        },
+        "enabled": {
+          "$ref": "#/definitions/Value%3Cboolean%3E",
+          "description": "Disable without deleting (useful in derived rule sets)."
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "match",
+        "quantity",
+        "description"
+      ],
+      "additionalProperties": false
+    },
+    "ElementFamily": {
+      "type": "string",
+      "enum": [
+        "linear",
+        "planar",
+        "volumetric",
+        "countable",
+        "reinforcement",
+        "assembly",
+        "space",
+        "void"
+      ]
+    },
+    "Selector": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "all": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Selector"
+              }
+            }
+          },
+          "required": [
+            "all"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "any": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Selector"
+              }
+            }
+          },
+          "required": [
+            "any"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "not": {
+              "$ref": "#/definitions/Selector"
+            }
+          },
+          "required": [
+            "not"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "field": {
+              "$ref": "#/definitions/SelectorField"
+            },
+            "op": {
+              "$ref": "#/definitions/SelectorOp"
+            },
+            "value": {
+              "$ref": "#/definitions/Value%3Cunknown%3E"
+            }
+          },
+          "required": [
+            "field",
+            "op"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "family": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/ElementFamily"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/ElementFamily"
+                  }
+                }
+              ]
+            }
+          },
+          "required": [
+            "family"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "ifcClass": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "includeSubtypes": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "ifcClass"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "expr": {
+              "$ref": "#/definitions/Expr"
+            }
+          },
+          "required": [
+            "expr"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "SelectorField": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/MeasuredField"
+        },
+        {
+          "type": "string",
+          "const": "ifc_class"
+        },
+        {
+          "type": "string",
+          "const": "predefined_type"
+        },
+        {
+          "type": "string",
+          "const": "type_name"
+        },
+        {
+          "type": "string",
+          "const": "family"
+        },
+        {
+          "type": "string",
+          "const": "family_name"
+        },
+        {
+          "type": "string",
+          "const": "material"
+        },
+        {
+          "type": "string",
+          "const": "element_type"
+        },
+        {
+          "type": "string",
+          "const": "space_type"
+        },
+        {
+          "type": "string",
+          "const": "discipline"
+        },
+        {
+          "type": "string",
+          "const": "storey"
+        },
+        {
+          "type": "string",
+          "const": "space"
+        },
+        {
+          "type": "string",
+          "const": "zone"
+        },
+        {
+          "type": "string",
+          "const": "status"
+        },
+        {
+          "type": "string",
+          "const": "is_external"
+        },
+        {
+          "type": "string",
+          "const": "load_bearing"
+        },
+        {
+          "type": "string",
+          "const": "system"
+        },
+        {
+          "type": "string",
+          "const": "profile"
+        },
+        {
+          "type": "string",
+          "const": "nominal_size"
+        },
+        {
+          "type": "string",
+          "const": "tag"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "MeasuredField": {
+      "type": "string",
+      "enum": [
+        "storey_elevation",
+        "length",
+        "width",
+        "height",
+        "thickness",
+        "depth",
+        "diameter",
+        "cross_section_area",
+        "slope",
+        "elevation_base",
+        "elevation_top",
+        "profile_girth",
+        "gross_area",
+        "net_area",
+        "footprint_area",
+        "developed_area",
+        "gross_volume",
+        "net_volume",
+        "perimeter",
+        "mass",
+        "nominal_mass_per_length",
+        "density",
+        "bar_diameter",
+        "bar_count",
+        "bar_length",
+        "insulation_thickness",
+        "connection_count"
+      ],
+      "description": "Numeric fields rules may use as variables in formulas, selectors and bands. Written out explicitly so the JSON Schema (for the Python engine) can list them; the check below fails to compile if this list drifts from MeasuredElement."
+    },
+    "SelectorOp": {
+      "type": "string",
+      "enum": [
+        "eq",
+        "neq",
+        "in",
+        "not_in",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "between",
+        "contains",
+        "starts_with",
+        "matches",
+        "exists",
+        "missing",
+        "under"
+      ]
+    },
+    "Value<unknown>": {
+      "anyOf": [
+        {},
+        {
+          "$ref": "#/definitions/ParamRef"
+        }
+      ],
+      "description": "A literal value, or a slot to be filled from `params`."
+    },
+    "Expr": {
+      "type": "string",
+      "description": "A formula in the small, safe expression language.\n\nGrammar (evaluated only by the engine, never by `eval`):   literals      12  0.5  \"text\"  true  false   operators     + - * /  ( )  = != > >= < <=  AND OR NOT   functions     IF(c,a,b)  MIN(a,b,..)  MAX(a,b,..)  ROUND(x,step)  CEIL(x,step)                 FLOOR(x,step)  ABS(x)  SQRT(x)  PI()  COALESCE(a,b,..)                 UNDER(term, \"concrete\")   true if a dictionary term is that term or beneath it   variables     any MeasuredField           e.g. net_area, thickness, length                 props[\"Pset_WallCommon.FireRating\"]                 p.<param>                   e.g. p.opening_threshold                 src.<field> / src.qty       (derived rules only: the source element / line)   aggregates    SUM | COUNT | MIN | MAX | AVG over a collection, with optional WHERE:                   SUM(openings.area WHERE area > p.opening_threshold)                   SUM(layers.volume WHERE material = \"concrete\")                   COUNT(openings WHERE kind = \"door\")                   SUM(faces.net_area WHERE side = \"a\")                 collections: openings, layers, faces, children"
+    },
+    "Value<Breakdown>": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Breakdown"
+        },
+        {
+          "$ref": "#/definitions/ParamRef"
+        }
+      ],
+      "description": "A literal value, or a slot to be filled from `params`."
+    },
+    "QuantitySpec": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "count"
+            },
+            "unit": {
+              "$ref": "#/definitions/Unit"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "length"
+            },
+            "basis": {
+              "$ref": "#/definitions/Value%3CLengthBasis%3E"
+            },
+            "deductions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/DeductionRule"
+              }
+            },
+            "unit": {
+              "$ref": "#/definitions/Unit"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "area"
+            },
+            "surface": {
+              "$ref": "#/definitions/Value%3CAreaSurface%3E"
+            },
+            "start": {
+              "$ref": "#/definitions/Value%3C(%22gross%22%7C%22net%22)%3E",
+              "description": "Gross ignores openings unless `deductions` say otherwise."
+            },
+            "deductions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/DeductionRule"
+              }
+            },
+            "unit": {
+              "$ref": "#/definitions/Unit"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "volume"
+            },
+            "start": {
+              "$ref": "#/definitions/Value%3C(%22gross%22%7C%22net%22)%3E"
+            },
+            "deductions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/DeductionRule"
+              }
+            },
+            "unit": {
+              "$ref": "#/definitions/Unit"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "mass"
+            },
+            "basis": {
+              "$ref": "#/definitions/Value%3CMassBasis%3E"
+            },
+            "density": {
+              "$ref": "#/definitions/Value%3Cnumber%3E"
+            },
+            "unit": {
+              "$ref": "#/definitions/Unit"
+            }
+          },
+          "required": [
+            "kind",
+            "basis"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "perimeter"
+            },
+            "unit": {
+              "$ref": "#/definitions/Unit"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "choose"
+            },
+            "pick": {
+              "$ref": "#/definitions/Value%3Cstring%3E"
+            },
+            "options": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/QuantitySpec"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "pick",
+            "options"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "when"
+            },
+            "if": {
+              "$ref": "#/definitions/Expr"
+            },
+            "then": {
+              "$ref": "#/definitions/QuantitySpec"
+            },
+            "else": {
+              "$ref": "#/definitions/QuantitySpec"
+            }
+          },
+          "required": [
+            "kind",
+            "if",
+            "then",
+            "else"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "formula"
+            },
+            "expr": {
+              "$ref": "#/definitions/Expr"
+            },
+            "unit": {
+              "$ref": "#/definitions/Unit"
+            }
+          },
+          "required": [
+            "kind",
+            "expr",
+            "unit"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "The quantity specification. A discriminated union by measurement kind, plus the two structural slots (`choose`, `when`) that let standards differ in the\n*way* of measuring, and the `formula` safety valve."
+    },
+    "Value<LengthBasis>": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/LengthBasis"
+        },
+        {
+          "$ref": "#/definitions/ParamRef"
+        }
+      ],
+      "description": "A literal value, or a slot to be filled from `params`."
+    },
+    "LengthBasis": {
+      "type": "string",
+      "enum": [
+        "axis",
+        "overall",
+        "clear",
+        "centreline",
+        "girth",
+        "perimeter"
+      ],
+      "description": "Which dimension of a linear element is measured."
+    },
+    "DeductionRule": {
+      "type": "object",
+      "properties": {
+        "what": {
+          "type": "string",
+          "enum": [
+            "openings",
+            "doors",
+            "windows",
+            "voids",
+            "embedded",
+            "recesses"
+          ],
+          "description": "What is deducted."
+        },
+        "mode": {
+          "$ref": "#/definitions/Value%3CDeductionMode%3E"
+        },
+        "threshold": {
+          "$ref": "#/definitions/Value%3Cnumber%3E",
+          "description": "Threshold value, compared using `compareBy`."
+        },
+        "compareBy": {
+          "$ref": "#/definitions/Value%3C(%22area%22%7C%22width%22%7C%22height%22%7C%22length%22%7C%22volume%22)%3E"
+        },
+        "addReveals": {
+          "$ref": "#/definitions/Value%3Cboolean%3E",
+          "description": "Add reveal / jamb surfaces back when an opening is deducted."
+        },
+        "where": {
+          "$ref": "#/definitions/Expr",
+          "description": "Restrict which openings this rule applies to."
+        }
+      },
+      "required": [
+        "what",
+        "mode"
+      ],
+      "additionalProperties": false
+    },
+    "Value<DeductionMode>": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/DeductionMode"
+        },
+        {
+          "$ref": "#/definitions/ParamRef"
+        }
+      ],
+      "description": "A literal value, or a slot to be filled from `params`."
+    },
+    "DeductionMode": {
+      "type": "string",
+      "enum": [
+        "none",
+        "all",
+        "over_threshold",
+        "excess_only",
+        "per_element_sum"
+      ],
+      "description": "How openings / voids / embedded parts are treated. Covers the common patterns across measurement standards without encoding any particular one."
+    },
+    "Value<(\"area\"|\"width\"|\"height\"|\"length\"|\"volume\")>": {
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "area"
+        },
+        {
+          "type": "string",
+          "const": "width"
+        },
+        {
+          "type": "string",
+          "const": "height"
+        },
+        {
+          "type": "string",
+          "const": "length"
+        },
+        {
+          "type": "string",
+          "const": "volume"
+        },
+        {
+          "$ref": "#/definitions/ParamRef"
+        }
+      ],
+      "description": "A literal value, or a slot to be filled from `params`."
+    },
+    "Value<boolean>": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/ParamRef"
+        }
+      ],
+      "description": "A literal value, or a slot to be filled from `params`."
+    },
+    "Value<AreaSurface>": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/AreaSurface"
+        },
+        {
+          "$ref": "#/definitions/ParamRef"
+        }
+      ],
+      "description": "A literal value, or a slot to be filled from `params`."
+    },
+    "AreaSurface": {
+      "type": "string",
+      "enum": [
+        "main",
+        "side_a",
+        "side_b",
+        "both",
+        "larger",
+        "smaller",
+        "mean",
+        "top",
+        "bottom",
+        "edges",
+        "footprint",
+        "developed"
+      ],
+      "description": "Which surface of a planar element is measured."
+    },
+    "Value<(\"gross\"|\"net\")>": {
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "gross"
+        },
+        {
+          "type": "string",
+          "const": "net"
+        },
+        {
+          "$ref": "#/definitions/ParamRef"
+        }
+      ],
+      "description": "A literal value, or a slot to be filled from `params`."
+    },
+    "Value<MassBasis>": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/MassBasis"
+        },
+        {
+          "$ref": "#/definitions/ParamRef"
+        }
+      ],
+      "description": "A literal value, or a slot to be filled from `params`."
+    },
+    "MassBasis": {
+      "type": "string",
+      "enum": [
+        "nominal_per_length",
+        "volume_density",
+        "reported"
+      ],
+      "description": "How a mass is obtained."
+    },
+    "Value<string>": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/definitions/ParamRef"
+        }
+      ],
+      "description": "A literal value, or a slot to be filled from `params`."
+    },
+    "Band": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "$ref": "#/definitions/MeasuredField"
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Value%3Cnumber%3E"
+          }
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "field",
+        "edges"
+      ],
+      "additionalProperties": false,
+      "description": "Split lines into bands by a numeric field, e.g. work above 3.5 m height."
+    },
+    "Value<Template>": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Template"
+        },
+        {
+          "$ref": "#/definitions/ParamRef"
+        }
+      ],
+      "description": "A literal value, or a slot to be filled from `params`."
+    },
+    "Template": {
+      "type": "string",
+      "description": "Template text with {placeholders}: any MeasuredField, p.<param>, or {expr:...}."
+    },
+    "DerivedRule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "from": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Source item rules this derives from."
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "element",
+            "line"
+          ],
+          "description": "\"element\": evaluated per source element (src.* = that element's measured fields). \"line\":    evaluated per source BoQ line (src.qty = the line quantity)."
+        },
+        "where": {
+          "$ref": "#/definitions/Expr",
+          "description": "Optional narrowing of sources."
+        },
+        "quantity": {
+          "$ref": "#/definitions/Expr"
+        },
+        "unit": {
+          "$ref": "#/definitions/Unit"
+        },
+        "factor": {
+          "$ref": "#/definitions/Value%3Cnumber%3E"
+        },
+        "rounding": {
+          "$ref": "#/definitions/Rounding"
+        },
+        "lineKey": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/SelectorField"
+              },
+              {
+                "$ref": "#/definitions/Expr"
+              }
+            ]
+          },
+          "description": "Absent: one derived line per source line (keeps the source's split). Present: group all sources by these fields of the source; [] = a single line."
+        },
+        "description": {
+          "$ref": "#/definitions/Value%3CTemplate%3E"
+        },
+        "onMissing": {
+          "$ref": "#/definitions/OnMissing"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "enabled": {
+          "$ref": "#/definitions/Value%3Cboolean%3E"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "from",
+        "scope",
+        "quantity",
+        "unit",
+        "description"
+      ],
+      "additionalProperties": false
+    },
+    "ManualItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "preliminary",
+            "provisional_sum",
+            "lump_sum",
+            "daywork",
+            "other"
+          ]
+        },
+        "description": {
+          "$ref": "#/definitions/Value%3CTemplate%3E"
+        },
+        "unit": {
+          "$ref": "#/definitions/Unit"
+        },
+        "quantity": {
+          "$ref": "#/definitions/Value%3Cnumber%3E",
+          "description": "Empty = flagged line for the user to fill."
+        },
+        "amount": {
+          "$ref": "#/definitions/Value%3Cnumber%3E",
+          "description": "Provisional and lump sums may carry an amount instead of a quantity."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "enabled": {
+          "$ref": "#/definitions/Value%3Cboolean%3E"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "description",
+        "unit"
+      ],
+      "additionalProperties": false
+    },
+    "BoqLine": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "ruleId": {
+          "type": "string"
+        },
+        "ruleKind": {
+          "type": "string",
+          "enum": [
+            "item",
+            "derived",
+            "manual"
+          ]
+        },
+        "description": {
+          "type": "string"
+        },
+        "unit": {
+          "$ref": "#/definitions/Unit"
+        },
+        "quantity": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "source": {
+          "$ref": "#/definitions/LineSource"
+        },
+        "family": {
+          "$ref": "#/definitions/ElementFamily"
+        },
+        "keys": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "null"
+            ]
+          },
+          "description": "Values of the rule's lineKey fields for this line."
+        },
+        "trace": {
+          "type": "object",
+          "properties": {
+            "formula": {
+              "type": "string"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "elements": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "guid": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "note": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "guid",
+                  "quantity"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "sourceLine": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "formula",
+            "params",
+            "elements"
+          ],
+          "additionalProperties": false,
+          "description": "Why this number: the formula, the parameter values used, and every element's share."
+        },
+        "codes": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/LineCode"
+          }
+        },
+        "location": {
+          "type": "object",
+          "properties": {
+            "storey": {
+              "type": "string"
+            },
+            "storeys": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "key",
+        "ruleId",
+        "ruleKind",
+        "description",
+        "unit",
+        "quantity",
+        "source",
+        "keys",
+        "trace",
+        "codes",
+        "tags",
+        "notes"
+      ],
+      "additionalProperties": false
+    },
+    "LineSource": {
+      "type": "string",
+      "enum": [
+        "measured",
+        "derived",
+        "manual",
+        "flagged"
+      ],
+      "description": "Where a line's quantity comes from."
+    },
+    "LineCode": {
+      "type": "object",
+      "properties": {
+        "system": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "path": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "title"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Full path from the top level, used for grouping and subtotals."
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "decision",
+            "map",
+            "ifc",
+            "default"
+          ]
+        },
+        "mapRuleId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "system",
+        "code",
+        "title",
+        "path",
+        "source"
+      ],
+      "additionalProperties": false,
+      "description": "What each BoQ line carries per system (see engine.ts BoqLine.codes)."
+    },
+    "Question": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/QuestionKind"
+        },
+        "blocking": {
+          "type": "boolean",
+          "description": "Blocking questions stop the BoQ from being \"complete\"; others are informative."
+        },
+        "message": {
+          "type": "string"
+        },
+        "answer": {
+          "$ref": "#/definitions/AnswerType"
+        },
+        "guids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "field": {
+          "type": "string",
+          "description": "For unknown_name: the field and raw text."
+        },
+        "raw": {
+          "type": "string"
+        },
+        "occurrences": {
+          "type": "number"
+        },
+        "suggestion": {
+          "type": [
+            "string",
+            "number"
+          ],
+          "description": "What the engine would use if nobody answers."
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "blocking",
+        "message",
+        "answer"
+      ],
+      "additionalProperties": false
+    },
+    "QuestionKind": {
+      "type": "string",
+      "enum": [
+        "unknown_name",
+        "missing_data",
+        "unmatched",
+        "double_claim",
+        "unclassified",
+        "classification_conflict",
+        "contradiction",
+        "overlap"
+      ]
+    },
+    "AnswerType": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "term"
+            },
+            "category": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "number"
+            },
+            "unit": {
+              "$ref": "#/definitions/Unit"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "rule"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "code"
+            },
+            "system": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "system"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "choice"
+            },
+            "options": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "recommended": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "value",
+                  "label"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "options"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "What kind of answer a question expects; drives the UI control."
+    },
+    "Warning": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "guids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ruleId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "Check": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "code": {
+          "$ref": "#/definitions/CheckCode"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "elementIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "message": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Scalar"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "code",
+        "severity",
+        "elementIds",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "CheckCode": {
+      "type": "string",
+      "enum": [
+        "volume_mismatch",
+        "area_mismatch",
+        "inconsistent_winding",
+        "not_watertight",
+        "no_geometry",
+        "geometry_error",
+        "overlap",
+        "no_material",
+        "duplicate_material_name",
+        "flag_conflict",
+        "placeholder_value",
+        "no_quantities",
+        "unassigned_storey",
+        "proxy_element"
+      ]
+    },
+    "Scalar": {
+      "type": [
+        "string",
+        "number",
+        "boolean",
+        "null"
+      ],
+      "description": "ParsedModel — the reusable JSON produced from one IFC file (one model version).\n\nLayer 1 of 2:   ParsedModel       faithful snapshot of the IFC. No decisions, no dictionary,                     no adopted quantities. Reused by the rules pipeline, the 3D                     viewer, revision comparison, review questions and federation.   MeasuredElement   (measured.ts) derived FROM this, with names normalised and                     quantities adopted. Cheap to recompute; this layer is not.\n\nConventions   - Ids are IFC GlobalIds wherever the IFC has one (stable across versions,     used to match elements between revisions). Catalogue entries without a     GlobalId (materials, layer sets) get a deterministic id \"mat:<step id>\".   - All lengths, areas, volumes are converted to SI (m, m2, m3). The original     unit is recorded in `header.units`.   - Coordinates are world coordinates of the file (before any federation     alignment, which is a separate step).   - Heavy geometry (meshes) is NOT in this JSON. Elements point into a     separate geometry store (e.g. a .glb with one node per GlobalId)."
+    }
+  }
+}

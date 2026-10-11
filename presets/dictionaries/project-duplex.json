@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0",
+  "id": "project-duplex",
+  "name": "Duplex project answers",
+  "version": "1",
+  "layer": "project",
+  "entries": [
+    {
+      "id": "q-roofing-barrier",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "exact": "Roofing - Barrier"
+      },
+      "term": "membrane.root_barrier",
+      "source": "user",
+      "createdBy": "estimator",
+      "createdAt": "2026-10-09",
+      "note": "Green roof build-up: barrier is the root barrier"
+    },
+    {
+      "id": "q-ct-slab",
+      "field": [
+        "material",
+        "layer_material",
+        "type_name"
+      ],
+      "match": {
+        "exact": "CT"
+      },
+      "when": "ifc_class = \"IfcSlab\"",
+      "term": "concrete.screed",
+      "source": "user",
+      "createdBy": "estimator"
+    }
+  ]
+}

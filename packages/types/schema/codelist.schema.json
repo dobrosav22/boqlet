@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/CodeList",
+  "definitions": {
+    "CodeList": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "official",
+            "company",
+            "client",
+            "other"
+          ]
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "locale": {
+          "type": "string"
+        },
+        "licence": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            },
+            "attribution": {
+              "type": "string"
+            },
+            "redistributable": {
+              "type": "boolean",
+              "description": "May this list be shipped to other organisations?"
+            }
+          },
+          "required": [
+            "name",
+            "redistributable"
+          ],
+          "additionalProperties": false
+        },
+        "levels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names of hierarchy levels, top first, e.g. [\"Group\", \"Sub group\", \"Section\", \"Object\"]."
+        },
+        "separator": {
+          "type": "string",
+          "description": "Separator used to derive parents from codes, e.g. \"_\" (EF_25_10 -> EF_25)."
+        },
+        "codes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Code"
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "name",
+        "kind",
+        "codes"
+      ],
+      "additionalProperties": false
+    },
+    "Code": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "parent": {
+          "type": "string",
+          "description": "Parent code. Omit to derive it from `CodeList.separator`."
+        },
+        "level": {
+          "type": "number",
+          "description": "0 = top level. Omit to derive it."
+        },
+        "description": {
+          "type": "string"
+        },
+        "titles": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Translations of the title, by locale."
+        },
+        "deprecated": {
+          "type": "boolean"
+        },
+        "extra": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Free extra columns from the source, e.g. Uniclass \"NRM\" or \"NBS Code\"."
+        }
+      },
+      "required": [
+        "code",
+        "title"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

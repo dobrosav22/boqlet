@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "1.0",
+  "id": "standard-style-example",
+  "name": "Standard-style example",
+  "version": "0.1.0",
+  "extends": "as-modelled",
+  "meta": {
+    "basedOn": "Fill in: the standard you are encoding",
+    "locale": "en"
+  },
+  "params": {
+    "wall_opening_mode": {
+      "value": "over_threshold"
+    },
+    "wall_opening_threshold": {
+      "value": 0.5
+    },
+    "wall_add_reveals": {
+      "value": true
+    },
+    "masonry_volume_from": {
+      "value": 0.12
+    },
+    "slab_opening_mode": {
+      "value": "over_threshold"
+    },
+    "slab_opening_threshold": {
+      "value": 0.5
+    },
+    "deduct_embedded": {
+      "value": "over_threshold"
+    },
+    "window_measure": {
+      "value": "area"
+    },
+    "rebar_slab_kg_m3": {
+      "value": 100
+    },
+    "high_work_from": {
+      "type": "number",
+      "value": 3.5,
+      "unit": "m",
+      "label": "Separate line for work above this height"
+    },
+    "rebar_estimates": {
+      "value": true
+    }
+  },
+  "items": [
+    {
+      "id": "wall-layers",
+      "label": "Wall layers measured separately",
+      "family": "planar",
+      "match": {
+        "ifcClass": "IfcWall"
+      },
+      "breakdown": "layer",
+      "quantity": {
+        "kind": "area",
+        "surface": "main",
+        "start": "gross",
+        "deductions": [
+          {
+            "what": "openings",
+            "mode": {
+              "param": "wall_opening_mode"
+            },
+            "threshold": {
+              "param": "wall_opening_threshold"
+            },
+            "compareBy": "area"
+          }
+        ]
+      },
+      "lineKey": [
+        "element_type",
+        "material",
+        "thickness"
+      ],
+      "bands": [
+        {
+          "field": "height",
+          "edges": [
+            {
+              "param": "high_work_from"
+            }
+          ],
+          "labels": [
+            "normal height",
+            "above limit"
+          ]
+        }
+      ],
+      "description": "{material}, {thickness*1000} mm",
+      "claims": [
+        "layers"
+      ],
+      "rounding": {
+        "step": 0.01,
+        "mode": "up",
+        "at": "line"
+      },
+      "tags": [
+        "wall"
+      ],
+      "partFilter": "NOT UNDER(material, \"air_gap\")"
+    }
+  ],
+  "derived": [
+    {
+      "id": "formwork-walls",
+      "label": "Formwork to concrete walls",
+      "from": [
+        "wall-layers"
+      ],
+      "scope": "line",
+      "where": "UNDER(src.material, \"concrete\")",
+      "quantity": "2 * src.qty * p.formwork_factor",
+      "unit": "m2",
+      "description": "Formwork to walls, both faces",
+      "tags": [
+        "formwork"
+      ]
+    },
+    {
+      "id": "paint-walls",
+      "label": "Paint to plasterboard",
+      "from": [
+        "wall-layers"
+      ],
+      "scope": "line",
+      "where": "UNDER(src.material, \"board.plasterboard\")",
+      "quantity": "src.qty",
+      "unit": "m2",
+      "description": "Paint to plasterboard wall surfaces",
+      "tags": [
+        "finish"
+      ]
+    }
+  ],
+  "remove": [
+    "walls"
+  ]
+}

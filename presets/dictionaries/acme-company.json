@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "1.0",
+  "id": "acme-company",
+  "name": "ACME Ltd naming",
+  "version": "2026.1",
+  "layer": "company",
+  "locales": [
+    "en",
+    "sr"
+  ],
+  "terms": [
+    {
+      "id": "acme.wall.z25",
+      "category": "element_type",
+      "label": "ACME Z-25: 25 cm clay block wall",
+      "broader": "wall.external"
+    },
+    {
+      "id": "masonry.block.clay",
+      "category": "material",
+      "label": "Clay hollow block",
+      "broader": "masonry.block"
+    }
+  ],
+  "entries": [
+    {
+      "id": "acme-z25",
+      "field": "type_name",
+      "match": {
+        "regex": "^Z-?25\\b"
+      },
+      "term": "acme.wall.z25",
+      "source": "user",
+      "createdBy": "estimating lead"
+    },
+    {
+      "id": "acme-ct-covering",
+      "field": [
+        "material",
+        "layer_material",
+        "type_name"
+      ],
+      "match": {
+        "exact": "CT"
+      },
+      "when": "ifc_class = \"IfcCovering\"",
+      "term": "finish.ceramic_tile",
+      "source": "user",
+      "note": "Office abbreviation"
+    },
+    {
+      "id": "acme-porotherm",
+      "field": [
+        "material",
+        "layer_material",
+        "type_name"
+      ],
+      "match": {
+        "regex": "\\b(porotherm|wienerberger|giter)\\b"
+      },
+      "term": "masonry.block.clay",
+      "source": "user"
+    },
+    {
+      "id": "acme-kosul",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "startsWith": "Košul."
+      },
+      "term": "concrete.screed",
+      "source": "user"
+    }
+  ]
+}

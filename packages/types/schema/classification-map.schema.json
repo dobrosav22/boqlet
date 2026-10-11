@@ -1,0 +1,326 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/ClassificationMap",
+  "definitions": {
+    "ClassificationMap": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "codeList": {
+          "type": "string",
+          "description": "CodeList.id this map points into. Every code must exist in that list."
+        },
+        "extends": {
+          "type": "string",
+          "description": "Inherit rules from another map; rules override by id."
+        },
+        "remove": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "decision",
+              "map",
+              "ifc"
+            ]
+          },
+          "description": "Where codes may come from, in priority order:   \"decision\"  a user's answer for this project   \"map\"       the rules below   \"ifc\"       classification references already on the elements in the IFC"
+        },
+        "ifc": {
+          "type": "object",
+          "properties": {
+            "systemNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "IfcClassification names that count as this code list, e.g. [\"Uniclass\", \"Uniclass 2015\"]."
+            },
+            "agreement": {
+              "type": "string",
+              "enum": [
+                "all",
+                "majority",
+                "ask"
+              ],
+              "description": "A line has many elements; how to pick one code when they disagree."
+            }
+          },
+          "required": [
+            "systemNames",
+            "agreement"
+          ],
+          "additionalProperties": false
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MapRule"
+          }
+        },
+        "onUnmapped": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "flag"
+            },
+            {
+              "type": "string",
+              "const": "ask"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Line matched by no rule."
+        },
+        "onConflict": {
+          "type": "string",
+          "enum": [
+            "first",
+            "ask"
+          ],
+          "description": "Several rules with equal priority match."
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "name",
+        "version",
+        "codeList",
+        "rules",
+        "onUnmapped",
+        "onConflict"
+      ],
+      "additionalProperties": false
+    },
+    "MapRule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "match": {
+          "$ref": "#/definitions/LineMatch"
+        },
+        "code": {
+          "$ref": "#/definitions/CodeTarget"
+        },
+        "priority": {
+          "type": "number",
+          "description": "Higher wins when several rules match. Default 0; ties go to the first rule."
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "match",
+        "code"
+      ],
+      "additionalProperties": false
+    },
+    "LineMatch": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "ruleId": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            }
+          },
+          "required": [
+            "ruleId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tag": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            }
+          },
+          "required": [
+            "tag"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "manualKind": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            }
+          },
+          "required": [
+            "manualKind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "where": {
+              "$ref": "#/definitions/Expr"
+            }
+          },
+          "required": [
+            "where"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "all": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/LineMatch"
+              }
+            }
+          },
+          "required": [
+            "all"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "any": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/LineMatch"
+              }
+            }
+          },
+          "required": [
+            "any"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "not": {
+              "$ref": "#/definitions/LineMatch"
+            }
+          },
+          "required": [
+            "not"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "What a map rule can look at. Lines are matched, not elements, because classification labels lines. Fields available to `where`:   rule_id, rule_kind (\"item\" | \"derived\" | \"manual\"), manual_kind, tags,   unit, source (\"measured\" | \"derived\" | \"manual\" | \"flagged\"),   family, ifc_class, predefined_type, material, element_type (dictionary terms),   storey, storey_elevation, and keys.<lineKey field>   e.g. keys.type_name, keys.material, keys.thickness Fields with several values across the line's elements hold the most common one, and the engine warns when a map rule depends on such a mixed field: the fix is to add that field to the rule's lineKey so the line splits."
+    },
+    "Expr": {
+      "type": "string",
+      "description": "A formula in the small, safe expression language.\n\nGrammar (evaluated only by the engine, never by `eval`):   literals      12  0.5  \"text\"  true  false   operators     + - * /  ( )  = != > >= < <=  AND OR NOT   functions     IF(c,a,b)  MIN(a,b,..)  MAX(a,b,..)  ROUND(x,step)  CEIL(x,step)                 FLOOR(x,step)  ABS(x)  SQRT(x)  PI()  COALESCE(a,b,..)                 UNDER(term, \"concrete\")   true if a dictionary term is that term or beneath it   variables     any MeasuredField           e.g. net_area, thickness, length                 props[\"Pset_WallCommon.FireRating\"]                 p.<param>                   e.g. p.opening_threshold                 src.<field> / src.qty       (derived rules only: the source element / line)   aggregates    SUM | COUNT | MIN | MAX | AVG over a collection, with optional WHERE:                   SUM(openings.area WHERE area > p.opening_threshold)                   SUM(layers.volume WHERE material = \"concrete\")                   COUNT(openings WHERE kind = \"door\")                   SUM(faces.net_area WHERE side = \"a\")                 collections: openings, layers, faces, children"
+    },
+    "CodeTarget": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "fromSource": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "fromSource"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "lookup": {
+              "type": "string",
+              "description": "Line field to look up, e.g. \"material\" or \"keys.type_name\"."
+            },
+            "table": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "default": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "lookup",
+            "table"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "A fixed code, a code looked up from a line field, or (derived lines) the source line's code."
+    }
+  }
+}

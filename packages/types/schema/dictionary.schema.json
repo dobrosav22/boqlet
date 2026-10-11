@@ -1,0 +1,402 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/Dictionary",
+  "definitions": {
+    "Dictionary": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "enum": [
+            "global",
+            "company",
+            "project"
+          ]
+        },
+        "locales": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "terms": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Term"
+          },
+          "description": "Vocabulary. Usually in the global layer; companies may add their own terms."
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DictionaryEntry"
+          }
+        },
+        "extractors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Extractor"
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "name",
+        "version",
+        "layer",
+        "entries"
+      ],
+      "additionalProperties": false
+    },
+    "Term": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable canonical id, dotted for hierarchy: \"concrete\", \"concrete.in_situ\"."
+        },
+        "category": {
+          "$ref": "#/definitions/TermCategory"
+        },
+        "label": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "broader": {
+          "type": "string",
+          "description": "Parent term. Rules can match a term and everything under it (selector op \"under\")."
+        },
+        "props": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "number",
+              "string",
+              "boolean"
+            ]
+          },
+          "description": "Values rules may use, e.g. density for mass-by-volume. User-editable."
+        },
+        "refs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "system": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "uri": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "system",
+              "code"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Links to external dictionaries and classifications."
+        },
+        "deprecated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "category",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "TermCategory": {
+      "type": "string",
+      "enum": [
+        "material",
+        "product",
+        "element_type",
+        "space",
+        "system",
+        "other"
+      ]
+    },
+    "DictionaryEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DictField"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/DictField"
+              }
+            }
+          ]
+        },
+        "match": {
+          "$ref": "#/definitions/TextMatch"
+        },
+        "caseSensitive": {
+          "type": "boolean",
+          "description": "Default false."
+        },
+        "ignoreAccents": {
+          "type": "boolean",
+          "description": "Default true: \"beton\" also matches \"béton\", \"ploca\" matches \"ploča\"."
+        },
+        "when": {
+          "$ref": "#/definitions/Expr",
+          "description": "Only apply in this context. Variables: ifc_class, predefined_type, discipline, family, plus the raw field values. E.g. CT means ceramic tile only on IfcCovering: `ifc_class = \"IfcCovering\"`."
+        },
+        "term": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "number",
+          "description": "How sure we are. Seeds and user answers are 1. AI-confirmed keeps the score."
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "seed",
+            "user",
+            "import",
+            "ai_confirmed"
+          ]
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "field",
+        "match",
+        "term",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "DictField": {
+      "type": "string",
+      "description": "Which raw field an entry or extractor reads."
+    },
+    "TextMatch": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "exact": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            }
+          },
+          "required": [
+            "exact"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "startsWith": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            }
+          },
+          "required": [
+            "startsWith"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "contains": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            }
+          },
+          "required": [
+            "contains"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "regex": {
+              "type": "string"
+            },
+            "flags": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "regex"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Expr": {
+      "type": "string",
+      "description": "A formula in the small, safe expression language.\n\nGrammar (evaluated only by the engine, never by `eval`):   literals      12  0.5  \"text\"  true  false   operators     + - * /  ( )  = != > >= < <=  AND OR NOT   functions     IF(c,a,b)  MIN(a,b,..)  MAX(a,b,..)  ROUND(x,step)  CEIL(x,step)                 FLOOR(x,step)  ABS(x)  SQRT(x)  PI()  COALESCE(a,b,..)                 UNDER(term, \"concrete\")   true if a dictionary term is that term or beneath it   variables     any MeasuredField           e.g. net_area, thickness, length                 props[\"Pset_WallCommon.FireRating\"]                 p.<param>                   e.g. p.opening_threshold                 src.<field> / src.qty       (derived rules only: the source element / line)   aggregates    SUM | COUNT | MIN | MAX | AVG over a collection, with optional WHERE:                   SUM(openings.area WHERE area > p.opening_threshold)                   SUM(layers.volume WHERE material = \"concrete\")                   COUNT(openings WHERE kind = \"door\")                   SUM(faces.net_area WHERE side = \"a\")                 collections: openings, layers, faces, children"
+    },
+    "Extractor": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "field": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DictField"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/DictField"
+              }
+            }
+          ]
+        },
+        "regex": {
+          "type": "string",
+          "description": "ECMAScript regular expression with NAMED groups, e.g. \"(?<t>\\\\d+)\\\\s?mm\"."
+        },
+        "flags": {
+          "type": "string"
+        },
+        "outputs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "target": {
+                "$ref": "#/definitions/ExtractTarget"
+              },
+              "unit": {
+                "$ref": "#/definitions/Unit"
+              }
+            },
+            "required": [
+              "target"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "when": {
+          "$ref": "#/definitions/Expr"
+        },
+        "override": {
+          "type": "boolean",
+          "description": "Default false: never overwrite a value the model already has (geometry wins over names)."
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "field",
+        "regex",
+        "outputs"
+      ],
+      "additionalProperties": false
+    },
+    "ExtractTarget": {
+      "type": "string"
+    },
+    "Unit": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string",
+          "enum": [
+            "nr",
+            "item",
+            "sum",
+            "mm",
+            "m",
+            "km",
+            "m2",
+            "m3",
+            "kg",
+            "t",
+            "ft",
+            "ft2",
+            "ft3",
+            "yd2",
+            "yd3",
+            "lb",
+            "h"
+          ]
+        }
+      ]
+    }
+  }
+}

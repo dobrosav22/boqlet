@@ -1,0 +1,1553 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/ParsedModel",
+  "definitions": {
+    "ParsedModel": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "header": {
+          "$ref": "#/definitions/Header"
+        },
+        "spatial": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SpatialNode"
+          }
+        },
+        "catalogues": {
+          "$ref": "#/definitions/Catalogues"
+        },
+        "elements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ParsedElement"
+          }
+        },
+        "openings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ParsedOpening"
+          }
+        },
+        "relationships": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Relationship"
+          }
+        },
+        "verification": {
+          "$ref": "#/definitions/Verification"
+        },
+        "geometry": {
+          "$ref": "#/definitions/GeometryStore"
+        },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "elementCount": {
+              "type": "number"
+            },
+            "openingCount": {
+              "type": "number"
+            },
+            "spaceCount": {
+              "type": "number"
+            },
+            "byClass": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              }
+            }
+          },
+          "required": [
+            "elementCount",
+            "openingCount",
+            "spaceCount",
+            "byClass"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "header",
+        "spatial",
+        "catalogues",
+        "elements",
+        "openings",
+        "relationships",
+        "verification",
+        "stats"
+      ],
+      "additionalProperties": false
+    },
+    "Header": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "object",
+          "properties": {
+            "fileName": {
+              "type": "string"
+            },
+            "sizeBytes": {
+              "type": "number"
+            },
+            "sha256": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "fileName",
+            "sizeBytes",
+            "sha256"
+          ],
+          "additionalProperties": false
+        },
+        "ifcSchema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "enum": [
+                "IFC2X3",
+                "IFC4",
+                "IFC4X1",
+                "IFC4X2",
+                "IFC4X3"
+              ]
+            }
+          ]
+        },
+        "modelView": {
+          "type": "string",
+          "description": "Model view definition from the file header, e.g. \"CoordinationView_V2.0\"."
+        },
+        "authoringApp": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "vendor": {
+              "type": "string"
+            },
+            "fullName": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "originatingSystem": {
+          "type": "string"
+        },
+        "preprocessor": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "organization": {
+          "type": "string"
+        },
+        "fileTimestamp": {
+          "type": "string"
+        },
+        "project": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "longName": {
+              "type": "string"
+            },
+            "phase": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "units": {
+          "type": "object",
+          "properties": {
+            "length": {
+              "type": "string"
+            },
+            "area": {
+              "type": "string"
+            },
+            "volume": {
+              "type": "string"
+            },
+            "angle": {
+              "type": "string"
+            },
+            "mass": {
+              "type": "string"
+            },
+            "lengthToMetre": {
+              "type": "number",
+              "description": "Factor applied to convert file lengths to metres."
+            }
+          },
+          "required": [
+            "length",
+            "lengthToMetre"
+          ],
+          "additionalProperties": false
+        },
+        "georeference": {
+          "type": "object",
+          "properties": {
+            "latitude": {
+              "type": "number"
+            },
+            "longitude": {
+              "type": "number"
+            },
+            "elevation": {
+              "type": "number"
+            },
+            "trueNorthDeg": {
+              "type": "number"
+            },
+            "crs": {
+              "type": "string"
+            },
+            "mapConversion": {
+              "type": "object",
+              "properties": {
+                "eastings": {
+                  "type": "number"
+                },
+                "northings": {
+                  "type": "number"
+                },
+                "orthogonalHeight": {
+                  "type": "number"
+                },
+                "rotationDeg": {
+                  "type": "number"
+                },
+                "scale": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "eastings",
+                "northings",
+                "orthogonalHeight"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "disciplineGuess": {
+          "type": "string",
+          "enum": [
+            "architecture",
+            "structure",
+            "mep",
+            "infrastructure",
+            "mixed",
+            "unknown"
+          ],
+          "description": "Engine's guess; the user confirms it when adding the model to a project."
+        },
+        "parse": {
+          "type": "object",
+          "properties": {
+            "engineVersion": {
+              "type": "string"
+            },
+            "ifcopenshellVersion": {
+              "type": "string"
+            },
+            "parsedAt": {
+              "type": "string"
+            },
+            "durationMs": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "engineVersion",
+            "parsedAt",
+            "durationMs"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "source",
+        "ifcSchema",
+        "project",
+        "units",
+        "parse"
+      ],
+      "additionalProperties": false
+    },
+    "SpatialNode": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "project",
+            "site",
+            "building",
+            "storey",
+            "space",
+            "zone",
+            "facility",
+            "facility_part"
+          ]
+        },
+        "ifcClass": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "longName": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": "string",
+          "description": "Parent in the spatial tree (zones have none; see memberIds)."
+        },
+        "childIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "elevation": {
+          "type": "number"
+        },
+        "memberIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Zones group spaces."
+        },
+        "predefinedType": {
+          "type": "string"
+        },
+        "psets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/definitions/PropValue"
+            }
+          }
+        },
+        "quantities": {
+          "$ref": "#/definitions/ReportedQuantities"
+        },
+        "geometry": {
+          "$ref": "#/definitions/GeometryInfo"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "ifcClass",
+        "childIds",
+        "psets",
+        "quantities"
+      ],
+      "additionalProperties": false
+    },
+    "PropValue": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Scalar"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Scalar"
+          }
+        }
+      ]
+    },
+    "Scalar": {
+      "type": [
+        "string",
+        "number",
+        "boolean",
+        "null"
+      ],
+      "description": "ParsedModel — the reusable JSON produced from one IFC file (one model version).\n\nLayer 1 of 2:   ParsedModel       faithful snapshot of the IFC. No decisions, no dictionary,                     no adopted quantities. Reused by the rules pipeline, the 3D                     viewer, revision comparison, review questions and federation.   MeasuredElement   (measured.ts) derived FROM this, with names normalised and                     quantities adopted. Cheap to recompute; this layer is not.\n\nConventions   - Ids are IFC GlobalIds wherever the IFC has one (stable across versions,     used to match elements between revisions). Catalogue entries without a     GlobalId (materials, layer sets) get a deterministic id \"mat:<step id>\".   - All lengths, areas, volumes are converted to SI (m, m2, m3). The original     unit is recorded in `header.units`.   - Coordinates are world coordinates of the file (before any federation     alignment, which is a separate step).   - Heavy geometry (meshes) is NOT in this JSON. Elements point into a     separate geometry store (e.g. a .glb with one node per GlobalId)."
+    },
+    "ReportedQuantities": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "number"
+        }
+      },
+      "description": "Quantity sets exactly as reported in the file (BaseQuantities, Qto_*, authoring-tool sets)."
+    },
+    "GeometryInfo": {
+      "type": "object",
+      "properties": {
+        "representationTypes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "IFC representation types found, e.g. [\"SweptSolid\"], [\"Brep\"], [\"SurfaceModel\"]."
+        },
+        "hasBody": {
+          "type": "boolean"
+        },
+        "meshRef": {
+          "type": "string",
+          "description": "Node / object id in the geometry store, normally the GlobalId."
+        },
+        "bboxMin": {
+          "$ref": "#/definitions/Vec3"
+        },
+        "bboxMax": {
+          "$ref": "#/definitions/Vec3"
+        },
+        "centroid": {
+          "$ref": "#/definitions/Vec3"
+        },
+        "volume": {
+          "type": "number"
+        },
+        "surfaceArea": {
+          "type": "number"
+        },
+        "triangleCount": {
+          "type": "number"
+        },
+        "watertight": {
+          "type": "boolean"
+        },
+        "normalsRepaired": {
+          "type": "boolean",
+          "description": "Face winding was inconsistent and repaired before measuring."
+        },
+        "volumeBeforeRepair": {
+          "type": "number"
+        },
+        "error": {
+          "type": "string",
+          "description": "Set when geometry could not be generated."
+        }
+      },
+      "required": [
+        "representationTypes",
+        "hasBody"
+      ],
+      "additionalProperties": false,
+      "description": "Measured from the actual geometry by the engine. Independent of reported values."
+    },
+    "Vec3": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "Catalogues": {
+      "type": "object",
+      "properties": {
+        "types": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TypeObject"
+          }
+        },
+        "materials": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Material"
+          }
+        },
+        "layerSets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LayerSet"
+          }
+        },
+        "profiles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Profile"
+          }
+        },
+        "systems": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SystemDef"
+          }
+        },
+        "classifications": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ClassificationRef"
+          }
+        }
+      },
+      "required": [
+        "types",
+        "materials",
+        "layerSets",
+        "profiles",
+        "systems",
+        "classifications"
+      ],
+      "additionalProperties": false
+    },
+    "TypeObject": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "ifcClass": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "predefinedType": {
+          "type": "string"
+        },
+        "elementType": {
+          "type": "string"
+        },
+        "psets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/definitions/PropValue"
+            }
+          }
+        },
+        "materialRef": {
+          "$ref": "#/definitions/MaterialRef"
+        },
+        "instanceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "ifcClass",
+        "psets",
+        "instanceIds"
+      ],
+      "additionalProperties": false
+    },
+    "MaterialRef": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "single"
+            },
+            "materialId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "materialId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "list"
+            },
+            "materialIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "materialIds"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "layerSet"
+            },
+            "layerSetId": {
+              "type": "string"
+            },
+            "direction": {
+              "type": "string",
+              "enum": [
+                "AXIS1",
+                "AXIS2",
+                "AXIS3"
+              ]
+            },
+            "sense": {
+              "type": "string",
+              "enum": [
+                "POSITIVE",
+                "NEGATIVE"
+              ]
+            },
+            "offset": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "layerSetId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "profileSet"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "materialId": {
+                    "type": "string"
+                  },
+                  "profileId": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "items"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "constituentSet"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "materialId": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "fraction": {
+                    "type": "number"
+                  },
+                  "category": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "items"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "How an element's material is defined. Mirrors IFC's material options."
+    },
+    "Material": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "psets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/definitions/PropValue"
+            }
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "psets"
+      ],
+      "additionalProperties": false
+    },
+    "LayerSet": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "totalThickness": {
+          "type": "number"
+        },
+        "layers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "materialId": {
+                "type": "string"
+              },
+              "thickness": {
+                "type": "number"
+              },
+              "isVentilated": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": "string"
+              },
+              "category": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "thickness"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "id",
+        "totalThickness",
+        "layers"
+      ],
+      "additionalProperties": false
+    },
+    "Profile": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "ifcClass": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "area": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "ifcClass",
+        "params"
+      ],
+      "additionalProperties": false
+    },
+    "SystemDef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "ifcClass": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "predefinedType": {
+          "type": "string"
+        },
+        "memberIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "ifcClass",
+        "memberIds"
+      ],
+      "additionalProperties": false
+    },
+    "ClassificationRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "system": {
+          "type": "string"
+        },
+        "edition": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "ParsedElement": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "stepId": {
+          "type": "number"
+        },
+        "ifcClass": {
+          "type": "string"
+        },
+        "ifcClassBase": {
+          "type": "string"
+        },
+        "predefinedType": {
+          "type": "string"
+        },
+        "objectType": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "typeId": {
+          "type": "string"
+        },
+        "containerId": {
+          "type": "string"
+        },
+        "storeyId": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": "string"
+        },
+        "childIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "hostId": {
+          "type": "string"
+        },
+        "openingIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fillsOpeningId": {
+          "type": "string"
+        },
+        "systemIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "materialRef": {
+          "$ref": "#/definitions/MaterialRef"
+        },
+        "classificationIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Scalar"
+          },
+          "description": "Direct IFC attributes worth keeping, e.g. OverallWidth / OverallHeight on doors."
+        },
+        "psets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/definitions/PropValue"
+            }
+          }
+        },
+        "typePsets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/definitions/PropValue"
+            }
+          },
+          "description": "Properties inherited from the type, kept separately so origin is visible."
+        },
+        "quantities": {
+          "type": "object",
+          "properties": {
+            "reported": {
+              "$ref": "#/definitions/ReportedQuantities"
+            },
+            "geometry": {
+              "$ref": "#/definitions/GeometryInfo"
+            }
+          },
+          "required": [
+            "reported",
+            "geometry"
+          ],
+          "additionalProperties": false
+        },
+        "placement": {
+          "type": "object",
+          "properties": {
+            "origin": {
+              "$ref": "#/definitions/Vec3"
+            },
+            "xAxis": {
+              "$ref": "#/definitions/Vec3"
+            },
+            "zAxis": {
+              "$ref": "#/definitions/Vec3"
+            }
+          },
+          "required": [
+            "origin"
+          ],
+          "additionalProperties": false
+        },
+        "profileId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "stepId",
+        "ifcClass",
+        "ifcClassBase",
+        "childIds",
+        "openingIds",
+        "systemIds",
+        "classificationIds",
+        "attributes",
+        "psets",
+        "typePsets",
+        "quantities"
+      ],
+      "additionalProperties": false
+    },
+    "ParsedOpening": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "hostId": {
+          "type": "string"
+        },
+        "fillingId": {
+          "type": "string"
+        },
+        "fillingClass": {
+          "type": "string"
+        },
+        "predefinedType": {
+          "type": "string"
+        },
+        "width": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        },
+        "depth": {
+          "type": "number"
+        },
+        "area": {
+          "type": "number"
+        },
+        "volume": {
+          "type": "number"
+        },
+        "bboxMin": {
+          "$ref": "#/definitions/Vec3"
+        },
+        "bboxMax": {
+          "$ref": "#/definitions/Vec3"
+        },
+        "reported": {
+          "$ref": "#/definitions/ReportedQuantities"
+        }
+      },
+      "required": [
+        "id",
+        "reported"
+      ],
+      "additionalProperties": false,
+      "description": "IfcOpeningElement / voids: not physical, but needed for deductions."
+    },
+    "Relationship": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "contains"
+            },
+            "containerId": {
+              "type": "string"
+            },
+            "elementIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "containerId",
+            "elementIds"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "aggregates"
+            },
+            "parentId": {
+              "type": "string"
+            },
+            "childIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "parentId",
+            "childIds"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "nests"
+            },
+            "parentId": {
+              "type": "string"
+            },
+            "childIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "parentId",
+            "childIds"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "voids"
+            },
+            "hostId": {
+              "type": "string"
+            },
+            "openingId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "hostId",
+            "openingId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fills"
+            },
+            "openingId": {
+              "type": "string"
+            },
+            "elementId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "openingId",
+            "elementId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "defines_type"
+            },
+            "typeId": {
+              "type": "string"
+            },
+            "elementIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "typeId",
+            "elementIds"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "space_boundary"
+            },
+            "spaceId": {
+              "type": "string"
+            },
+            "elementId": {
+              "type": "string"
+            },
+            "physical": {
+              "type": "boolean"
+            },
+            "external": {
+              "type": "boolean"
+            },
+            "level": {
+              "type": "string",
+              "enum": [
+                "1st",
+                "2nd",
+                "2a",
+                "2b"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "spaceId",
+            "elementId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "connects"
+            },
+            "elementIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "connectionType": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "elementIds"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "assigned_to_system"
+            },
+            "systemId": {
+              "type": "string"
+            },
+            "elementIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "systemId",
+            "elementIds"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "assigned_to_group"
+            },
+            "groupId": {
+              "type": "string"
+            },
+            "elementIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "groupId",
+            "elementIds"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "covers"
+            },
+            "elementId": {
+              "type": "string"
+            },
+            "coveringIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "elementId",
+            "coveringIds"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "space_covered"
+            },
+            "spaceId": {
+              "type": "string"
+            },
+            "coveringIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "spaceId",
+            "coveringIds"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Verification": {
+      "type": "object",
+      "properties": {
+        "tolerance": {
+          "type": "number",
+          "description": "Relative tolerance used for reported vs geometry comparisons."
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Check"
+          }
+        },
+        "summary": {
+          "type": "object",
+          "properties": {
+            "volume_mismatch": {
+              "type": "number"
+            },
+            "area_mismatch": {
+              "type": "number"
+            },
+            "inconsistent_winding": {
+              "type": "number"
+            },
+            "not_watertight": {
+              "type": "number"
+            },
+            "no_geometry": {
+              "type": "number"
+            },
+            "geometry_error": {
+              "type": "number"
+            },
+            "overlap": {
+              "type": "number"
+            },
+            "no_material": {
+              "type": "number"
+            },
+            "duplicate_material_name": {
+              "type": "number"
+            },
+            "flag_conflict": {
+              "type": "number"
+            },
+            "placeholder_value": {
+              "type": "number"
+            },
+            "no_quantities": {
+              "type": "number"
+            },
+            "unassigned_storey": {
+              "type": "number"
+            },
+            "proxy_element": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "tolerance",
+        "checks",
+        "summary"
+      ],
+      "additionalProperties": false
+    },
+    "Check": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "code": {
+          "$ref": "#/definitions/CheckCode"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "elementIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "message": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Scalar"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "code",
+        "severity",
+        "elementIds",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "CheckCode": {
+      "type": "string",
+      "enum": [
+        "volume_mismatch",
+        "area_mismatch",
+        "inconsistent_winding",
+        "not_watertight",
+        "no_geometry",
+        "geometry_error",
+        "overlap",
+        "no_material",
+        "duplicate_material_name",
+        "flag_conflict",
+        "placeholder_value",
+        "no_quantities",
+        "unassigned_storey",
+        "proxy_element"
+      ]
+    },
+    "GeometryStore": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": [
+            "glb",
+            "fragments",
+            "obj"
+          ]
+        },
+        "uri": {
+          "type": "string",
+          "description": "Path or URL relative to the parsed model, e.g. \"geometry.glb\"."
+        },
+        "addressing": {
+          "type": "string",
+          "const": "node_name",
+          "description": "How meshRef values map into the store."
+        },
+        "worldCoordinates": {
+          "type": "boolean",
+          "const": true
+        }
+      },
+      "required": [
+        "format",
+        "uri",
+        "addressing",
+        "worldCoordinates"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

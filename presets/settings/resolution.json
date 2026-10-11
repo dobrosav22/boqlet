@@ -1,0 +1,34 @@
+{
+  "layerOrder": [
+    "project",
+    "company",
+    "global"
+  ],
+  "matchOrder": [
+    "exact",
+    "startsWith",
+    "regex",
+    "contains"
+  ],
+  "ai": {
+    "enabled": true,
+    "autoAcceptAbove": 1,
+    "suggestAbove": 0.6
+  },
+  "unresolved": "ask",
+  "askFor": [
+    {
+      "field": "material"
+    },
+    {
+      "field": "layer_material"
+    },
+    {
+      "field": "space_name"
+    },
+    {
+      "field": "type_name",
+      "when": "ifc_class = \"IfcWall\" OR ifc_class = \"IfcCovering\" OR ifc_class = \"IfcBuildingElementProxy\""
+    }
+  ]
+}

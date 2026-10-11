@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1.0",
+  "id": "demo-trades",
+  "name": "Demo: trade sections",
+  "kind": "company",
+  "version": "0.1.0",
+  "locale": "en",
+  "licence": { "name": "Example, free to use", "redistributable": true },
+  "levels": ["Trade"],
+  "codes": [
+    { "code": "00", "title": "Preliminaries" },
+    { "code": "01", "title": "Concrete works" },
+    { "code": "02", "title": "Masonry" },
+    { "code": "03", "title": "Drywall and partitions" },
+    { "code": "04", "title": "Carpentry and joinery" },
+    { "code": "05", "title": "Steelwork and metalwork" },
+    { "code": "06", "title": "Finishes" },
+    { "code": "07", "title": "Roofing" },
+    { "code": "08", "title": "Furniture" },
+    { "code": "99", "title": "Other" }
+  ]
+}

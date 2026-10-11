@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0",
+  "id": "acme-house-rules",
+  "name": "ACME Ltd house rules",
+  "version": "2026.1",
+  "extends": "standard-style-example",
+  "meta": {
+    "basedOn": "ACME internal practice",
+    "author": "ACME estimating team"
+  },
+  "params": {
+    "wall_opening_threshold": {
+      "value": 1
+    },
+    "formwork_factor": {
+      "value": 1.05
+    },
+    "include_furniture": {
+      "value": true
+    }
+  },
+  "derived": [
+    {
+      "id": "skirting",
+      "label": "Skirting from room perimeters",
+      "from": [
+        "coverings"
+      ],
+      "scope": "element",
+      "where": "src.predefined_type = \"FLOORING\"",
+      "quantity": "src.perimeter - SUM(src.openings.width WHERE kind = \"door\")",
+      "unit": "m",
+      "description": "Skirting to floor finishes",
+      "tags": [
+        "finish"
+      ]
+    }
+  ],
+  "manual": [
+    {
+      "id": "acme-cleaning",
+      "kind": "lump_sum",
+      "description": "Final builder's clean",
+      "unit": "sum"
+    }
+  ]
+}

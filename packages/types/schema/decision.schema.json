@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/Decision",
+  "definitions": {
+    "Decision": {
+      "type": "object",
+      "properties": {
+        "questionId": {
+          "type": "string",
+          "description": "Question.id. Ids are deterministic (built from content), so they stay stable across runs."
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "project",
+            "company"
+          ]
+        },
+        "answer": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "note": {
+          "type": "string"
+        },
+        "decidedBy": {
+          "type": "string"
+        },
+        "decidedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "questionId",
+        "scope",
+        "answer"
+      ],
+      "additionalProperties": false,
+      "description": "A user's answer to a Question. Decisions are stored per project (or promoted to company level) and re-applied on every run and every new model version, so the same question is never asked twice."
+    }
+  }
+}

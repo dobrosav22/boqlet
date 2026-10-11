@@ -1,0 +1,180 @@
+{
+  "schemaVersion": "1.0",
+  "id": "acme-cost-codes",
+  "name": "ACME cost codes",
+  "kind": "company",
+  "publisher": "ACME Ltd",
+  "version": "2026.1",
+  "locale": "en",
+  "licence": {
+    "name": "Internal",
+    "redistributable": false
+  },
+  "levels": [
+    "Section",
+    "Item"
+  ],
+  "separator": ".",
+  "codes": [
+    {
+      "code": "A",
+      "title": "Preliminaries"
+    },
+    {
+      "code": "A.01",
+      "title": "Site setup and welfare"
+    },
+    {
+      "code": "A.02",
+      "title": "Access and scaffolding"
+    },
+    {
+      "code": "A.03",
+      "title": "Cleaning"
+    },
+    {
+      "code": "B",
+      "title": "Substructure"
+    },
+    {
+      "code": "B.01",
+      "title": "Foundations"
+    },
+    {
+      "code": "B.02",
+      "title": "Ground slabs"
+    },
+    {
+      "code": "B.03",
+      "title": "Formwork to substructure"
+    },
+    {
+      "code": "C",
+      "title": "Frame"
+    },
+    {
+      "code": "C.01",
+      "title": "Structural steel"
+    },
+    {
+      "code": "C.02",
+      "title": "Concrete frame and slabs"
+    },
+    {
+      "code": "C.03",
+      "title": "Reinforcement"
+    },
+    {
+      "code": "C.04",
+      "title": "Formwork to frame"
+    },
+    {
+      "code": "C.05",
+      "title": "Timber and other members"
+    },
+    {
+      "code": "D",
+      "title": "Walls"
+    },
+    {
+      "code": "D.01",
+      "title": "External walls"
+    },
+    {
+      "code": "D.02",
+      "title": "Internal walls and partitions"
+    },
+    {
+      "code": "E",
+      "title": "Openings"
+    },
+    {
+      "code": "E.01",
+      "title": "Windows and rooflights"
+    },
+    {
+      "code": "E.02",
+      "title": "Doors"
+    },
+    {
+      "code": "F",
+      "title": "Roof"
+    },
+    {
+      "code": "F.01",
+      "title": "Roof build-ups and coverings"
+    },
+    {
+      "code": "G",
+      "title": "Floors and stairs"
+    },
+    {
+      "code": "G.01",
+      "title": "Upper floors"
+    },
+    {
+      "code": "G.02",
+      "title": "Stairs"
+    },
+    {
+      "code": "G.03",
+      "title": "Railings and balustrades"
+    },
+    {
+      "code": "H",
+      "title": "Finishes"
+    },
+    {
+      "code": "H.01",
+      "title": "Floor finishes"
+    },
+    {
+      "code": "H.02",
+      "title": "Ceiling finishes"
+    },
+    {
+      "code": "H.03",
+      "title": "Wall finishes and painting"
+    },
+    {
+      "code": "H.04",
+      "title": "Skirtings and trims"
+    },
+    {
+      "code": "J",
+      "title": "Fittings and furniture"
+    },
+    {
+      "code": "J.01",
+      "title": "Fittings and furniture"
+    },
+    {
+      "code": "K",
+      "title": "Services"
+    },
+    {
+      "code": "K.01",
+      "title": "Pipework, ductwork and cabling"
+    },
+    {
+      "code": "K.02",
+      "title": "Fittings, terminals and equipment"
+    },
+    {
+      "code": "X",
+      "title": "Provisional sums"
+    },
+    {
+      "code": "X.01",
+      "title": "Provisional sums"
+    },
+    {
+      "code": "Z",
+      "title": "Unclassified"
+    },
+    {
+      "code": "Z.99",
+      "title": "To be classified"
+    }
+  ]
+}

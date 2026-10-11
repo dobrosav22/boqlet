@@ -1,0 +1,30 @@
+{
+  "name": "ifc-boq",
+  "private": true,
+  "version": "0.1.0",
+  "description": "IFC -> Bill of Quantities. React web app + Python engine. Seed of the future FE/BE monorepo.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "postinstall": "node scripts/setup-engine.mjs",
+    "setup:engine": "node scripts/setup-engine.mjs --force",
+    "dev": "concurrently -k -n engine,web -c blue,green \"npm:dev:engine\" \"npm:dev:web\"",
+    "dev:engine": "node scripts/run-engine.mjs serve",
+    "dev:web": "npm run dev -w @ifc-boq/web",
+    "build": "npm run build -w @ifc-boq/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run typecheck && npm run test:engine",
+    "test:engine": "node scripts/run-engine.mjs test",
+    "boq": "node scripts/run-engine.mjs cli",
+    "codegen": "npm run codegen -w @ifc-boq/types",
+    "import:uniclass": "node scripts/run-engine.mjs import-uniclass"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

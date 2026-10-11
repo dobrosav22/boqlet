@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/ResolutionSettings",
+  "definitions": {
+    "ResolutionSettings": {
+      "type": "object",
+      "properties": {
+        "layerOrder": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "project",
+              "company",
+              "global"
+            ]
+          },
+          "description": "Default [\"project\", \"company\", \"global\"]: first layer with a match wins."
+        },
+        "matchOrder": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "exact",
+              "startsWith",
+              "regex",
+              "contains"
+            ]
+          },
+          "description": "Within a layer. Default [\"exact\", \"startsWith\", \"regex\", \"contains\"]."
+        },
+        "ai": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "autoAcceptAbove": {
+              "type": "number",
+              "description": "Above this: accept and log. Default 1 (never auto-accept)."
+            },
+            "suggestAbove": {
+              "type": "number",
+              "description": "Above this: ask with the suggestion pre-selected. Below: ask without one."
+            }
+          },
+          "required": [
+            "enabled"
+          ],
+          "additionalProperties": false,
+          "description": "AI suggestions for names no entry matches."
+        },
+        "unresolved": {
+          "type": "string",
+          "enum": [
+            "ask",
+            "flag",
+            "keep_raw"
+          ],
+          "description": "What to do with a name nothing resolves."
+        },
+        "askFor": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "$ref": "#/definitions/DictField"
+              },
+              "when": {
+                "$ref": "#/definitions/Expr"
+              }
+            },
+            "required": [
+              "field"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Which unresolved names are worth a question. Others keep their raw text (rules can still match raw names). A door's type name rarely needs a term; a wall's usually does. Default: every field, always."
+        }
+      },
+      "required": [
+        "unresolved"
+      ],
+      "additionalProperties": false
+    },
+    "DictField": {
+      "type": "string",
+      "description": "Which raw field an entry or extractor reads."
+    },
+    "Expr": {
+      "type": "string",
+      "description": "A formula in the small, safe expression language.\n\nGrammar (evaluated only by the engine, never by `eval`):   literals      12  0.5  \"text\"  true  false   operators     + - * /  ( )  = != > >= < <=  AND OR NOT   functions     IF(c,a,b)  MIN(a,b,..)  MAX(a,b,..)  ROUND(x,step)  CEIL(x,step)                 FLOOR(x,step)  ABS(x)  SQRT(x)  PI()  COALESCE(a,b,..)                 UNDER(term, \"concrete\")   true if a dictionary term is that term or beneath it   variables     any MeasuredField           e.g. net_area, thickness, length                 props[\"Pset_WallCommon.FireRating\"]                 p.<param>                   e.g. p.opening_threshold                 src.<field> / src.qty       (derived rules only: the source element / line)   aggregates    SUM | COUNT | MIN | MAX | AVG over a collection, with optional WHERE:                   SUM(openings.area WHERE area > p.opening_threshold)                   SUM(layers.volume WHERE material = \"concrete\")                   COUNT(openings WHERE kind = \"door\")                   SUM(faces.net_area WHERE side = \"a\")                 collections: openings, layers, faces, children"
+    }
+  }
+}

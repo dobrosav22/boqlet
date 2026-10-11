@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1.0",
+  "id": "demo-trades-map",
+  "name": "Demo: lines to trade sections",
+  "version": "0.1.0",
+  "codeList": "demo-trades",
+  "sources": ["decision", "map"],
+  "rules": [
+    { "id": "prelims", "match": { "manualKind": ["preliminary", "provisional_sum", "lump_sum"] }, "code": "00" },
+    { "id": "concrete", "match": { "any": [{ "where": "UNDER(material, \"concrete\")" }, { "tag": ["formwork", "concrete"] }] }, "code": "01", "priority": 2, "note": "Works for any rule set: decided by material term, not by rule id." },
+    { "id": "drywall", "match": { "where": "ifc_class = \"IfcWall\" AND (UNDER(element_type, \"wall.partition\") OR UNDER(element_type, \"wall.lining\"))" }, "code": "03", "priority": 1 },
+    { "id": "masonry", "match": { "where": "ifc_class = \"IfcWall\"" }, "code": "02" },
+    { "id": "steel", "match": { "where": "UNDER(material, \"metal.steel\") AND ifc_class != \"IfcWall\"" }, "code": "05", "priority": 1 },
+    { "id": "railings", "match": { "where": "ifc_class = \"IfcRailing\"" }, "code": "05" },
+    { "id": "joinery", "match": { "where": "ifc_class = \"IfcDoor\" OR ifc_class = \"IfcWindow\" OR UNDER(material, \"timber.lumber\") OR ifc_class = \"IfcStair\"" }, "code": "04" },
+    { "id": "finishes", "match": { "any": [{ "tag": "finish" }, { "where": "ifc_class = \"IfcCovering\" OR UNDER(material, \"finish\") OR UNDER(material, \"timber.flooring\")" }] }, "code": "06", "priority": 1 },
+    { "id": "roofing", "match": { "where": "ifc_class = \"IfcRoof\"" }, "code": "07" },
+    { "id": "furniture", "match": { "where": "ifc_class = \"IfcFurnishingElement\"" }, "code": "08" }
+  ],
+  "onUnmapped": { "code": "99" },
+  "onConflict": "first"
+}
