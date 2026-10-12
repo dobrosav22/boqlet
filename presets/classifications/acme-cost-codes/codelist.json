@@ -85,6 +85,10 @@
       "title": "Internal walls and partitions"
     },
     {
+      "code": "D.03",
+      "title": "Curtain walling, panels and cladding"
+    },
+    {
       "code": "E",
       "title": "Openings"
     },
@@ -149,6 +153,10 @@
       "title": "Fittings and furniture"
     },
     {
+      "code": "J.02",
+      "title": "Other components"
+    },
+    {
       "code": "K",
       "title": "Services"
     },
@@ -159,6 +167,26 @@
     {
       "code": "K.02",
       "title": "Fittings, terminals and equipment"
+    },
+    {
+      "code": "L",
+      "title": "Site and external works"
+    },
+    {
+      "code": "L.01",
+      "title": "Earthworks"
+    },
+    {
+      "code": "L.02",
+      "title": "Pavements, courses and markings"
+    },
+    {
+      "code": "L.03",
+      "title": "Kerbs, edgings and rails"
+    },
+    {
+      "code": "L.04",
+      "title": "Site, track and landscape components"
     },
     {
       "code": "X",

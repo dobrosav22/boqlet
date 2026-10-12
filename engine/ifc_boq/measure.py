@@ -9,12 +9,24 @@ Adoption policy (v0, constants below; documented in docs/05-engine.md):
               data/quantity_sources.json) when present, else geometry. If both exist and
               differ beyond TOLERANCE the reported value is still used (it is usually
               join-aware, see the Duplex party wall) and a warning is logged.
-  thickness   material layer set total, else reported, else smallest geometry extent.
+              Geometry volume is used only from a closed mesh (watertight, or closed with
+              T-junctions, see parse.closed_surface).
+  thickness   material layer set total, else reported, else smallest extent of the
+              oriented bounding box (world axes would give a rotated wall's diagonal).
   wall area   net_volume / thickness  (keeps area, volume and layers consistent;
               authoring-tool "Area" is often inconsistent), else reported area.
-  other area  reported area, else net_volume / thickness.
+  other area  reported area, else net_volume / thickness, else (open surface models
+              such as road markings) the one-sided mesh area.
   gross       net + area of the openings hosted by the element.
-  length      reported, else longest horizontal geometry extent.
+  length      reported, else the oriented box: columns and piles along the most vertical
+              axis, other linear elements the longest extent (sloped and rotated members),
+              others the longest horizontal extent.
+  aggregates  an element without its own body (a roof made of slabs) takes the sum of
+              its parts' adopted volume and planar area.
+  class       IFC2x3 generic distribution occurrences take the class their type names
+              (IfcFlowSegment + IfcDuctSegmentType -> IfcDuctSegment).
+  family      the nearest listed class up the schema's supertypes (families.ts).
+  discipline  "mep" for distribution elements, else the model's discipline guess.
   height      door/window OverallHeight, else reported, else vertical geometry extent.
   faces       walls: side a and b, each = main area (v0 approximation; no per-face
               geometry yet). Slabs/coverings: top and bottom.
@@ -29,6 +41,9 @@ import json
 import os
 import re
 from collections import defaultdict
+from functools import lru_cache
+
+import ifcopenshell.ifcopenshell_wrapper as ifc_schema
 
 from .expr import fmt
 from .log import CalcLog
@@ -39,11 +54,35 @@ FAMILIES = json.load(open(os.path.join(HERE, "data", "families.json"), encoding=
 SOURCES = json.load(open(os.path.join(HERE, "data", "quantity_sources.json"), encoding="utf-8"))
 TOLERANCE = 0.01
 PLANAR_VERTICAL = ("IfcWall", "IfcCurtainWall", "IfcPlate")
+LINEAR_VERTICAL = ("IfcColumn", "IfcPile")
 PHASE_MAP = {"new construction": "new", "new": "new", "existing": "existing"}
+# IFC2x3 distribution occurrences are generic; the specific class is on the type (IfcDuctSegmentType)
+GENERIC_2X3 = {"IfcFlowSegment", "IfcFlowFitting", "IfcFlowTerminal", "IfcFlowController", "IfcFlowMovingDevice",
+               "IfcFlowStorageDevice", "IfcFlowTreatmentDevice", "IfcEnergyConversionDevice",
+               "IfcDistributionControlElement", "IfcDistributionFlowElement", "IfcDistributionElement"}
 
 
-def family_of(cls: str) -> str:
-    return FAMILIES.get(cls, "countable")
+@lru_cache(maxsize=None)
+def ancestry(cls: str, schema: str = "IFC4X3_ADD2") -> tuple[str, ...]:
+    """cls and its supertypes, nearest first. Looks in the model's schema, then IFC4.3
+    (an IFC2x3 type can name an IFC4 class). Just (cls,) if no schema knows it."""
+    for name in (schema, {"IFC4X3": "IFC4X3_ADD2"}.get(schema), "IFC4X3_ADD2"):
+        if not name:
+            continue
+        try:
+            d = ifc_schema.schema_by_name(name).declaration_by_name(cls)
+        except Exception:
+            continue
+        out = []
+        while d is not None:
+            out.append(d.name())
+            d = d.supertype()
+        return tuple(out)
+    return (cls,)
+
+
+def family_of(cls: str, schema: str = "IFC4X3_ADD2") -> str:
+    return next((FAMILIES[c] for c in ancestry(cls, schema) if c in FAMILIES), "countable")
 
 
 def nominal_mass_per_length(profile: str | None) -> float | None:
@@ -95,16 +134,23 @@ def build(parsed: dict, rv: Resolver, log: CalcLog) -> tuple[list[dict], list[di
         if r["kind"] == "space_boundary":
             spaces_of[r["elementId"]].add(r["spaceId"])
     by_id = {e["id"]: e for e in parsed["elements"]}
-    discipline = parsed["header"].get("disciplineGuess", "unknown")
+    model_discipline = parsed["header"].get("disciplineGuess", "unknown")
+    schema = parsed["header"].get("ifcSchema", "IFC4")
     resolutions: list[dict] = []
     out: list[dict] = []
 
     for el in parsed["elements"]:
         cls = el["ifcClassBase"]
-        fam = family_of(cls)
-        ctx = {"ifc_class": cls, "predefined_type": el.get("predefinedType"), "discipline": discipline}
         notes: list[str] = []
         prov: dict[str, str] = {}
+        type_cls = types.get(el.get("typeId"), {}).get("ifcClass", "")
+        cls_note = None
+        if cls in GENERIC_2X3 and type_cls.endswith("Type") and type_cls[:-4] != cls:
+            cls_note = f"class {cls} taken as {type_cls[:-4]} (from its type {type_cls})"
+            cls = type_cls[:-4]
+        fam = family_of(cls, schema)
+        discipline = "mep" if "IfcDistributionElement" in ancestry(cls, schema) else model_discipline
+        ctx = {"ifc_class": cls, "predefined_type": el.get("predefinedType"), "discipline": discipline}
 
         # ---------- names (dictionary) ----------
         hints: dict = {}
@@ -163,6 +209,8 @@ def build(parsed: dict, rv: Resolver, log: CalcLog) -> tuple[list[dict], list[di
                 bmin = [min(k["bboxMin"][i] for k in ks) for i in range(3)]
                 bmax = [max(k["bboxMax"][i] for k in ks) for i in range(3)]
         ext = [bmax[i] - bmin[i] for i in range(3)] if bmin and bmax else None
+        obb, obb_axes = g.get("obbExtents"), g.get("obbAxes")
+        closed = g.get("closed", g.get("watertight", True))
 
         rep = {k: find_reported(el, k) for k in ("volume", "area", "length", "width", "height", "thickness", "perimeter", "mass")}
 
@@ -174,6 +222,9 @@ def build(parsed: dict, rv: Resolver, log: CalcLog) -> tuple[list[dict], list[di
         elif fam == "planar" and rep["thickness"][0]:
             thickness, prov["thickness"] = rep["thickness"][0], "reported"
             t_note = rep["thickness"][1]
+        elif fam == "planar" and obb:
+            thickness, prov["thickness"] = min(obb), "geometry"
+            t_note = "smallest oriented-box extent"
         elif fam == "planar" and ext:
             thickness = min(ext[2], min(ext[0], ext[1])) if cls not in PLANAR_VERTICAL else min(ext[0], ext[1])
             prov["thickness"] = "geometry"
@@ -193,11 +244,13 @@ def build(parsed: dict, rv: Resolver, log: CalcLog) -> tuple[list[dict], list[di
                     notes.append(f"geometry volume differs from reported by {diff:+.1%}; reported used")
                     log.warn("measure", f"{el.get('name') or el['id']}: geometry volume {fmt(round(geo_vol, 3))} m3 vs reported "
                              f"{fmt(round(net_volume, 3))} m3 ({diff:+.1%}). Using reported (join-aware).", guid=el["id"])
-        elif geo_vol and g.get("watertight", True) is not False:
+        elif geo_vol and closed is not False:
             net_volume, prov["net_volume"] = geo_vol, "geometry"
             v_note = f"{fmt(round(geo_vol, 4))} m3 from geometry"
+            if g.get("watertight") is False:
+                v_note += " (closed mesh with T-junctions)"
         elif geo_vol:
-            notes.append("mesh not watertight: geometric volume unreliable, not used")
+            notes.append("mesh not closed: geometric volume unreliable, not used")
 
         # openings hosted by this element
         ops = []
@@ -224,6 +277,9 @@ def build(parsed: dict, rv: Resolver, log: CalcLog) -> tuple[list[dict], list[di
             elif net_volume and thickness:
                 net_area, prov["net_area"] = net_volume / thickness, "derived"
                 a_note = f"net area = volume / thickness = {fmt(round(net_area, 3))} m2"
+            elif closed is False and "SurfaceModel" in g.get("representationTypes", []) and g.get("surfaceArea"):
+                net_area, prov["net_area"] = g["surfaceArea"], "geometry"
+                a_note = f"net area {fmt(round(net_area, 3))} m2 = one-sided area of the open surface model"
             if net_area is not None:
                 gross_area = net_area + open_area
                 prov["gross_area"] = "derived"
@@ -235,6 +291,12 @@ def build(parsed: dict, rv: Resolver, log: CalcLog) -> tuple[list[dict], list[di
         length = rep["length"][0]
         if length:
             prov["length"] = "reported"
+        elif obb and cls in LINEAR_VERTICAL:              # along the most vertical axis (a squat pier is wider than tall)
+            length, prov["length"] = max(zip(obb, obb_axes), key=lambda ea: abs(ea[1][2]))[0], "geometry"
+        elif obb and fam == "linear":
+            length, prov["length"] = max(obb), "geometry"
+        elif obb and any(abs(ax[2]) < 0.5 for ax in obb_axes):
+            length, prov["length"] = max(e for e, ax in zip(obb, obb_axes) if abs(ax[2]) < 0.5), "geometry"
         elif ext:
             length, prov["length"] = max(ext[0], ext[1]), "geometry"
         width = el["attributes"].get("OverallWidth") or rep["width"][0]
@@ -243,6 +305,18 @@ def build(parsed: dict, rv: Resolver, log: CalcLog) -> tuple[list[dict], list[di
             prov["height"] = "reported"
         elif ext:
             height, prov["height"] = ext[2], "geometry"
+
+        # perimeter: reported, else for a closed slab-like prism S = 2V/t + P*t  ->  P = (S - 2V/t) / t
+        # (includes the edges of openings, which is what edge formwork needs)
+        perimeter, p_note = rep["perimeter"][0], None
+        if perimeter:
+            prov["perimeter"] = "reported"
+        elif (fam == "planar" and cls not in PLANAR_VERTICAL and closed and g.get("volume") and g.get("surfaceArea")
+              and thickness and not g.get("bodyCount")):
+            p = (g["surfaceArea"] - 2 * g["volume"] / thickness) / thickness
+            if p > 0:
+                perimeter, prov["perimeter"] = p, "geometry"
+                p_note = f"perimeter = (surface {fmt(round(g['surfaceArea'], 3))} - 2 x volume / thickness) / thickness = {fmt(round(p, 3))} m"
 
         # profile & mass
         profile = hints.pop("profile", None)
@@ -297,7 +371,7 @@ def build(parsed: dict, rv: Resolver, log: CalcLog) -> tuple[list[dict], list[di
             "developed_area": net_area if cls not in PLANAR_VERTICAL else None,
             "faces": faces,
             "gross_volume": gross_volume, "net_volume": net_volume,
-            "perimeter": rep["perimeter"][0], "mass": rep["mass"][0],
+            "perimeter": perimeter, "mass": rep["mass"][0],
             "nominal_mass_per_length": nmpl, "density": density,
             "openings": ops, "layers": layers,
             "host_guid": el.get("hostId"), "parent_guid": el.get("parentId"), "child_guids": el.get("childIds", []),
@@ -310,7 +384,7 @@ def build(parsed: dict, rv: Resolver, log: CalcLog) -> tuple[list[dict], list[di
                 prov[k] = "derived"
         out.append(m)
 
-        bits = [f"{cls}"]
+        bits = [cls_note or cls]
         if mat:
             bits.append(f"material '{main_raw}' -> {mat['term'] or 'UNRESOLVED'}")
         if t_note:
@@ -319,9 +393,53 @@ def build(parsed: dict, rv: Resolver, log: CalcLog) -> tuple[list[dict], list[di
             bits.append(f"volume {v_note}")
         if a_note:
             bits.append(a_note)
+        if p_note:
+            bits.append(p_note)
         if ops:
             bits.append(f"{len(ops)} opening(s) {fmt(round(open_area, 3))} m2 -> gross {fmt(round(gross_area or 0, 3))} m2")
         if nmpl:
             bits.append(f"profile {profile}: {fmt(nmpl)} kg/m")
         log.detail("measure", f"{el.get('name') or el['id']}: " + "; ".join(bits), guid=el["id"])
+    roll_up_parts(out, by_id, log)
     return out, resolutions
+
+
+def roll_up_parts(out: list[dict], by_id: dict, log: CalcLog):
+    """An aggregate without its own body (IfcRoof made of slabs, IfcElementAssembly) takes its
+    quantities from its parts: volume = sum of the parts' adopted volumes (only if every part
+    with a body has one), area = sum of the planar parts' areas. Parts are still measurable on
+    their own; rules decide whether the whole or the parts are measured (rules.py)."""
+    by_guid = {m["guid"]: m for m in out}
+
+    def depth(m, seen=0):
+        p = by_guid.get(m.get("parent_guid"))
+        return 0 if p is None or seen > 20 else 1 + depth(p, seen + 1)
+
+    for m in sorted(out, key=lambda m: -depth(m)):              # nested assemblies: deepest first
+        if by_id[m["guid"]]["quantities"]["geometry"].get("hasBody") or not m["child_guids"]:
+            continue
+        parts = [by_guid[c] for c in m["child_guids"] if c in by_guid]
+        bodies = [p for p in parts if by_id[p["guid"]]["quantities"]["geometry"].get("hasBody") or p["child_guids"]]
+        bits = []
+        if bodies and all(p["net_volume"] is not None for p in bodies):
+            m["net_volume"] = sum(p["net_volume"] for p in bodies)
+            m["gross_volume"] = sum(p["gross_volume"] or p["net_volume"] for p in bodies)
+            m["provenance"]["net_volume"] = "derived"
+            bits.append(f"volume = sum of {len(bodies)} part(s) = {fmt(round(m['net_volume'], 4))} m3")
+        elif bodies:
+            m["net_volume"] = m["gross_volume"] = None
+            m["warnings"].append("some parts have no reliable volume: no volume for the whole")
+        planar = [p for p in parts if p["net_area"] is not None and (p["family"] == "planar" or (      # incl. rolled-up
+            p["child_guids"] and not by_id[p["guid"]]["quantities"]["geometry"].get("hasBody")))]     # sub-assemblies
+        if m["net_area"] is None and planar:
+            m["net_area"] = sum(p["net_area"] for p in planar)
+            m["gross_area"] = sum(p["gross_area"] or p["net_area"] for p in planar)
+            m["footprint_area"] = m["developed_area"] = m["net_area"]
+            m["faces"] = [{"side": s, "gross_area": m["gross_area"], "net_area": m["net_area"]} for s in ("top", "bottom")]
+            m["provenance"]["net_area"] = m["provenance"]["gross_area"] = "derived"
+            if len({p["thickness"] for p in planar}) == 1 and m["thickness"] is None:
+                m["thickness"] = planar[0]["thickness"]
+            bits.append(f"area = sum of {len(planar)} planar part(s) = "
+                        f"{' + '.join(fmt(round(p['net_area'], 3)) for p in planar)} = {fmt(round(m['net_area'], 3))} m2")
+        if bits:
+            log.detail("measure", f"{m.get('name') or m['guid']}: no body of its own; " + "; ".join(bits), guid=m["guid"])

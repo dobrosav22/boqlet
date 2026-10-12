@@ -18,6 +18,8 @@
     "test": "npm run typecheck && npm run test:engine",
     "test:engine": "node scripts/run-engine.mjs test",
     "boq": "node scripts/run-engine.mjs cli",
+    "corpus": "node scripts/run-engine.mjs corpus",
+    "catalogue": "node scripts/run-engine.mjs catalogue",
     "codegen": "npm run codegen -w @ifc-boq/types",
     "import:uniclass": "node scripts/run-engine.mjs import-uniclass"
   },

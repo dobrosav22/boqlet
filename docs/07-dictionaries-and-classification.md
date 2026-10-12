@@ -45,7 +45,11 @@ The hierarchy is what makes `material under "concrete"` match `concrete.in_situ`
 decision (this project's answers) -> project -> company -> global
 within a layer: exact -> startsWith -> regex -> contains
 first match wins; case and accents folded; `when` conditions can make the same text mean different things by context
+regex entries are also tried with "_" read as a space (material libraries name by category_subtype: concrete_reinforced_in-situ)
 ```
+
+The seed also has a `non_physical` term for display-only materials (`virtual_*` on placement
+markers and zone volumes); as-modelled excludes elements made of it.
 
 | Layer | Holds | Who writes it |
 |---|---|---|

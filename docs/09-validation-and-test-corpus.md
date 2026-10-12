@@ -1,7 +1,10 @@
 # 09 Validation and test corpus
 
 Two separate questions: does the engine **work** on varied real files (the corpus), and is its
-output **right** (the answer key). Only the first file of each is in hand.
+output **right** (the answer key). Answer keys in hand: the Duplex (Revit 2011) with a hand-made
+BoQ, and the buildingSMART certification samples checked against their own quantity sets and
+cross-schema agreement. Corpus: 309 public files from 30 tools run without engine errors
+(listed, tagged and statused in `12-ifc-corpus-catalogue.md`). No professional BoQ yet.
 
 ## The Duplex experiment
 
@@ -115,6 +118,58 @@ TypeScript-generated schemas.
 **Important caveat:** this proves the engine reproduces our own hand measurement of one file.
 It does not prove professional accuracy (gap 6) or robustness on other tools.
 
+## The buildingSMART certification samples (2026-10)
+
+Source: [buildingSMART/Certification-datasets](https://github.com/buildingSMART/Certification-datasets)
+(CC BY 4.0), the public files used for buildingSMART's IFC import certification. 35 files:
+
+| Set | Files | Notes |
+|---|---|---|
+| Simple-Scene, IFC2x3 / IFC4 / IFC4.3 | 10 per schema: Building-Architecture, -Structural, -Hvac, -Landscaping; Infra-Bridge, -Road, -Rail, -Plumbing, -Electrical, -Landscaping | One scene (a house on a site, a road, a railway, two bridges) exported by **SketchUp 2026 + Sketchup-IFC-manager 5.6.0** to all three schemas. IFC2x3 uses faceted Breps; IFC4 and IFC4.3 use triangulated face sets. Lengths in mm, areas and volumes in m2 / m3. Some files carry `Qto_*BaseQuantities`. Infrastructure is real IFC4.3 (IfcBridge, IfcRoad, IfcRailway, IfcCourse, IfcEarthworksFill, IfcRail, IfcTrackElement, IfcSurfaceFeature); IFC2x3 and IFC4 flatten it to IfcBuilding and proxies |
+| ISO Spec, Reference View 1.2 (IFC4) | 5 small hand-written examples | A wall with an opening and a window, an inch-unit tessellated column, tessellation samples |
+
+Valid files and a good test of **schemas**: the same element can be compared across three
+schemas and two geometry types. **Not** a test of tool variety: one exporter made all the scene
+files. Subset in `fixtures/ifc/buildingsmart/`; pinned by `engine/tests/test_certification_samples.py`.
+Re-run the whole set with `npm run corpus -- <clone>/` after an engine change.
+
+### What the samples found
+
+| Finding | Effect before | Decision (now in the engine) |
+|---|---|---|
+| ISO wall file: the geometry kernel misses the mm unit and returns raw millimetres as metres | Wall 5,000,000,000 m2 | Geometry requested in file units and scaled with the parser's own factor (`convert-back-units`) |
+| Tessellated exports leave T-junctions: meshes geometrically closed but not watertight | Footing and wall volumes rejected as "unreliable"; footing became a blocking `missing_data` question | `closed` = watertight or every boundary loop has ~zero vector area; an open pipe end or missing face still fails. Volume matches the IFC2x3 Brep exactly |
+| IfcRoof with no geometry, made of slabs (architecture) or timber girders and beam shoes (structure) | Roof line flagged; its parts skipped as "parent measured", so 53.6 m2 of roof slabs and 24.7 m of girders vanished | Measure: a body-less aggregate takes its parts' volume and planar area. Rules: a parent counts as measured only if a rule gets a value for it; otherwise its parts are measured |
+| Walls, girders, railings rotated in plan; sloped arch members; squat bridge piers | Thickness 10.39 m (plan diagonal); lengths 12% short; column length = plan width | Oriented bounding box (numpy, no scipy) on the largest body; columns along the vertical axis |
+| IFC2x3 MEP: IfcFlowSegment typed by IfcDuctSegmentType, IfcFlowTerminal by IfcAirTerminalType | Unmatched in IFC2x3, measured in IFC4: same model, different BoQ | Class taken from the type (`ifc_class`; `ifc_class_raw` keeps the original); family found by walking supertypes |
+| `mep-items` depended on the file's discipline guess; IFC4.3 guessed "infrastructure" for a house (IfcBuilding is an IfcFacility) | Air terminals, manholes, charging station never counted | Discipline per element ("mep" for distribution elements); infrastructure guessed from IfcBridge / IfcRoad / IfcRailway / IfcMarineFacility only |
+| `partFilter` was ignored when deciding that a parent is measured | Bridge piers and track panels (IfcElementAssembly, counted as "countable") hid all their parts: 65 of 68 elements unmatched | `partFilter` applies; IfcElementAssembly is family `assembly`; an assembly whose parts are all measured counts as covered |
+| Placement markers "origin" and "geo-reference" and zone volumes are proxies with `virtual_*` materials | Counted as unknown objects; in an MEP file also as MEP items (double count) | Dictionary term `non_physical`; as-modelled excludes them (`include_non_physical`, default off); `mep-items` no longer takes proxies |
+| Material names in `category_subtype_detail` form (`concrete_reinforced_in-situ`, `metal_steel-galvanized`) | Nothing resolved: `\bconcrete\b` does not match before `_`. Every file blocked | Regex entries also tried with `_` as a separator; seed terms for calcium silicate, stone, soil, topsoil, aggregate, bituminous, planting, generic metal, grout, precast / in-situ concrete |
+| No perimeter outside Revit | Slab edge formwork flagged | Perimeter of a closed slab-like prism: P = (S - 2V/t) / t |
+| No rules for IfcCourse, IfcEarthworksFill, IfcRail, IfcSurfaceFeature, IfcTrackElement, IfcSign, IfcGeographicElement, IfcChimney, IfcDiscreteAccessory | Road: 1 of 55 elements measured; rail: 1 of 75 | as-modelled items `earthworks-modelled` (m3), `courses` and `surface-features` (m2; open surface models by mesh area), `kerbs-rails` (m), `other-components` (nr); ACME codes J.02, L.01-L.04 |
+| Classification references on the type only | Lost | Inherited by occurrences |
+| Elements on a site or in a bridge / road part reported as "no storey" | Noise on every infrastructure element | `unassigned_storey` only inside a building |
+
+Result on all 35 files: no crashes, every ParsedModel and BoqResult valid against the schemas.
+The house measures the same in IFC2x3, IFC4 and IFC4.3 for every class all three schemas have.
+IFC4.3 road: 52 of 55 elements measured (was 1); rail 72 of 75 (was 1); bridge 47 of 50 (was 40, with wrong lengths).
+
+### Still open (see 11)
+
+- **Federation duplicates.** The discipline models share GUIDs: the chimney is a body-less placeholder in
+  Architecture and HVAC and a solid in Structural; the roof aggregates slabs in Architecture and timber in
+  Structural under one GUID; manholes appear in Electrical and Plumbing; the marker assemblies are empty
+  in four models and filled in Landscaping. Each file alone is measured correctly; a federated BoQ must merge by GUID.
+- **Placeholder material names** ("Default") and genuinely ambiguous ones (`composite_element_roof`,
+  `bulk-material_water_surfacewater`) still block. That is the intended behaviour; a `placeholder_material` check would explain it better.
+- **IFC2x3 / IFC4 infrastructure** arrives as proxies, IfcBuilding, and IfcElementAssembly used as a solid
+  (road shoulders with a body and no parts): counted as unknown objects or left as `unmatched` questions,
+  which is the intended behaviour. Only IFC4.3 carries the classes.
+- **Terrain and planting** (IfcGeographicElement) are counted; area or volume for grass and soil needs a site-works rule set.
+- **Location** of infrastructure lines: no storey; facility parts (IfcBridgePart, IfcRoadPart) are not used as a location yet.
+- Values in this corpus are checked against the files' own quantity sets, cross-schema agreement and hand-written geometry, **not** a professional BoQ.
+
 ## Test corpus plan
 
 About 15-20 varied IFC files give relative confidence in a working engine; 2-3 projects with a
@@ -138,24 +193,29 @@ from different tools. Live tracking: `docs/reference/files/IFC_Test_Corpus_Plan.
 | # | Purpose | Tool | IFC | Discipline | Tier | Suggested source | Status |
 |---|---|---|---|---|---|---|---|
 | 1 | Old Revit export baseline | Revit 2011 | 2x3 | Arch | Minimum | NIBS Duplex | **Have** |
-| 2 | Modern Revit export | Revit current | 4 | Arch | Minimum | buildingSMART samples or own export | Missing |
-| 3 | Archicad architecture | Archicad | 2x3 | Arch | Minimum | Schependomlaan (verify tool) | Missing |
-| 4 | Archicad, newer schema | Archicad | 4 | Arch | Confident | Firm or vendor | Missing |
-| 5 | Structural concrete with rebar | Tekla | 4 | Struct | Minimum | Tekla sample / firm | Missing |
-| 6 | Structural steel | Tekla | 2x3 | Struct | Confident | Tekla sample / firm | Missing |
-| 7 | Revit structure | Revit current | 4 | Struct | Confident | NIBS Office set | Missing |
-| 8 | Installations | Revit MEP | 2x3 | MEP | Confident | NIBS Office or Clinic | Missing |
-| 9 | Allplan export | Allplan | 4 | Arch / precast | Confident | Firm or vendor | Missing |
-| 10 | Secondary BIM tool | Vectorworks or BricsCAD | 4 | Arch | Confident | Vendor | Missing |
+| 2 | Modern Revit export | Revit current | 4 | Arch | Minimum | buildingSMART samples or own export | **Run** (Revit 2015/2019/2021 IFC4 from OpenIFC; no Revit 2022+ yet) |
+| 3 | Archicad architecture | Archicad | 2x3 | Arch | Minimum | Schependomlaan (verify tool) | **Run** (Schependomlaan design model is Archicad 18; KIT and FZK houses Archicad 9-11) |
+| 4 | Archicad, newer schema | Archicad | 4 | Arch | Confident | Firm or vendor | **Run** (Archicad 20 and 23, IFC4, OpenIFC) |
+| 5 | Structural concrete with rebar | Tekla | 4 | Struct | Minimum | Tekla sample / firm | Partial (Tekla concrete in Schependomlaan precast; no modelled rebar seen) |
+| 6 | Structural steel | Tekla | 2x3 | Struct | Confident | Tekla sample / firm | **Run** (Tekla 12-2020, IFC2x3, OpenIFC and Schependomlaan) |
+| 7 | Revit structure | Revit current | 4 | Struct | Confident | NIBS Office set | **Run** (NBU Office and Clinic structure, Hospital structure; Revit 2011-2015) |
+| 8 | Installations | Revit MEP | 2x3 | MEP | Confident | NIBS Office or Clinic | **Run** (NBU Duplex / Clinic MEP, Revit MEP 2011-2013; also MagiCAD and DDS-CAD) |
+| 9 | Allplan export | Allplan | 4 | Arch / precast | Confident | Firm or vendor | Partial (Allplan 2003-2008, IFC2x3 only) |
+| 10 | Secondary BIM tool | Vectorworks or BricsCAD | 4 | Arch | Confident | Vendor | Partial (Vectorworks 2010-2018, IFC2x3 only) |
 | 11 | Native-IFC authoring | Bonsai | 4 | Arch | Minimum | Self-made / community | Missing |
 | 12 | Open-source alternative | FreeCAD | 4 | Arch | Optional | Self-made | Missing |
-| 13 | Federated set, same project | Revit mixed | 2x3 | Arch + Struct + MEP | Minimum | NIBS Office set | Missing |
-| 14 | Federated set, real project | Mixed tools | 2x3 / 4 | Arch + Struct | Confident | Firm partnership | Missing |
-| 15 | Messy real architecture | Any | Any | Arch | Confident | Firm partnership | Missing |
-| 16 | Messy real structure | Any | Any | Struct | Confident | Firm partnership | Missing |
-| 17 | Export-settings robustness | Revit current | 4 | Arch | Confident | Own exports x3 | Missing |
-| 18 | Infrastructure schema | Civil 3D / other | 4.3 | Infra | Optional | buildingSMART samples | Missing |
+| 13 | Federated set, same project | Revit mixed | 2x3 | Arch + Struct + MEP | Minimum | NIBS Office set | **Run** (NBU Office Building and Medical Clinic sets; LTU A-House) |
+| 14 | Federated set, real project | Mixed tools | 2x3 / 4 | Arch + Struct | Confident | Firm partnership | **Run** (Schependomlaan: Archicad, Tekla, HiCAD, Revit, SketchUp, Xella) |
+| 15 | Messy real architecture | Any | Any | Arch | Confident | Firm partnership | Partial (Schependomlaan subcontractor models; DURAARK projects) |
+| 16 | Messy real structure | Any | Any | Struct | Confident | Firm partnership | Partial (Schependomlaan Tekla and HiCAD models) |
+| 17 | Export-settings robustness | Revit current | 4 | Arch | Confident | Own exports x3 | Partial (Lakeside exported from Archicad, Revit and Vectorworks; Solibri-optimised variants) |
+| 18 | Infrastructure schema | Civil 3D / other | 4.3 | Infra | Optional | buildingSMART samples | **Have** (SketchUp, simple scene; a Civil 3D or other road tool still missing) |
 | 19-21 | Accuracy references A, B, C | Any | Any | Residential, commercial, other | Accuracy | Firm partnership + professional BoQ | Missing |
+| 22 | Same model in three schemas | SketchUp + IFC-manager | 2x3 / 4 / 4.3 | Arch, struct, MEP, infra | Confident | buildingSMART Certification-datasets | **Have** |
+
+Status: **Have** = in hand with checked quantities; **Run** = public files the engine ran on with
+schema-valid output, quantities not checked (file by file in `12-ifc-corpus-catalogue.md`);
+Partial = only some of the purpose is covered.
 
 Tiers: Minimum (about 6 files) proves the engine is not tied to one tool; Minimum + Confident
 (about 16) gives relative confidence; Accuracy (3) is a separate requirement.
@@ -175,7 +235,8 @@ rule or a `quantity_sources.json` entry, with a test.
 
 1. Put the IFC in `fixtures/ifc/` (check its licence allows redistribution; otherwise keep it out
    of git and document where to get it).
-2. Generate with as-modelled; read the parse checks and the measure log for warnings.
+2. Run `npm run corpus -- <folder> --out <dir>` for the summary, then generate with as-modelled and read
+   the parse checks and the measure log for warnings.
 3. Fix exporter quirks in `parse.py` / `measure.py` / `data/quantity_sources.json`.
 4. Add a test module with the numbers you have verified independently (geometry, the authoring
    tool's schedules, or a professional BoQ). Never write expected values by copying the engine's

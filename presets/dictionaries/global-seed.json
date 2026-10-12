@@ -229,6 +229,12 @@
       "broader": "finish"
     },
     {
+      "id": "finish.plaster",
+      "category": "material",
+      "label": "Plaster / render",
+      "broader": "finish"
+    },
+    {
       "id": "glass",
       "category": "material",
       "label": "Glass"
@@ -241,7 +247,8 @@
     {
       "id": "landscape.grass",
       "category": "material",
-      "label": "Grass / growing medium"
+      "label": "Grass / growing medium",
+      "broader": "landscape"
     },
     {
       "id": "wall",
@@ -312,6 +319,59 @@
       "id": "space.utility",
       "category": "space",
       "label": "Utility / storage"
+    },
+    {
+      "id": "masonry.calcium_silicate",
+      "category": "material",
+      "label": "Calcium silicate (sand-lime) masonry",
+      "broader": "masonry"
+    },
+    {
+      "id": "masonry.stone",
+      "category": "material",
+      "label": "Natural stone",
+      "broader": "masonry"
+    },
+    {
+      "id": "earth",
+      "category": "material",
+      "label": "Soil and earth",
+      "labels": {
+        "de": "Boden",
+        "fr": "Terre"
+      }
+    },
+    {
+      "id": "earth.topsoil",
+      "category": "material",
+      "label": "Topsoil",
+      "broader": "earth"
+    },
+    {
+      "id": "aggregate",
+      "category": "material",
+      "label": "Granular material: sand, gravel, crushed stone, ballast"
+    },
+    {
+      "id": "bituminous",
+      "category": "material",
+      "label": "Bituminous material: asphalt, macadam"
+    },
+    {
+      "id": "landscape",
+      "category": "material",
+      "label": "Landscape and planting"
+    },
+    {
+      "id": "landscape.planting",
+      "category": "material",
+      "label": "Planting and vegetation",
+      "broader": "landscape"
+    },
+    {
+      "id": "non_physical",
+      "category": "material",
+      "label": "Not a building material (display, marker or zone objects)"
     }
   ],
   "entries": [
@@ -541,6 +601,56 @@
       "note": "Concrete strength classes (EN 206 'C30/37', ex-YU 'MB30')"
     },
     {
+      "id": "rx-concrete-precast",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(concrete|beton|b[eé]ton|hormig[oó]n|calcestruzzo|betong)\\b.*\\b(precast|pre-cast|prefab\\w*|pr[eé]fabriqu\\w*|prefabricad\\w*|prefabbricat\\w*)|\\b(precast|pre-cast|prefab\\w*)\\b.*\\b(concrete|beton)\\b|betonfertigteil|fertigteilbeton"
+      },
+      "term": "concrete.precast",
+      "source": "seed",
+      "note": "Precast / prefabricated concrete; tried before plain concrete."
+    },
+    {
+      "id": "rx-concrete-in-situ",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\bconcrete\\b.*\\b(in[ -]?situ|cast[ -]in[ -]place)\\b|\\b(ortbeton|b[eé]ton coul[eé] en place)\\b"
+      },
+      "term": "concrete.in_situ",
+      "source": "seed"
+    },
+    {
+      "id": "rx-cast-in-place",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "^\\s*cast[ -]in[ -](place|situ)\\b"
+      },
+      "term": "concrete.in_situ",
+      "source": "seed"
+    },
+    {
+      "id": "rx-concrete-psi",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "^\\s*C[2-9]\\d{3}\\s*$"
+      },
+      "term": "concrete",
+      "source": "seed",
+      "note": "Concrete named by its compressive strength in psi (C4000)."
+    },
+    {
       "id": "rx-concrete",
       "field": [
         "material",
@@ -553,13 +663,25 @@
       "source": "seed"
     },
     {
+      "id": "rx-calcium-silicate",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "(sand[ -]?lime|calcium[ -]silicate|kalksandstein|silico[ -]?calcaire|silicocalc)"
+      },
+      "term": "masonry.calcium_silicate",
+      "source": "seed"
+    },
+    {
       "id": "rx-brick",
       "field": [
         "material",
         "layer_material"
       ],
       "match": {
-        "regex": "\\b(brick|opeka|cigla|ziegel|ladrillo|mattone|brique)\\b"
+        "regex": "\\b(bricks?|tegl|opeka|cigla|ziegel|ladrillo|mattone|brique)\\b"
       },
       "term": "masonry.brick",
       "source": "seed"
@@ -584,7 +706,7 @@
         "type_name"
       ],
       "match": {
-        "regex": "(plasterboard|gypsum (wall )?board|drywall|gips(ana)?[ -]?(karton)?[ -]?plo[cč]a|gipskarton|rigips|knauf|placo|pladur)"
+        "regex": "(plasterboard|gipsplate|gipsplater|gypsum (wall )?board|drywall|gips(ana)?[ -]?(karton)?[ -]?plo[cč]a|gipskarton|rigips|knauf|placo|pladur)"
       },
       "term": "board.plasterboard",
       "source": "seed"
@@ -596,7 +718,7 @@
         "layer_material"
       ],
       "match": {
-        "regex": "(mineral wool|rock ?wool|glass ?wool|kamena vuna|staklena vuna|mineralwolle|steinwolle)"
+        "regex": "(mineral wool|mineralull|mineralwool|rock ?wool|glass ?wool|kamena vuna|staklena vuna|mineralwolle|steinwolle)"
       },
       "term": "insulation.mineral_wool",
       "source": "seed"
@@ -657,7 +779,7 @@
         "layer_material"
       ],
       "match": {
-        "regex": "\\b(wood|timber|drvo|holz|madera|legno|bois)\\b"
+        "regex": "\\b(wood|heltre|bindingsverk|taktro|utlekting|timber|drvo|holz|madera|legno|bois)\\b"
       },
       "term": "timber",
       "source": "seed"
@@ -709,6 +831,225 @@
       },
       "term": "metal.aluminium",
       "source": "seed"
+    },
+    {
+      "id": "rx-steel-grade",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "^\\s*(S(235|275|355|420|460|690)[A-Z0-9+]*|A(36|53|500|572|992)\\b|Q(235|345|355|390|420)[A-Z]?|SS400|SM(400|490|520)[A-C]?|SN(400|490)[A-C]?)\\b"
+      },
+      "term": "metal.steel",
+      "source": "seed",
+      "note": "Structural steel grade designations used as the material name (EN, ASTM, GB, JIS patterns)."
+    },
+    {
+      "id": "rx-masonry",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(masonry|mauerwerk|ma[cç]onnerie|mamposter[ií]a|muratura)\\b"
+      },
+      "term": "masonry",
+      "source": "seed"
+    },
+    {
+      "id": "rx-epdm",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\bEPDM\\b"
+      },
+      "term": "membrane.epdm",
+      "source": "seed"
+    },
+    {
+      "id": "rx-plaster",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(plaster|render|puss|putz|enduit|revoque|intonaco|malter)\\b"
+      },
+      "term": "finish.plaster",
+      "source": "seed"
+    },
+    {
+      "id": "rx-particle-board",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(chipboard|particle ?board|osb|spon(plate)?|sponplate|spanplatte|trefiberplate|fibreboard|fiberboard|mdf|vindtettplate)\\b"
+      },
+      "term": "board",
+      "source": "seed"
+    },
+    {
+      "id": "rx-steel",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(steel|stahl|acier|acero|acciaio|[čc]elik)\\b"
+      },
+      "term": "metal.steel",
+      "source": "seed"
+    },
+    {
+      "id": "rx-metal",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(metal|sheet ?metal|sheetmetal|copper|zinc|kupfer|zink|cuivre|bakar|cink)\\b"
+      },
+      "term": "metal",
+      "source": "seed"
+    },
+    {
+      "id": "rx-aggregate",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(gravel|crushed[ -]stone|ballast|sand|hardcore|aggregate|kies|schotter|gravier|grava|[šs]ljunak|tucanik|tu[čc]anik)\\b"
+      },
+      "term": "aggregate",
+      "source": "seed"
+    },
+    {
+      "id": "rx-stone",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(stone|granite|marble|limestone|sandstone|naturstein|granit|marmor|kamen|pierre|piedra)\\b"
+      },
+      "term": "masonry.stone",
+      "source": "seed"
+    },
+    {
+      "id": "rx-grout",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(grout|mortar|m[öo]rtel|mortier|mortero|malta|malter)\\b"
+      },
+      "term": "masonry.mortar",
+      "source": "seed"
+    },
+    {
+      "id": "rx-topsoil",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(topsoil|top soil|oberboden|mutterboden|terre v[eé]g[eé]tale|humus)\\b"
+      },
+      "term": "earth.topsoil",
+      "source": "seed"
+    },
+    {
+      "id": "rx-soil",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(soil|earth|subsoil|clay|boden|erde|terre|tierra|zemlja|tlo)\\b"
+      },
+      "term": "earth",
+      "source": "seed"
+    },
+    {
+      "id": "rx-bituminous",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(bitumen|bituminous|asphalt|asphalte|asfalt|tarmac|macadam|dbm)\\b"
+      },
+      "term": "bituminous",
+      "source": "seed"
+    },
+    {
+      "id": "rx-road-marking",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "(road[ -]marking|thermoplastic|fahrbahnmarkierung|marquage routier)"
+      },
+      "term": "finish.paint",
+      "source": "seed"
+    },
+    {
+      "id": "rx-grass",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(grass|turf|lawn|rasen|gazon|c[eé]sped|trava)\\b"
+      },
+      "term": "landscape.grass",
+      "source": "seed"
+    },
+    {
+      "id": "rx-planting",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "\\b(vegetation|planting|plants?|trees?|shrubs?|hedge|bepflanzung|v[eé]g[eé]tation|vegetaci[oó]n|rastinje)\\b"
+      },
+      "term": "landscape.planting",
+      "source": "seed"
+    },
+    {
+      "id": "rx-gypsum-fibre",
+      "field": [
+        "material",
+        "layer_material",
+        "type_name"
+      ],
+      "match": {
+        "regex": "gypsum[ -]?fib(re|er)|gipsfaser|fermacell"
+      },
+      "term": "board.plasterboard",
+      "source": "seed"
+    },
+    {
+      "id": "rx-non-physical",
+      "field": [
+        "material",
+        "layer_material"
+      ],
+      "match": {
+        "regex": "^virtual[ _-]"
+      },
+      "term": "non_physical",
+      "source": "seed",
+      "note": "SketchUp IFC Manager (and others) use 'virtual_*' materials for origin and georeference markers and zone volumes."
     },
     {
       "id": "rx-party-wall",

@@ -138,6 +138,17 @@
       "code": "C.05"
     },
     {
+      "id": "curtain-walls",
+      "match": {
+        "ruleId": [
+          "curtain-walls",
+          "plates"
+        ]
+      },
+      "code": "D.03",
+      "priority": 2
+    },
+    {
       "id": "external-walls",
       "match": {
         "all": [
@@ -266,6 +277,45 @@
         "ruleId": "mep-items"
       },
       "code": "K.02"
+    },
+    {
+      "id": "earthworks",
+      "match": {
+        "ruleId": "earthworks-modelled"
+      },
+      "code": "L.01"
+    },
+    {
+      "id": "pavements",
+      "match": {
+        "ruleId": [
+          "courses",
+          "surface-features"
+        ]
+      },
+      "code": "L.02"
+    },
+    {
+      "id": "kerbs-rails",
+      "match": {
+        "ruleId": "kerbs-rails"
+      },
+      "code": "L.03"
+    },
+    {
+      "id": "other-components",
+      "match": {
+        "ruleId": "other-components"
+      },
+      "code": {
+        "lookup": "ifc_class",
+        "table": {
+          "IfcSign": "L.04",
+          "IfcTrackElement": "L.04",
+          "IfcGeographicElement": "L.04"
+        },
+        "default": "J.02"
+      }
     },
     {
       "id": "proxies",

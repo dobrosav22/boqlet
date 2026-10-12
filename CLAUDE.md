@@ -33,6 +33,8 @@ npm run dev          # engine on 127.0.0.1:8787 + web on http://localhost:5173
 | `npm run test:engine` | Engine tests only. Includes the Duplex acceptance test. |
 | `npm run typecheck` / `npm run build` | Web + types typecheck / production build of the web app. |
 | `npm run boq -- <file.ifc> --out boq.xlsx` | Command-line run, no UI. `--help` for options. |
+| `npm run corpus -- <folder>` | Run every IFC in a folder; one summary row per file, schema-validated. Use before adding fixtures. |
+| `npm run catalogue` | Regenerate `docs/12-ifc-corpus-catalogue.md` from `fixtures/corpus/catalogue.json` (every IFC looked at, tagged). |
 | `npm run codegen` | Regenerate JSON Schemas from the TypeScript types. Run after editing `packages/types/src`. |
 | `npm run setup:engine` | Recreate the Python venv (after editing `engine/requirements.txt`). |
 | `npm run import:uniclass` | Download Uniclass 2015 EF into `presets/classifications/uniclass2015-ef/codelist.json`. |
@@ -50,7 +52,7 @@ Environment: `IFC_BOQ_PYTHON` (python to use), `IFC_BOQ_SKIP_ENGINE_SETUP=1`,
 | `engine/tests` | pytest. `test_duplex.py` is the acceptance test against the hand-made BoQ. |
 | `presets/` | Rule sets, dictionaries, classifications, resolution settings, as JSON. Loaded from disk on every run, so edits apply without restarting. |
 | `apps/web` | React 18 + Vite dev UI: drop IFC, choose presets, generate, inspect lines, log, questions, compare, download Excel. |
-| `fixtures/` | The NIBS Duplex IFC and the hand-made reference BoQ. |
+| `fixtures/` | The NIBS Duplex IFC and the hand-made reference BoQ; buildingSMART certification samples (CC BY 4.0) in `ifc/buildingsmart/`. |
 | `scripts/` | Node helpers that set up and run the Python engine from npm. |
 | `docs/` | Everything decided so far, written for the next developer or agent. |
 
@@ -81,6 +83,7 @@ Environment: `IFC_BOQ_PYTHON` (python to use), `IFC_BOQ_SKIP_ENGINE_SETUP=1`,
 | Task | Read |
 |---|---|
 | Understand the domain (BoQ, IFC, measurement, classification) | `docs/01-domain-primer.md` |
+| Which IFC files exist and which were tested | `docs/12-ifc-corpus-catalogue.md` |
 | Why something is the way it is | `docs/02-decisions.md` |
 | Add or change an engine stage | `docs/05-engine.md` |
 | Write or change a rule set | `docs/06-rules-authoring.md` |
@@ -90,10 +93,13 @@ Environment: `IFC_BOQ_PYTHON` (python to use), `IFC_BOQ_SKIP_ENGINE_SETUP=1`,
 
 ## Status in one paragraph
 
-Working end to end on one real file (the NIBS Duplex, Revit 2011, IFC2x3): parse, verify,
+Working end to end on the NIBS Duplex (Revit 2011, IFC2x3): parse, verify,
 dictionary resolution, measuring, rule execution (items, derived, manual), classification
 into any number of code lists, questions and answers, calculation log, Excel export, and a dev
 UI. The engine reproduces the hand-made Duplex BoQ exactly. Not yet built: multiple models per
 BoQ (federation), per-face geometry for room-based finishes, overlap and contradiction
 questions, AI name suggestions, model revisions, background jobs, users and projects, the
-Java backend. Only one IFC has been tested; other authoring tools will surface new quirks.
+Java backend. Also run on 309 public IFC files from 30 authoring tools (buildingSMART samples,
+DURAARK, the Auckland OpenIFC repository, Schependomlaan): no engine errors, output valid
+against the contract; quantities checked only for the Duplex and the buildingSMART samples.
+What was run and what is still uncovered: `docs/12-ifc-corpus-catalogue.md`.

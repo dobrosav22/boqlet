@@ -36,9 +36,18 @@ Lines are sorted by the first classification's code path, then by rule order, th
 ### 1. Parse (`parse.py`)
 
 ifcopenshell reads the file; `ifcopenshell.geom` meshes every element with openings cut
-(world coordinates, parallel iterator). Each mesh goes into trimesh for volume, area, bounding
-box and watertightness; inconsistent face winding is repaired before measuring (this is what
-fixed the Duplex party wall: 433 m3 raw, 25.83 m3 repaired). Pairwise solid intersections
+(world coordinates, parallel iterator). Geometry is requested in file units and scaled with
+the parser's own unit factor: the kernel can miss a unit assignment and return millimetres as
+metres (ISO sample `wall-with-opening-and-window`: a 6 m2 wall came out as 5,000,000,000 m2).
+Each mesh goes into trimesh for volume, area, bounding box and watertightness; inconsistent face
+winding is repaired before measuring (this is what fixed the Duplex party wall: 433 m3 raw,
+25.83 m3 repaired). `closed` is true when the mesh is watertight, or when its only open edges
+are T-junctions (every boundary loop has ~zero vector area), which tessellated exports produce;
+an open pipe end or a missing face is a loop with real area. The oriented bounding box
+(`obbExtents`, `obbAxes`; numpy only: the better of the minimum-area plan rectangle with the
+vertical extent and the principal axes) is taken on the largest disjoint body (`bodyCount`),
+so measuring does not depend on world axes. Classification references on a type are inherited
+by its occurrences. Pairwise solid intersections
 (trimesh booleans on the manifold3d engine, for walls, slabs, footings, beams, columns,
 members, coverings, plates, piles, roofs; pairs skipped when bounding boxes do not overlap;
 minimum 0.001 m3) catch double counting. The pair loop is O(n²): fine for the Duplex, needs a
@@ -70,12 +79,17 @@ still need checking against a real ArchiCAD export).
 
 | Quantity | Policy (v0) | Why |
 |---|---|---|
-| volume | reported if present, else geometry. If both exist and differ by more than 1%, the reported value is still used and a warning is logged | Reported values are join-aware; geometry double counts at junctions (Duplex party wall stub: geometry +42%) |
-| thickness | material layer set total, else reported, else smallest geometry extent | |
+| volume | reported if present, else geometry, but only from a **closed** mesh (watertight, or closed with T-junctions). If both exist and differ by more than 1%, the reported value is still used and a warning is logged | Reported values are join-aware; geometry double counts at junctions (Duplex party wall stub: geometry +42%). Tessellated exports leave T-junctions; their volume is exact |
+| thickness | material layer set total, else reported, else smallest extent of the **oriented** bounding box (of the largest body) | World-axis extents gave a rotated bridge wall a thickness of 10.39 m |
 | wall area | net volume / thickness, else reported area | Keeps area, volume and layers consistent; Revit's Area disagreed with Volume on 7 Duplex walls |
-| other areas | reported, else net volume / thickness | |
+| other areas | reported, else net volume / thickness, else for an open surface model (road markings) the one-sided mesh area | |
 | gross area / volume | net + the openings hosted by the element | Gives rules both starting points |
-| length | reported, else longest horizontal extent | |
+| length | reported, else the oriented box: columns and piles along the most vertical axis, other linear elements the longest extent, others the longest horizontal extent | World axes measured rotated girders 12% short and gave columns a plan width |
+| perimeter | reported, else for a closed slab-like prism P = (S - 2V/t) / t (includes opening edges) | Slab edge formwork had no perimeter outside Revit |
+| aggregates | an element without its own body (IfcRoof made of slabs, IfcElementAssembly) takes the sum of its parts' adopted volumes (only if every part with a body has one) and of its planar parts' areas, nested assemblies bottom up | The certification roof had no geometry of its own |
+| class | IFC2x3 generic distribution occurrences take the class their type names (IfcFlowSegment + IfcDuctSegmentType -> IfcDuctSegment); `ifc_class_raw` keeps the original | IFC2x3 has no IfcDuctSegment; rules and IFC4 files use the specific class |
+| family | nearest class listed in `families.ts`, walking the schema's supertypes (IfcAirTerminal -> IfcFlowTerminal) | |
+| discipline | "mep" for distribution elements, else the model's guess | MEP items in an architecture or infrastructure file were never counted |
 | height | door/window OverallHeight, else reported, else vertical extent | |
 | faces | walls: side a and b, each = main area (**approximation**; no per-face geometry yet). Slabs and coverings: top and bottom | Room-based finishes need real faces later |
 | layers | one per material layer: area = main net area, volume = area x thickness, material resolved to a term | |
@@ -101,8 +115,12 @@ maps read (used to decide which unknown names matter).
    a rule id are forced into that rule.
 2. Pass 1: every rule's selector against every element.
 3. Pass 2, per enabled rule: skip excluded elements; skip **aggregate parts** whose parent is
-   measured by any enabled rule unless the rule says `parts: "include"`; apply `partFilter`;
-   add forced elements; record `claims`.
+   measured by an enabled rule (it takes the parent, `partFilter` included, and gets a value
+   for it) unless the rule says `parts: "include"`; apply `partFilter`; add forced elements;
+   record `claims`. A parent that rules take but cannot measure (a roof with no body and no
+   planar parts) is measured **through its parts** instead of becoming a flagged line that
+   hides them; the log says so and coverage counts it as covered. An aggregate whose parts are
+   all measured or excluded is covered too.
 4. For each element, `parts_of` applies the breakdown (element, layer, face, material, child),
    then `add_part` evaluates the `QuantitySpec`, handles missing values (`onMissing`: flag,
    skip, ask -> `missing_data` question, `{default}`; a numeric decision for
@@ -207,6 +225,11 @@ npm run boq -- model.ifc [--rules as-modelled] [--dict global-seed acme-company]
 Accepts an IFC or a saved `parsed.json` (much faster). Preset arguments take ids or paths.
 Prints the BoQ table and a summary; exits with code 2 when the result needs input.
 
+`npm run corpus -- <folder> [--rules id] [--out dir] [--no-overlaps]` (`corpus.py`) runs every
+IFC under a folder, validates both outputs against the schemas and prints one row per file
+(measured, unmatched, excluded, flagged, blocking questions, parse checks). With `--out` it
+keeps parsed.json, result.json and summary.json per file to compare runs after an engine change.
+
 ## Tests (`engine/tests`)
 
 | File | Covers |
@@ -214,6 +237,7 @@ Prints the BoQ table and a summary; exits with code 2 when the result needs inpu
 | `test_expr.py` | Values of many expressions (operators, null semantics, functions, aggregates with WHERE, an opening-deduction formula), `explain()` substitution, proof that Python `eval` is never reachable |
 | `test_presets.py` | Schemas exist; every preset loads and validates; every rule set flattens with a clean integrity check; maps only emit codes that exist; dictionary entries point to defined terms |
 | `test_names.py` | 26 messy multilingual names (`messy_names.json`) resolve to the right terms, including "CT" meaning different things on coverings and slabs and staying unknown on walls; the decision layer wins over dictionaries; extractors |
+| `test_certification_samples.py` | buildingSMART samples and a hand-written IFC: unit scaling (mm the kernel misses, inch), one scene giving the same numbers in IFC2x3 / IFC4 / IFC4.3, walls agree with `Qto_WallBaseQuantities`, roof from its slabs, parent measured through its parts, T-junction volumes trusted and real holes rejected, rotated wall / sloped beam / rotated slab perimeter / two-body wall from the oriented box, IFC2x3 MEP class from type, discipline guess, marker objects excluded, library-style material names, type-level classification |
 | `test_duplex.py` | Acceptance: as-modelled reproduces the hand-made BoQ (`HAND_BOQ`, counts); every line explained; every line coded; party wall internal by dictionary type; slot change changes numbers (demo-tweaked); custom rules and classification (demo-custom + demo-trades); unmatched decision assigns a rule; other presets run; unknown material blocks until answered; contract tests for BoqResult and ParsedModel |
 
 `conftest.py` parses the Duplex once per session (about 5 s).

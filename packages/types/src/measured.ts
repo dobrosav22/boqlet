@@ -58,8 +58,8 @@ export interface MeasuredElement {
   /* ---- identity ---------------------------------------------------- */
   guid: string;
   model_id: string;
-  discipline: string;             // architecture | structure | mep | ...
-  ifc_class: string;              // normalised (IfcWallStandardCase -> IfcWall)
+  discipline: string;             // "mep" for distribution elements, else the model's guess (architecture | structure | infrastructure | unknown)
+  ifc_class: string;              // normalised (IfcWallStandardCase -> IfcWall; IFC2x3 IfcFlowSegment typed IfcDuctSegmentType -> IfcDuctSegment)
   ifc_class_raw: string;
   predefined_type?: string;
   family: ElementFamily;          // measurement family (linear, planar, ...)

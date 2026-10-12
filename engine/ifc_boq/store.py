@@ -1,7 +1,7 @@
 """
 store.py - file-based cache for parsed models and runs (engine/.cache).
 
-  models/<sha256>/model.ifc      the uploaded file
+  models/<sha256>/model.ifc      the uploaded file (model.ifczip when zipped)
   models/<sha256>/parsed.json    ParsedModel   (parse once per file version)
   models/<sha256>/geometry.glb   meshes for a future 3D viewer
   runs/<runId>.json              RunRequest + BoqResult (immutable)
@@ -16,6 +16,7 @@ import json
 import shutil
 import time
 import uuid
+import zipfile
 from functools import lru_cache
 from pathlib import Path
 
@@ -41,7 +42,7 @@ def put_model(src: Path, file_name: str) -> tuple[str, dict, bool]:
     if parsed_path.exists():
         return mid, get_parsed(mid), True
     d.mkdir(parents=True, exist_ok=True)
-    ifc = d / "model.ifc"
+    ifc = d / ("model.ifczip" if zipfile.is_zipfile(src) else "model.ifc")   # ifcopenshell reads zips by extension
     shutil.copyfile(src, ifc)
     doc, parser = parse_file(str(ifc))
     doc["header"]["source"]["fileName"] = file_name

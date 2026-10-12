@@ -450,7 +450,28 @@
           "type": "number"
         },
         "watertight": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Every mesh edge is shared by exactly two triangles."
+        },
+        "closed": {
+          "type": "boolean",
+          "description": "The surface encloses a volume: watertight, or geometrically closed although the triangulation has T-junctions (area-weighted normals sum to ~0). The geometric volume is trusted only when this is true."
+        },
+        "obbExtents": {
+          "$ref": "#/definitions/Vec3",
+          "description": "Oriented bounding box: extents in metres, largest first, and the unit axis of each. Unlike bboxMin/bboxMax it does not depend on world axes (rotated walls, sloped members)."
+        },
+        "obbAxes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Vec3"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "bodyCount": {
+          "type": "number",
+          "description": "Disjoint pieces in the mesh, when more than one; the oriented box then describes the largest."
         },
         "normalsRepaired": {
           "type": "boolean",

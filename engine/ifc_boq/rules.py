@@ -102,9 +102,20 @@ class RuleEngine:
         self.matched: set[str] = set()
         self.excluded: set[str] = set()
         self.skipped_parts: set[str] = set()
+        self.through_parts: set[str] = set()          # parents no rule can measure: their parts are measured
         self.claims: dict[tuple, list[str]] = defaultdict(list)
 
     # ---------------------------------------------------------------- helpers
+    def ancestor_in(self, e: dict, guids: set) -> bool:
+        """Any aggregate ancestor in guids (a slab in an assembly in a measured roof is a part too)."""
+        seen, p = set(), e.get("parent_guid")
+        while p and p not in seen:
+            if p in guids:
+                return True
+            seen.add(p)
+            p = self.by_guid.get(p, {}).get("parent_guid")
+        return False
+
     def val(self, v):
         if isinstance(v, dict) and "param" in v:
             return self.params.get(v["param"])
@@ -393,14 +404,38 @@ class RuleEngine:
         matches = {}
         for i in items:
             matches[i["id"]] = [e for e in self.el if self.select(i["match"], e)]
-        parent_measured = {e["guid"] for i in enabled for e in matches[i["id"]]}
+        # A parent is measured when an enabled rule takes it (partFilter included) and gets a value.
+        # A parent no rule can measure (a roof with no body of its own and no planar parts) is
+        # measured through its parts instead of becoming a flagged line that hides them.
+        parents = {e["parent_guid"] for e in self.el if e.get("parent_guid")}
+        taken_parents, parent_measured = set(), set()
+        for i in enabled:
+            for e in matches[i["id"]]:
+                if e["guid"] not in parents or e["guid"] in self.excluded:
+                    continue
+                if i.get("partFilter") and not self.x.evaluate(i["partFilter"], self.ctx(e)):
+                    continue
+                taken_parents.add(e["guid"])
+                on_missing = i.get("onMissing") or self.defaults.get("onMissing")
+                if (isinstance(on_missing, dict) and "default" in on_missing
+                        or isinstance(self.decisions.get(f"missing:{i['id']}:{e['guid']}"), (int, float))
+                        or any(self.quantity(i["quantity"], p)[0] is not None for p in self.parts_of(i, e))):
+                    parent_measured.add(e["guid"])
+        with_ruled_parts = {e["parent_guid"] for i in enabled for e in matches[i["id"]] if e.get("parent_guid")}
+        self.through_parts = {g for g in taken_parents - parent_measured if g in with_ruled_parts and g not in forced}
+        for g in sorted(self.through_parts):
+            p = self.by_guid[g]
+            self.log.info("match", f"{p.get('name') or g} ({p['ifc_class']}): no rule gets a quantity for the whole; "
+                                   f"measured through its {len(p.get('child_guids', []))} part(s)", guid=g)
         # pass 2: per enabled rule, skip aggregate parts whose parent is measured
         for i in enabled:
             take = []
             for e in matches[i["id"]]:
                 if e["guid"] in self.excluded:
                     continue
-                if e.get("parent_guid") in parent_measured and (i.get("parts") or "skip") == "skip":
+                if e["guid"] in self.through_parts:
+                    continue
+                if self.ancestor_in(e, parent_measured) and (i.get("parts") or "skip") == "skip":
                     self.skipped_parts.add(e["guid"])
                     continue
                 if i.get("partFilter") and not self.x.evaluate(i["partFilter"], self.ctx(e)):
@@ -607,7 +642,7 @@ class RuleEngine:
                             out[lk] = line
                             n_lines += 1
                         line["_count"] += 1
-                        line["trace"]["elements"].append({"guid": guid or "", "name": sctx.get("name") if guid else f"line {srcline['description']}",
+                        line["trace"]["elements"].append({"guid": guid or "", "name": (sctx.get("name") or "") if guid else f"line {srcline['description']}",
                                                           "quantity": None if v is None else round(v, 6), "note": txt})
                         if v is None:
                             line["_missing"] += 1

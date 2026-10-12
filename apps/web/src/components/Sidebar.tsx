@@ -69,7 +69,7 @@ export function Sidebar(p: Props) {
         tabIndex={0}
         onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && input.current?.click()}
       >
-        <input ref={input} type="file" accept=".ifc" hidden data-testid="file-input" onChange={(e) => void upload(e.target.files?.[0])} />
+        <input ref={input} type="file" accept=".ifc,.ifczip" hidden data-testid="file-input" onChange={(e) => void upload(e.target.files?.[0])} />
         {uploading ? (
           <>
             <strong>Reading {uploading}</strong>

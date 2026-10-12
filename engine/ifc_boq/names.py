@@ -82,7 +82,11 @@ class Resolver:
         if "regex" in m:
             flags = re.I if lower else 0
             pat = py_regex(m["regex"])
-            return bool(re.search(pat, raw, flags) or re.search(pat, fold(raw, acc, False), flags))
+            # "_" is a word character, so \bconcrete\b misses "concrete_reinforced_in-situ"
+            # (material libraries that name by category_subtype); CamelCase hides words the same
+            # way ("ReinforcingSteel"). Also try the name with both read as separators.
+            spaced = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", fold(raw, acc, False)).replace("_", " ")
+            return any(re.search(pat, s, flags) for s in dict.fromkeys((raw, fold(raw, acc, False), spaced)))
         return False
 
     def when_ok(self, item, ctx) -> bool:

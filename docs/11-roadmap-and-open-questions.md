@@ -7,7 +7,13 @@ Keep this page current: when you fix a limitation, delete its row.
 
 | Area | Limitation | Consequence | Where to fix |
 |---|---|---|---|
-| Test coverage | Only one IFC tested (Revit 2011, IFC2x3, architecture only) | Other tools and IFC4 will surface quirks | Corpus (09), `parse.py`, `measure.py`, `data/quantity_sources.json` |
+| Test coverage | Two authoring tools: Revit 2011 (Duplex) and SketchUp + IFC-manager (buildingSMART certification scene in IFC2x3 / IFC4 / IFC4.3, plus ISO examples). No Archicad, Tekla, Allplan, current Revit, Bonsai | Other tools will surface new quirks | Corpus (09, `npm run corpus`), `parse.py`, `measure.py`, `data/quantity_sources.json` |
+| Federation duplicates | Discipline models share GUIDs (a chimney placeholder in Architecture, the solid in Structural; one roof GUID aggregating slabs in one model and timber in another) | Each model alone is right; adding models naively double counts | Federation stage: merge by GlobalId, prefer the occurrence with geometry, union aggregate parts |
+| Multi-language names | The seed dictionary resolves English plus a few languages entry by entry. Real projects block on local material names: Dutch (`Kalkzandsteen`, `Staal`, `Metselwerk`, `spaanplaat` in Schependomlaan), Norwegian (`tegl`, `gipsplate` in DURAARK; a few added ad hoc), German (`Leer`) | Most "needs input" results on real files are a name, not an engine problem | Decide a general approach (per-language seed packs, a public term source such as bSDD, or AI suggestions with confirmation) instead of adding languages one at a time |
+| Placeholder material names | "Default" (and similar) becomes a blocking name question | Correct but unexplained | A `placeholder_material` parse check, or a dictionary term for "unspecified" with a non-blocking question |
+| Infrastructure location | Elements in IfcBridgePart / IfcRoadPart have no storey; lines have no location | Infrastructure BoQs cannot split by part | `storey`-like field for the nearest spatial container |
+| Terrain and planting | IfcGeographicElement counted (nr) by as-modelled | Grass, soil, river bed as "1 nr" | Site-works rule set: area / volume by predefined type or material |
+| IFC2x3 / IFC4 infrastructure | Exported as proxies and IfcBuilding | Only counted as unknown objects | Dictionary or rules on ObjectType ("sleeper", "rail"); nothing to do in the engine |
 | Faces | Wall sides a and b both equal the main area; no per-face geometry, no face-to-room links | `surface: side_a/side_b/larger/smaller/mean` give the same number; room-based finishes impossible | `measure.py` faces from geometry or `IfcRelSpaceBoundary` (the Duplex has 237 boundaries) |
 | Footprint / developed area | Only where measured; developed falls back to net area | Sloped roofs and stairs approximated | `measure.py` |
 | Deductions | `embedded` and `recesses` are ignored (a note is written); as-modelled's `deduct_embedded` slot has no effect | Columns through slabs, beams in walls never deducted | Needs embedded-element intersection from parse |
@@ -51,11 +57,14 @@ Keep this page current: when you fix a limitation, delete its row.
 Engineering, roughly in order of value:
 
 1. **Collect the minimum corpus** (6 files: modern Revit IFC4, Archicad, Tekla with rebar, Bonsai,
-   NIBS Office federated set). Run each, fix quirks, add tests. Nothing else de-risks as much.
+   NIBS Office federated set). Run each with `npm run corpus`, fix quirks, add tests. Nothing else
+   de-risks as much: the buildingSMART samples alone found ten engine bugs (09), but they all come
+   from one exporter.
 2. **Real faces and rooms**: per-face areas from geometry and space boundaries; enables
    room-based finishes and makes `side_a/side_b` meaningful.
 3. **Federation v1**: several models per run, discipline defaults, include/exclude scope,
-   cross-model duplicate check, one BoQ.
+   cross-model duplicate check (by GlobalId: the certification scene repeats elements across its
+   discipline models, some as body-less placeholders), one BoQ.
 4. **Platform skeleton in Java**: orgs, projects, model versions, decisions persisted, job table,
    the engine as a worker (see 03 for the mapping). Generate DTOs from `packages/types/schema`.
 5. **Rule editor v1**: the Library has the questionnaire over the master template plus the full editor; still

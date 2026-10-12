@@ -126,9 +126,10 @@ def check_preset(kind: str, req: CheckPresetRequest):
 @app.post("/api/models")
 def upload_model(file: UploadFile = File(...)):
     name = file.filename or "model.ifc"
-    if not name.lower().endswith(".ifc"):
-        raise HTTPException(400, "Only .ifc files are supported (not .ifczip / .ifcxml yet).")
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".ifc") as tmp:
+    suffix = Path(name).suffix.lower()
+    if suffix not in (".ifc", ".ifczip"):
+        raise HTTPException(400, "Only .ifc and .ifczip files are supported (not .ifcxml yet).")
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         size = 0
         while chunk := file.file.read(1 << 20):
             size += len(chunk)

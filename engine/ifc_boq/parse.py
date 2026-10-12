@@ -44,6 +44,7 @@ NEEDS_MATERIAL = ("IfcWall", "IfcSlab", "IfcFooting", "IfcBeam", "IfcColumn", "I
 MEP_ROOTS = ("IfcDistributionElement",)
 STRUCT_CLASSES = ("IfcBeam", "IfcColumn", "IfcFooting", "IfcPile", "IfcReinforcingElement", "IfcMember")
 ARCH_CLASSES = ("IfcDoor", "IfcWindow", "IfcCovering", "IfcFurnishingElement", "IfcRailing", "IfcStair")
+INFRA_FACILITIES = ("IfcBridge", "IfcRoad", "IfcRailway", "IfcMarineFacility")
 SPATIAL_KIND = {"IfcProject": "project", "IfcSite": "site", "IfcBuilding": "building",
                 "IfcBuildingStorey": "storey", "IfcSpace": "space", "IfcZone": "zone",
                 "IfcFacility": "facility", "IfcFacilityPart": "facility_part"}
@@ -91,6 +92,24 @@ def class_base(cls: str) -> str:
 
 def is_any(e, classes):
     return any(e.is_a(c) for c in classes)
+
+
+def _hull2d(p: np.ndarray) -> np.ndarray:
+    """Convex hull of 2D points (Andrew's monotone chain), counter-clockwise."""
+    p = np.unique(np.round(p, 9), axis=0)                 # sorted by x, then y
+    if len(p) < 3:
+        return p
+
+    def half(points):
+        h: list = []
+        for q in points:
+            while len(h) >= 2 and ((h[-1][0] - h[-2][0]) * (q[1] - h[-2][1])
+                                   - (h[-1][1] - h[-2][1]) * (q[0] - h[-2][0])) <= 0:
+                h.pop()
+            h.append(q)
+        return h
+    lower, upper = half(p), half(p[::-1])
+    return np.array(lower[:-1] + upper[:-1])
 
 
 class Parser:
@@ -237,9 +256,79 @@ class Parser:
         return None
 
     # ----- geometry -----
+    @staticmethod
+    def closed_surface(m: trimesh.Trimesh) -> bool:
+        """True when the mesh encloses a volume. Watertight meshes do; so do meshes whose only
+        open edges are T-junctions (a vertex lying on a neighbour's edge, common in tessellated
+        exports): every boundary loop of such a mesh is a degenerate crack with ~zero vector area.
+        A real hole (open pipe end, missing face) has a loop with real area."""
+        if m.is_watertight:
+            return True
+        idx = trimesh.grouping.group_rows(m.edges_sorted, require_count=1)
+        if len(idx) == 0:
+            return False                                  # non-manifold (edges used 3+ times)
+        edges = m.edges[idx]
+        v = m.vertices
+        for comp in trimesh.graph.connected_components(edges, min_len=1):
+            in_comp = np.isin(edges[:, 0], comp)
+            e = edges[in_comp]
+            c = v[comp].mean(0)                           # centre first: georeferenced coordinates are large
+            a, b = v[e[:, 0]] - c, v[e[:, 1]] - c
+            vector_area = 0.5 * np.cross(a, b).sum(0)
+            perimeter = np.linalg.norm(b - a, axis=1).sum()
+            if perimeter > 0 and np.linalg.norm(vector_area) / perimeter ** 2 > 1e-6:
+                return False
+        return True
+
+    @staticmethod
+    def bodies(m: trimesh.Trimesh) -> list[np.ndarray]:
+        """Vertex sets of the disjoint pieces of a mesh (one IfcWall can hold both spandrel walls
+        of a bridge), largest surface area first."""
+        comps = trimesh.graph.connected_components(m.edges, nodes=np.arange(len(m.vertices)), min_len=1)
+        if len(comps) < 2:
+            return [np.arange(len(m.vertices))]
+        face_comp = np.full(len(m.vertices), -1)
+        for i, c in enumerate(comps):
+            face_comp[c] = i
+        area = np.bincount(face_comp[m.faces[:, 0]], weights=m.area_faces, minlength=len(comps))
+        return [comps[i] for i in np.argsort(-area)]
+
+    @staticmethod
+    def oriented_box(points: np.ndarray):
+        """(extents largest first, unit axes) of an oriented bounding box, numpy only.
+        Two candidates, the smaller wins: the minimum-area plan rectangle with the vertical
+        extent (exact for rotated walls and slabs), and the principal axes (exact for sloped
+        members such as rafters and arch segments)."""
+        pts = np.unique(np.round(points, 9), axis=0)
+        if len(pts) < 4:
+            return None
+        cands = []
+        hull = _hull2d(pts[:, :2])
+        if len(hull) >= 3:
+            e = np.roll(hull, -1, axis=0) - hull
+            e = e[np.hypot(e[:, 0], e[:, 1]) > 1e-12]
+            u = e / np.hypot(e[:, 0], e[:, 1])[:, None]
+            v = np.stack([-u[:, 1], u[:, 0]], 1)
+            a, b = np.ptp(hull @ u.T, axis=0), np.ptp(hull @ v.T, axis=0)
+            i = int(np.argmin(a * b))
+            axes = [[u[i, 0], u[i, 1], 0.0], [v[i, 0], v[i, 1], 0.0], [0.0, 0.0, 1.0]]
+            cands.append(([a[i], b[i], float(np.ptp(pts[:, 2]))], axes))
+        _, vecs = np.linalg.eigh(np.cov((pts - pts.mean(0)).T))
+        cands.append((list(np.ptp(pts @ vecs, axis=0)), [list(vecs[:, k]) for k in range(3)]))
+
+        def size(c):
+            ext = sorted(c[0], reverse=True)
+            return (ext[0] * ext[1] * ext[2], ext[0] * ext[1])   # volume, then area for flat sheets
+        ext, axes = min(cands, key=size)
+        order = np.argsort(-np.asarray(ext))
+        return [r6(ext[k]) for k in order], [vec(axes[k]) for k in order]
+
     def run_geometry(self):
         s = ifcopenshell.geom.settings()
         s.set("use-world-coords", True)
+        # Ask for file units and scale with our own factor: the geometry kernel can miss a unit
+        # assignment and silently return millimetres as metres (ISO sample wall-with-opening-and-window).
+        s.set("convert-back-units", True)
         geo = {}
         for include_openings in (False, True):
             kwargs = ({"include": list(self.f.by_type("IfcOpeningElement"))} if include_openings
@@ -251,7 +340,7 @@ class Parser:
                 continue
             while True:
                 sh = it.get()
-                v = np.array(sh.geometry.verts, dtype=float).reshape(-1, 3)
+                v = np.array(sh.geometry.verts, dtype=float).reshape(-1, 3) * self.L
                 fc = np.array(sh.geometry.faces, dtype=int).reshape(-1, 3)
                 if len(fc):
                     m = trimesh.Trimesh(v, fc, process=True)
@@ -263,7 +352,13 @@ class Parser:
                     info = dict(hasBody=True, meshRef=sh.guid, bboxMin=vec(v.min(0)), bboxMax=vec(v.max(0)),
                                 centroid=vec(m.center_mass if abs(m.volume) > 1e-9 else (v.min(0) + v.max(0)) / 2), volume=r6(abs(m.volume)), surfaceArea=r6(m.area),
                                 triangleCount=int(len(fc)), watertight=bool(m.is_watertight),
-                                normalsRepaired=fixed)
+                                closed=bool(self.closed_surface(m)), normalsRepaired=fixed)
+                    pieces = self.bodies(m)
+                    obb = self.oriented_box(m.vertices[pieces[0]])
+                    if obb:
+                        info["obbExtents"], info["obbAxes"] = obb
+                    if len(pieces) > 1:
+                        info["bodyCount"] = len(pieces)
                     if fixed:
                         info["volumeBeforeRepair"] = r6(raw)
                     geo[sh.guid] = info
@@ -310,7 +405,29 @@ class Parser:
             rec["name"] = p.ProfileName
         return rec
 
+    def has_type(self, cls: str) -> bool:
+        try:
+            return bool(self.f.by_type(cls))
+        except RuntimeError:                      # class not in this schema
+            return False
+
     # ----- spatial -----
+    def in_building(self, e) -> bool:
+        """Spatially inside an IfcBuilding, or not placed in the spatial structure at all.
+        Elements on a site or in an infrastructure facility have no storey by design."""
+        seen, x = set(), e
+        while x is not None and x.id() not in seen:
+            seen.add(x.id())
+            if x.is_a("IfcBuilding"):
+                return True
+            c = ue.get_container(x) if not x.is_a("IfcSpatialStructureElement") and not (
+                self.schema != "IFC2X3" and x.is_a("IfcSpatialElement")) else None
+            nxt = c if c is not None else ue.get_aggregate(x)
+            if nxt is None:
+                return x is e                     # nothing above the element itself
+            x = nxt
+        return False
+
     def storey_of(self, e, seen=None):
         seen = seen or set()
         if e.id() in seen:
@@ -503,7 +620,7 @@ class Parser:
         # elements --------------------------------------------------------
         elements, by_class = [], {}
         for e in f.by_type("IfcElement"):
-            if e.is_a("IfcOpeningElement") or e.is_a("IfcFeatureElementSubtraction"):
+            if e.is_a("IfcOpeningElement") or e.is_a("IfcFeatureElementSubtraction") or e.is_a("IfcVirtualElement"):   # never physical
                 continue
             psets, qtos = self.definitions(e)
             t = ue.get_type(e)
@@ -535,9 +652,12 @@ class Parser:
                 "systemIds": [rel.RelatingGroup.GlobalId for rel in (getattr(e, "HasAssignments", None) or [])
                               if rel.is_a("IfcRelAssignsToGroup") and rel.RelatingGroup.is_a("IfcSystem")
                               and not rel.RelatingGroup.is_a("IfcZone")],
-                "classificationIds": [f"cls:{rel.RelatingClassification.id()}" for rel in (getattr(e, "HasAssociations", None) or [])
-                                      if rel.is_a("IfcRelAssociatesClassification")
-                                      and rel.RelatingClassification.is_a("IfcClassificationReference")],
+                # occurrence first, then inherited from the type (codes are often assigned to types only)
+                "classificationIds": list(dict.fromkeys(
+                    f"cls:{rel.RelatingClassification.id()}"
+                    for o in (e, t) if o is not None for rel in (getattr(o, "HasAssociations", None) or [])
+                    if rel.is_a("IfcRelAssociatesClassification")
+                    and rel.RelatingClassification.is_a("IfcClassificationReference"))),
                 "attributes": attrs, "psets": psets,
                 "typePsets": self.type_psets(t) if t else {},
                 "quantities": {"reported": qtos, "geometry": g},
@@ -556,8 +676,11 @@ class Parser:
             if mr:
                 rec["materialRef"] = mr
             if e.ObjectPlacement is not None:
-                m4 = up.get_local_placement(e.ObjectPlacement)
-                rec["placement"] = {"origin": vec(m4[:3, 3] * self.L), "xAxis": vec(m4[:3, 0]), "zAxis": vec(m4[:3, 2])}
+                try:
+                    m4 = up.get_local_placement(e.ObjectPlacement)
+                    rec["placement"] = {"origin": vec(m4[:3, 3] * self.L), "xAxis": vec(m4[:3, 0]), "zAxis": vec(m4[:3, 2])}
+                except (AttributeError, TypeError, ValueError):
+                    pass    # IfcGridPlacement and other placements the helper cannot resolve; geometry is still in world coordinates
             prof = self.profile_of(e)
             # keep only parametric or named profiles (sections like W310X60); free-form outlines carry no data
             if prof is not None and (prof.ProfileName or not prof.is_a("IfcArbitraryClosedProfileDef")):
@@ -668,7 +791,11 @@ class Parser:
             return sum(1 for e in f.by_type("IfcElement") if is_any(e, classes))
         mep, struct, arch = count(MEP_ROOTS), count(STRUCT_CLASSES), count(ARCH_CLASSES) + len(f.by_type("IfcSpace"))
         total = max(1, len(elements))
-        if mep / total > 0.6:
+        # IFC4.3 bridges, roads, railways... (IfcBuilding is an IfcFacility too, so name the others)
+        infra = any(self.has_type(c) for c in INFRA_FACILITIES)
+        if infra and not f.by_type("IfcBuilding"):
+            guess = "infrastructure"
+        elif mep / total > 0.6:
             guess = "mep"
         elif arch == 0 and struct > 0:
             guess = "structure"
@@ -676,8 +803,8 @@ class Parser:
             guess = "mixed"
         elif arch > 0:
             guess = "architecture"
-        elif self.schema.startswith("IFC4X3") and f.by_type("IfcFacility"):
-            guess = "infrastructure"
+        elif infra:
+            guess = "mixed"
         else:
             guess = "unknown"
         header["disciplineGuess"] = guess
@@ -716,14 +843,15 @@ class Parser:
             ent = f.by_guid(e["id"])
             has_children_geo = any(elem_by_id.get(c, {}).get("quantities", {}).get("geometry", {}).get("hasBody")
                                    for c in e["childIds"])
-            if not g.get("hasBody") and not has_children_geo and e["ifcClassBase"] not in ("IfcElementAssembly",):
-                self.check("no_geometry", "warning", [e["id"]], f"{e['ifcClass']} '{e.get('name', '')}' has no body geometry.")
+            if not g.get("hasBody") and not has_children_geo and (e["ifcClassBase"] != "IfcElementAssembly" or not e["childIds"]):
+                self.check("no_geometry", "warning", [e["id"]], f"{e['ifcClass']} '{e.get('name', '')}' has no body geometry"
+                           + (" and no parts (its parts may be in another model)." if e["ifcClassBase"] == "IfcElementAssembly" else "."))
             if g.get("normalsRepaired"):
                 self.check("inconsistent_winding", "warning", [e["id"]],
                            f"Mesh had inconsistent face winding ({', '.join(g['representationTypes']) or 'unknown representation'}); "
                            f"repaired before measuring.", volumeBeforeRepair=g.get("volumeBeforeRepair"), volume=g.get("volume"))
-            if g.get("hasBody") and g.get("watertight") is False:
-                self.check("not_watertight", "info", [e["id"]], "Mesh is not watertight; geometric volume is unreliable.")
+            if g.get("hasBody") and g.get("closed") is False:
+                self.check("not_watertight", "info", [e["id"]], "Mesh is not closed; geometric volume is unreliable.")
             # reported vs geometry volume (any source that names a volume)
             gv = g.get("volume")
             reported = None
@@ -747,9 +875,9 @@ class Parser:
                 parent_has_mat = ue.get_material(pe, should_inherit=True) is not None
             if is_any(ent, NEEDS_MATERIAL) and "materialRef" not in e and not parent_has_mat:
                 self.check("no_material", "warning", [e["id"]], f"{e['ifcClass']} '{e.get('name', '')}' has no material.")
-            if e["ifcClassBase"] == "IfcBuildingElementProxy":
-                self.check("proxy_element", "info", [e["id"]], f"Unclassified object '{e.get('name', '')}' (IfcBuildingElementProxy).")
-            if "storeyId" not in e:
+            if e["ifcClassBase"] in ("IfcBuildingElementProxy", "IfcBuiltElement"):   # IFC4.3 generic built element too
+                self.check("proxy_element", "info", [e["id"]], f"Unclassified object '{e.get('name', '')}' ({e['ifcClass']}).")
+            if "storeyId" not in e and self.in_building(ent):
                 self.check("unassigned_storey", "info", [e["id"]], f"{e['ifcClass']} '{e.get('name', '')}' has no storey.")
             # door/window external flag vs host
             if e.get("hostId") and e["hostId"] in elem_by_id:

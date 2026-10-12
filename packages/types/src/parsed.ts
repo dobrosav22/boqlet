@@ -196,7 +196,18 @@ export interface GeometryInfo {
   volume?: number;
   surfaceArea?: number;
   triangleCount?: number;
+  /** Every mesh edge is shared by exactly two triangles. */
   watertight?: boolean;
+  /** The surface encloses a volume: watertight, or geometrically closed although the
+   *  triangulation has T-junctions (area-weighted normals sum to ~0). The geometric
+   *  volume is trusted only when this is true. */
+  closed?: boolean;
+  /** Oriented bounding box: extents in metres, largest first, and the unit axis of each.
+   *  Unlike bboxMin/bboxMax it does not depend on world axes (rotated walls, sloped members). */
+  obbExtents?: Vec3;
+  obbAxes?: [Vec3, Vec3, Vec3];
+  /** Disjoint pieces in the mesh, when more than one; the oriented box then describes the largest. */
+  bodyCount?: number;
   /** Face winding was inconsistent and repaired before measuring. */
   normalsRepaired?: boolean;
   volumeBeforeRepair?: number;

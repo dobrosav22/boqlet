@@ -123,7 +123,25 @@ def get_boq(parsed: dict, rules: dict, classifications: list[tuple[dict, dict]],
     questions: list[dict] = list(eng.questions)
 
     # 4. coverage -------------------------------------------------------------------------
-    covered = {e["guid"] for e in elements if e.get("parent_guid") in eng.matched}
+    parent_of = {e["guid"]: e.get("parent_guid") for e in elements}
+
+    def ancestor_measured(g: str) -> bool:                # parts of parts (HiCAD nests bolts in fixings in railings)
+        seen, p = set(), parent_of.get(g)
+        while p and p not in seen:
+            if p in eng.matched:
+                return True
+            seen.add(p)
+            p = parent_of.get(p)
+        return False
+    covered = {e["guid"] for e in elements if ancestor_measured(e["guid"])} | eng.through_parts
+    # an aggregate (IfcElementAssembly) whose parts are all measured or excluded is covered by them
+    done = eng.matched | eng.excluded
+    for _ in range(20):                                   # nested assemblies, bottom up
+        more = {e["guid"] for e in elements if e.get("child_guids") and e["guid"] not in done | covered
+                and all(c in done or c in covered for c in e["child_guids"])}
+        if not more:
+            break
+        covered |= more
     groups = defaultdict(list)
     for e in elements:
         g = e["guid"]
@@ -138,7 +156,7 @@ def get_boq(parsed: dict, rules: dict, classifications: list[tuple[dict, dict]],
                                      f"Assign a rule or exclude.",
                           "answer": {"kind": "rule"}})
     unmatched_n = sum(len(v) for v in groups.values())
-    log.info("match", f"coverage: {len(eng.matched)} measured, {len(covered - eng.matched)} covered by their parent, "
+    log.info("match", f"coverage: {len(eng.matched)} measured, {len(covered - eng.matched)} covered by their parent or parts, "
                       f"{len(eng.excluded)} excluded, {unmatched_n} unmatched")
 
     # names that matter -> questions

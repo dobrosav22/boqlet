@@ -803,6 +803,14 @@
       "section": "scope",
       "question": "Are unclassified model objects (proxies) counted as items?",
       "help": "No: they are left out and listed as excluded. Either way they are reported."
+    },
+    "include_non_physical": {
+      "type": "boolean",
+      "value": false,
+      "label": "Count marker objects",
+      "section": "scope",
+      "question": "Are objects with a non-physical material (origin and georeference markers, zone volumes) counted?",
+      "help": "No: they are left out and listed as excluded. Authoring tools add them for placement and display only."
     }
   },
   "items": [
@@ -920,6 +928,68 @@
       ],
       "tags": [
         "wall"
+      ]
+    },
+    {
+      "id": "curtain-walls",
+      "label": "Curtain walls",
+      "family": "assembly",
+      "match": {
+        "ifcClass": "IfcCurtainWall"
+      },
+      "quantity": {
+        "kind": "area",
+        "surface": "main",
+        "start": "net"
+      },
+      "lineKey": [
+        "type_name",
+        "IF(p.lines_by_storey, storey, \"\")"
+      ],
+      "description": "Curtain wall, {type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
+      "claims": [
+        "body"
+      ],
+      "tags": [
+        "wall",
+        "facade"
+      ]
+    },
+    {
+      "id": "plates",
+      "label": "Plates, panels and building element parts",
+      "family": "planar",
+      "match": {
+        "all": [
+          {
+            "ifcClass": [
+              "IfcPlate",
+              "IfcBuildingElementPart"
+            ]
+          },
+          {
+            "not": {
+              "field": "material",
+              "op": "under",
+              "value": "metal.steel"
+            }
+          }
+        ]
+      },
+      "quantity": {
+        "kind": "area",
+        "surface": "main",
+        "start": "net"
+      },
+      "lineKey": [
+        "ifc_class",
+        "type_name",
+        "material",
+        "IF(p.lines_by_storey, storey, \"\")"
+      ],
+      "description": "{ifc_class}, {type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
+      "claims": [
+        "body"
       ]
     },
     {
@@ -1112,7 +1182,8 @@
             "ifcClass": [
               "IfcBeam",
               "IfcColumn",
-              "IfcMember"
+              "IfcMember",
+              "IfcPlate"
             ]
           },
           {
@@ -1315,7 +1386,12 @@
       "label": "Stairs",
       "family": "assembly",
       "match": {
-        "ifcClass": "IfcStair"
+        "ifcClass": [
+          "IfcStair",
+          "IfcRamp",
+          "IfcStairFlight",
+          "IfcRampFlight"
+        ]
       },
       "quantity": {
         "kind": "choose",
@@ -1381,7 +1457,8 @@
           "IfcPipeSegment",
           "IfcDuctSegment",
           "IfcCableSegment",
-          "IfcCableCarrierSegment"
+          "IfcCableCarrierSegment",
+          "IfcFlowSegment"
         ]
       },
       "quantity": {
@@ -1415,7 +1492,16 @@
       "label": "Fittings, terminals, equipment",
       "family": "countable",
       "match": {
-        "family": "countable"
+        "all": [
+          {
+            "family": "countable"
+          },
+          {
+            "not": {
+              "ifcClass": "IfcBuildingElementProxy"
+            }
+          }
+        ]
       },
       "partFilter": "discipline = \"mep\"",
       "quantity": {
@@ -1464,10 +1550,184 @@
       }
     },
     {
+      "id": "earthworks-modelled",
+      "label": "Modelled earthworks",
+      "family": "volumetric",
+      "match": {
+        "ifcClass": [
+          "IfcEarthworksFill",
+          "IfcEarthworksCut",
+          "IfcReinforcedSoil"
+        ]
+      },
+      "quantity": {
+        "kind": "volume",
+        "start": "net"
+      },
+      "lineKey": [
+        "ifc_class",
+        "type_name",
+        "IF(p.lines_by_storey, storey, \"\")"
+      ],
+      "description": "Earthworks, {type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
+      "claims": [
+        "body"
+      ],
+      "tags": [
+        "earthworks",
+        "external"
+      ]
+    },
+    {
+      "id": "courses",
+      "label": "Pavement courses",
+      "family": "planar",
+      "match": {
+        "ifcClass": [
+          "IfcCourse",
+          "IfcPavement"
+        ]
+      },
+      "quantity": {
+        "kind": "area",
+        "surface": "main",
+        "start": "net"
+      },
+      "lineKey": [
+        "type_name",
+        "IF(p.lines_by_storey, storey, \"\")"
+      ],
+      "description": "Course, {type_name}, {thickness*1000} mm{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
+      "claims": [
+        "body"
+      ],
+      "tags": [
+        "pavement",
+        "external"
+      ]
+    },
+    {
+      "id": "surface-features",
+      "label": "Surface features and markings",
+      "family": "planar",
+      "match": {
+        "ifcClass": "IfcSurfaceFeature"
+      },
+      "quantity": {
+        "kind": "area",
+        "surface": "main",
+        "start": "net"
+      },
+      "lineKey": [
+        "type_name",
+        "IF(p.lines_by_storey, storey, \"\")"
+      ],
+      "description": "Surface feature, {type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
+      "claims": [
+        "finish"
+      ],
+      "tags": [
+        "pavement",
+        "external"
+      ]
+    },
+    {
+      "id": "kerbs-rails",
+      "label": "Kerbs and rails",
+      "family": "linear",
+      "match": {
+        "ifcClass": [
+          "IfcKerb",
+          "IfcRail"
+        ]
+      },
+      "quantity": {
+        "kind": "length",
+        "basis": {
+          "param": "linear_basis"
+        }
+      },
+      "lineKey": [
+        "ifc_class",
+        "type_name",
+        "IF(p.lines_by_storey, storey, \"\")"
+      ],
+      "description": "{ifc_class}, {type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
+      "claims": [
+        "body"
+      ],
+      "tags": [
+        "external"
+      ]
+    },
+    {
+      "id": "other-components",
+      "label": "Other components",
+      "family": "countable",
+      "match": {
+        "ifcClass": [
+          "IfcChimney",
+          "IfcDiscreteAccessory",
+          "IfcMechanicalFastener",
+          "IfcFastener",
+          "IfcBearing",
+          "IfcSign",
+          "IfcTrackElement",
+          "IfcGeographicElement"
+        ]
+      },
+      "quantity": {
+        "kind": "count"
+      },
+      "lineKey": [
+        "ifc_class",
+        "type_name",
+        "IF(p.lines_by_storey, storey, \"\")"
+      ],
+      "description": "{ifc_class}, {type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
+      "claims": [
+        "body"
+      ]
+    },
+    {
+      "id": "non-physical",
+      "label": "Markers and display objects",
+      "family": "countable",
+      "match": {
+        "field": "material",
+        "op": "under",
+        "value": "non_physical"
+      },
+      "quantity": {
+        "kind": "count"
+      },
+      "lineKey": [
+        "type_name"
+      ],
+      "description": "Marker object {type_name}",
+      "enabled": {
+        "param": "include_non_physical"
+      }
+    },
+    {
       "id": "unmatched-proxies",
       "label": "Unknown objects",
       "match": {
-        "ifcClass": "IfcBuildingElementProxy"
+        "all": [
+          {
+            "ifcClass": [
+              "IfcBuildingElementProxy",
+              "IfcBuiltElement"
+            ]
+          },
+          {
+            "not": {
+              "field": "material",
+              "op": "under",
+              "value": "non_physical"
+            }
+          }
+        ]
       },
       "quantity": {
         "kind": "count"

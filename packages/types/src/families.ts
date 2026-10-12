@@ -7,7 +7,10 @@
  * does not say otherwise. Rule sets may still measure any element any way.
  *
  * Covers IFC2x3, IFC4 and IFC4.3. IFC2x3 "StandardCase" classes are normalised
- * to their parent (IfcWallStandardCase -> IfcWall) before rules run.
+ * to their parent (IfcWallStandardCase -> IfcWall) before rules run, and IFC2x3
+ * generic distribution occurrences take the class their type names
+ * (IfcFlowSegment + IfcDuctSegmentType -> IfcDuctSegment). The engine walks the
+ * schema's supertypes to find a listed class (IfcAirTerminal -> IfcFlowTerminal).
  */
 
 import type { QuantitySpec } from "./rules";
@@ -69,6 +72,7 @@ export const IFC_FAMILIES: Record<string, ElementFamily> = {
   IfcShadingDevice: "countable",
   IfcBuildingElementProxy: "countable", // unknown: always worth a review question
   IfcBuildingElementPart: "planar",
+  IfcElementAssembly: "assembly",      // bridge piers, track panels, trusses: measured through their parts
 
   /* ---- components & reinforcement ---- */
   IfcReinforcingBar: "reinforcement",
@@ -124,6 +128,7 @@ export const IFC_FAMILIES: Record<string, ElementFamily> = {
   IfcCaissonFoundation: "volumetric",
   IfcSign: "countable",
   IfcSignal: "countable",
+  IfcSurfaceFeature: "planar",       // road markings, surface treatments: by area (often surface models)
 
   /* ---- spatial & voids ---- */
   IfcSpace: "space",
