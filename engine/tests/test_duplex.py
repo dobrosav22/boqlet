@@ -64,7 +64,7 @@ def test_complete_and_covered(result):
     assert result["status"] == "complete"
     s = result["stats"]
     assert s["unmatchedElements"] == 0
-    assert s["excludedElements"] == 61          # loose furniture is off by default
+    assert s["excludedElements"] == 61 + 21     # loose furniture (61) and the 21 rooms: room finishes are off by default
     assert not [w for w in result["warnings"] if w["code"] == "rule_set"]
 
 

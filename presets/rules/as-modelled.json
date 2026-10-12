@@ -811,6 +811,14 @@
       "section": "scope",
       "question": "Are objects with a non-physical material (origin and georeference markers, zone volumes) counted?",
       "help": "No: they are left out and listed as excluded. Authoring tools add them for placement and display only."
+    },
+    "room_finishes": {
+      "type": "boolean",
+      "value": false,
+      "label": "Finishes room by room",
+      "section": "finishes",
+      "question": "Do you measure floor, ceiling and wall finishes and skirting room by room, from the rooms (IFC spaces)?",
+      "help": "Floor and ceiling area, wall area less the doors and windows in its walls, perimeter less door widths. Uses the IFC space quantities if the file has them, else the room solid. Usually instead of finishes from modelled coverings, not as well."
     }
   },
   "items": [
@@ -1707,6 +1715,122 @@
       "description": "Marker object {type_name}",
       "enabled": {
         "param": "include_non_physical"
+      }
+    },
+    {
+      "id": "room-floors",
+      "label": "Floor finishes by room",
+      "family": "space",
+      "match": {
+        "ifcClass": "IfcSpace"
+      },
+      "quantity": {
+        "kind": "formula",
+        "expr": "floor_area",
+        "unit": "m2"
+      },
+      "lineKey": [
+        "space_type",
+        "IF(space_type = null, type_name, \"\")",
+        "IF(p.lines_by_storey, storey, \"\")"
+      ],
+      "description": "Floor finish, {expr: COALESCE(space_type, type_name, name)}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
+      "claims": [
+        "floor_finish"
+      ],
+      "tags": [
+        "finish",
+        "room"
+      ],
+      "enabled": {
+        "param": "room_finishes"
+      }
+    },
+    {
+      "id": "room-ceilings",
+      "label": "Ceiling finishes by room",
+      "family": "space",
+      "match": {
+        "ifcClass": "IfcSpace"
+      },
+      "quantity": {
+        "kind": "formula",
+        "expr": "ceiling_area",
+        "unit": "m2"
+      },
+      "lineKey": [
+        "space_type",
+        "IF(space_type = null, type_name, \"\")",
+        "IF(p.lines_by_storey, storey, \"\")"
+      ],
+      "description": "Ceiling finish, {expr: COALESCE(space_type, type_name, name)}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
+      "claims": [
+        "ceiling_finish"
+      ],
+      "tags": [
+        "finish",
+        "room"
+      ],
+      "enabled": {
+        "param": "room_finishes"
+      }
+    },
+    {
+      "id": "room-walls",
+      "label": "Wall finishes by room",
+      "family": "space",
+      "match": {
+        "ifcClass": "IfcSpace"
+      },
+      "quantity": {
+        "kind": "formula",
+        "expr": "wall_area_net",
+        "unit": "m2"
+      },
+      "lineKey": [
+        "space_type",
+        "IF(space_type = null, type_name, \"\")",
+        "IF(p.lines_by_storey, storey, \"\")"
+      ],
+      "description": "Wall finish, {expr: COALESCE(space_type, type_name, name)}, less openings{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
+      "claims": [
+        "wall_finish"
+      ],
+      "tags": [
+        "finish",
+        "room"
+      ],
+      "enabled": {
+        "param": "room_finishes"
+      }
+    },
+    {
+      "id": "room-skirting",
+      "label": "Skirting by room",
+      "family": "space",
+      "match": {
+        "ifcClass": "IfcSpace"
+      },
+      "quantity": {
+        "kind": "formula",
+        "expr": "skirting_length",
+        "unit": "m"
+      },
+      "lineKey": [
+        "space_type",
+        "IF(space_type = null, type_name, \"\")",
+        "IF(p.lines_by_storey, storey, \"\")"
+      ],
+      "description": "Skirting, {expr: COALESCE(space_type, type_name, name)}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
+      "claims": [
+        "skirting"
+      ],
+      "tags": [
+        "finish",
+        "room"
+      ],
+      "enabled": {
+        "param": "room_finishes"
       }
     },
     {

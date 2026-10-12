@@ -54,6 +54,7 @@ FAMILIES = json.load(open(os.path.join(HERE, "data", "families.json"), encoding=
 SOURCES = json.load(open(os.path.join(HERE, "data", "quantity_sources.json"), encoding="utf-8"))
 TOLERANCE = 0.01
 PLANAR_VERTICAL = ("IfcWall", "IfcCurtainWall", "IfcPlate")
+CONTACT_TOL = 0.1    # m, as in parse.py: openings this close to a room's box face it
 LINEAR_VERTICAL = ("IfcColumn", "IfcPile")
 PHASE_MAP = {"new construction": "new", "new": "new", "existing": "existing"}
 # IFC2x3 distribution occurrences are generic; the specific class is on the type (IfcDuctSegmentType)
@@ -142,6 +143,14 @@ def build(parsed: dict, rv: Resolver, log: CalcLog, model_id: str | None = None,
     schema = parsed["header"].get("ifcSchema", "IFC4")
     resolutions: list[dict] = []
     out: list[dict] = []
+    rooms = {}                                   # space id -> (name, space_type)
+    for sp_ in parsed["spatial"]:
+        if sp_["kind"] == "space":
+            raw = sp_.get("longName") or sp_.get("name")
+            res = rv.resolve("space_name", raw, {"ifc_class": "IfcSpace"}) if raw else None
+            if res:
+                resolutions.append({**res, "ctx": {"ifc_class": "IfcSpace"}, "guid": sp_["id"]})
+            rooms[sp_["id"]] = (raw, res["term"] if res else None)
 
     for el in parsed["elements"]:
         cls = el["ifcClassBase"]
@@ -329,13 +338,20 @@ def build(parsed: dict, rv: Resolver, log: CalcLog, model_id: str | None = None,
         nmpl = nominal_mass_per_length(profile)
         density = rv.term_prop(mat["term"] if mat else None, "density_kg_m3")
 
-        # faces
-        faces = []
-        sp = sorted(spaces_of.get(el["id"], []))
+        # faces: real sides from geometry (with the rooms on them), else both = main area
+        faces, f_note = [], None
+        sp = sorted(spaces_of.get(el["id"], set()) | {c["spaceId"] for c in g.get("contacts", [])})
         if net_area is not None:
-            sides = ("a", "b") if cls in PLANAR_VERTICAL else ("top", "bottom")
-            for s in sides:
-                faces.append({"side": s, "gross_area": gross_area, "net_area": net_area})
+            labels = ("a", "b") if cls in PLANAR_VERTICAL else ("top", "bottom")
+            sides = g.get("sides")
+            if sides and (sides["a"] or sides["b"]):
+                faces = side_faces(sides, g.get("contacts", []), labels, open_area, rooms, common_pset(el).get("IsExternal"))
+                f_note = (f"faces {labels[0]} {fmt(round(sides['a'], 3))} / {labels[1]} {fmt(round(sides['b'], 3))} m2 net"
+                          + (f", {len({f['space'] for f in faces if f.get('space')})} room(s) on them"
+                             if any(f.get("space") for f in faces) else ""))
+            else:
+                for s in labels:
+                    faces.append({"side": s, "gross_area": gross_area, "net_area": net_area})
 
         # layers
         layers = [{"index": l["index"], "material": l["term"], "material_raw": l["raw"], "thickness": l["thickness"],
@@ -399,13 +415,131 @@ def build(parsed: dict, rv: Resolver, log: CalcLog, model_id: str | None = None,
             bits.append(a_note)
         if p_note:
             bits.append(p_note)
+        if f_note:
+            bits.append(f_note)
         if ops:
             bits.append(f"{len(ops)} opening(s) {fmt(round(open_area, 3))} m2 -> gross {fmt(round(gross_area or 0, 3))} m2")
         if nmpl:
             bits.append(f"profile {profile}: {fmt(nmpl)} kg/m")
         log.detail("measure", f"{el.get('name') or el['id']}: " + "; ".join(bits), guid=el["id"])
     roll_up_parts(out, by_id, log)
+    out += measure_rooms(parsed, rooms, out, model_id, model_discipline, log)
     return out, resolutions
+
+
+def side_faces(sides: dict, contacts: list, labels: tuple, open_area: float, rooms: dict, is_external) -> list[dict]:
+    """Faces of a planar element from its measured sides: one per room lying on a side (the
+    room's contact area, openings shared in proportion) plus what no room covers."""
+    axis = sides["axis"]
+    faces = []
+    for key, label, sign in (("a", labels[0], 1), ("b", labels[1], -1)):
+        net = sides[key]
+        gross = net + open_area
+        if gross <= 0:
+            continue
+        share = net / gross
+        mine = [c for c in contacts if c["side"] == key]
+        normal = [round(sign * v, 6) for v in axis]
+        for c in mine:
+            name, term = rooms.get(c["spaceId"], (None, None))
+            a = min(c["area"], gross)
+            faces.append({k: v for k, v in {"side": label, "gross_area": a, "net_area": a * share, "space": c["spaceId"],
+                                             "space_name": name, "space_type": term, "is_external": False,
+                                             "normal": normal}.items() if v is not None})
+        rest = gross - sum(min(c["area"], gross) for c in mine)
+        if rest > max(0.05 * gross, 0.1) or not mine:
+            f = {"side": label, "gross_area": rest, "net_area": rest * share, "normal": normal}
+            if not mine and isinstance(is_external, bool):
+                f["is_external"] = is_external
+            faces.append(f)
+    return faces
+
+
+def measure_rooms(parsed: dict, rooms: dict, elements: list[dict], model_id: str, discipline: str, log: CalcLog) -> list[dict]:
+    """IfcSpace -> MeasuredElement (family "space"). Reported first (IFC Qto_SpaceBaseQuantities),
+    else the room solid. Revit's own room Area is not used: it depends on a Revit setting (wall
+    centre, core or finish) and disagreed with the room solid by about 9% on the Duplex; it is
+    logged. Openings counted for a room: those in an element the room lies on, near the room."""
+    spatial = {s["id"]: s for s in parsed["spatial"]}
+    bounding = defaultdict(set)
+    for e in elements:
+        for f in e.get("faces", []):
+            if f.get("space"):
+                bounding[f["space"]].add(e["guid"])
+    openings_by_host = defaultdict(list)
+    for o in parsed["openings"]:
+        if o.get("hostId"):
+            openings_by_host[o["hostId"]].append(o)
+    out = []
+    for sid, (raw, term) in rooms.items():
+        s = spatial[sid]
+        g = s.get("geometry") or {}
+        geo = g.get("room") or {}
+        rec = {"quantities": {"reported": s.get("quantities", {})}, "psets": s.get("psets", {})}
+        prov, bits = {}, []
+
+        def pick(kind, geo_key, label):
+            v, src = find_reported(rec, kind)
+            if v is not None:
+                prov[kind] = "reported"
+                bits.append(f"{label} {fmt(round(v, 3))} from {src}")
+                return v
+            if geo.get(geo_key):
+                prov[kind] = "geometry"
+                bits.append(f"{label} {fmt(round(geo[geo_key], 3))} from the room solid")
+                return geo[geo_key]
+            return None
+        floor = pick("floor_area", "floorArea", "floor")
+        ceiling = pick("ceiling_area", "ceilingArea", "ceiling")
+        walls = pick("wall_area", "wallArea", "walls")
+        perimeter = pick("room_perimeter", "perimeter", "perimeter")
+        height = pick("height", "height", "height")
+        revit = (s.get("psets", {}).get("PSet_Revit_Dimensions") or {}).get("Area")
+        if isinstance(revit, (int, float)) and floor and abs(revit - floor) / floor > TOLERANCE:
+            bits.append(f"Revit Area {fmt(round(revit, 3))} not used ({(revit - floor) / floor:+.1%}, follows a Revit room area setting)")
+        # openings facing the room: in a bounding element, and their box next to the room's box
+        ops, lo, hi = [], g.get("bboxMin"), g.get("bboxMax")
+        for h in sorted(bounding.get(sid, ())):
+            for o in openings_by_host.get(h, []):
+                near = lo and o.get("bboxMin") and all(o["bboxMin"][i] <= hi[i] + CONTACT_TOL and o["bboxMax"][i] >= lo[i] - CONTACT_TOL
+                                                       for i in range(3))
+                if near and (o.get("height") or 0) >= (o.get("depth") or 0):
+                    kind = {"IfcDoor": "door", "IfcWindow": "window"}.get(o.get("fillingClass") or "", "void")
+                    ops.append({"kind": kind, "width": o.get("width"), "height": o.get("height"), "area": o.get("area"),
+                                "depth": o.get("depth"), "perimeter": 2 * ((o.get("width") or 0) + (o.get("height") or 0)),
+                                "filling_guid": o.get("fillingId"), "filling_class": o.get("fillingClass")})
+        open_area = sum(o["area"] or 0 for o in ops)
+        doors = sum(o["width"] or 0 for o in ops if o["kind"] == "door")
+        walls_net, _ = find_reported(rec, "wall_area_net")
+        if walls_net is None and walls is not None:
+            walls_net = max(walls - open_area, 0.0)
+        skirting = max(perimeter - doors, 0.0) if perimeter is not None else None
+        if ops:
+            bits.append(f"{len(ops)} opening(s) {fmt(round(open_area, 3))} m2 in its walls, doors {fmt(round(doors, 3))} m wide")
+        storey = spatial.get(s.get("parentId"), {})
+        volume, _ = find_reported(rec, "volume")
+        if volume is None and g.get("volume") and g.get("closed", g.get("watertight", True)):
+            volume = g["volume"]
+        is_storey = storey.get("kind") == "storey"
+        m = {
+            "guid": sid, "model_id": model_id, "discipline": discipline, "ifc_class": "IfcSpace", "ifc_class_raw": s["ifcClass"],
+            "predefined_type": s.get("predefinedType"), "family": "space", "name": s.get("name"), "type_name": s.get("longName"),
+            "space_type": term, "materials": [], "storey": storey.get("name") if is_storey else None,
+            "storey_elevation": storey.get("elevation") if is_storey else None,
+            "spaces": [sid], "status": "new", "count": 1,
+            "floor_area": floor, "ceiling_area": ceiling, "wall_area": walls, "wall_area_net": walls_net,
+            "skirting_length": skirting, "perimeter": perimeter, "height": height,
+            "net_area": floor, "gross_area": floor, "footprint_area": floor, "net_volume": volume, "gross_volume": volume,
+            "faces": [f for f in ({"side": "bottom", "gross_area": floor, "net_area": floor},
+                                  {"side": "top", "gross_area": ceiling, "net_area": ceiling}) if f["gross_area"] is not None],
+            "openings": ops, "layers": [], "child_guids": [], "bounded_by": sorted(bounding.get(sid, ())),
+            "props": {f"{ps}.{k}": v for ps, vals in s.get("psets", {}).items() for k, v in vals.items()},
+            "provenance": prov, "warnings": [],
+        }
+        out.append(m)
+        label = f"{s.get('name') or sid} (room" + (f", {raw}" if raw and raw != s.get("name") else "") + (f" -> {term}" if term else "") + ")"
+        log.detail("measure", label + ": " + "; ".join(bits) + f"; bounded by {len(m['bounded_by'])} element(s)", guid=sid)
+    return out
 
 
 def roll_up_parts(out: list[dict], by_id: dict, log: CalcLog):

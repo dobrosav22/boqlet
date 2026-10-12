@@ -32,7 +32,7 @@ from .federation import combine
 from .log import CalcLog
 from .measure import build as measure
 from .names import Resolver, decision_entries
-from .rules import RuleEngine, flatten, integrity, referenced_fields, unmatched_id
+from .rules import RuleEngine, enabled_view, flatten, integrity, referenced_fields, unmatched_id
 
 INTERNAL = ("_fields", "_mixed", "_parts", "_source_key", "_manual_kind")
 
@@ -203,7 +203,7 @@ def get_boq(parsed: dict, rules: dict, classifications: list[tuple[dict, dict]],
                       f"{len(eng.excluded)} excluded, {unmatched_n} unmatched")
 
     # names that matter -> questions
-    refs = referenced_fields(flat, [m for _, m in classifications])
+    refs = referenced_fields(enabled_view(flat), [m for _, m in classifications])
     field_needed = {"material": "material" in refs, "layer_material": "material" in refs or "layers" in refs,
                     "type_name": "element_type" in refs, "space_name": "space_type" in refs}
     for (field, raw), r in sorted(distinct.items(), key=lambda kv: (kv[0][0], kv[0][1] or "")):

@@ -100,8 +100,8 @@ Working end to end on the NIBS Duplex (Revit 2011, IFC2x3): parse, verify,
 dictionary resolution, measuring, federation of several models into one BoQ, rule execution
 (items, derived, manual), classification
 into any number of code lists, questions and answers, calculation log, Excel export, and a dev
-UI. The engine reproduces the hand-made Duplex BoQ exactly. Not yet built: per-face geometry for
-room-based finishes, contradiction questions, AI name suggestions, model revisions, background jobs, users and projects, the
+UI, plus real wall faces with the rooms on them and room-by-room finishes. The engine reproduces the
+hand-made Duplex BoQ exactly. Not yet built: room/face links across federated models, contradiction questions, AI name suggestions, model revisions, background jobs, users and projects, the
 Java backend. Also run on 309 public IFC files from 30 authoring tools (buildingSMART samples,
 DURAARK, the Auckland OpenIFC repository, Schependomlaan): no engine errors, output valid
 against the contract; quantities checked only for the Duplex and the buildingSMART samples.

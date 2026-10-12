@@ -318,6 +318,27 @@
       }
     },
     {
+      "id": "room-finishes",
+      "match": {
+        "ruleId": [
+          "room-floors",
+          "room-ceilings",
+          "room-walls",
+          "room-skirting"
+        ]
+      },
+      "code": {
+        "lookup": "rule_id",
+        "table": {
+          "room-floors": "H.01",
+          "room-ceilings": "H.02",
+          "room-walls": "H.03",
+          "room-skirting": "H.04"
+        },
+        "default": "H.03"
+      }
+    },
+    {
       "id": "proxies",
       "match": {
         "ruleId": "unmatched-proxies"

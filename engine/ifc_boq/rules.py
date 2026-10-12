@@ -73,6 +73,23 @@ def integrity(rules: dict) -> list[str]:
     return sorted(set(out))
 
 
+def enabled_view(flat: dict) -> dict:
+    """The rule set as it runs: enabled items, derived and manual rules only, parameter slots
+    replaced by their values (formula slots included). What 'used by the current rules' means."""
+    params = {k: p.get("value") for k, p in flat.get("params", {}).items()}
+
+    def fill(v):
+        if isinstance(v, dict):
+            if set(v) == {"param"}:
+                return fill(params.get(v["param"]))
+            return {k: fill(x) for k, x in v.items()}
+        if isinstance(v, list):
+            return [fill(x) for x in v]
+        return v
+    on = lambda r: fill(r.get("enabled", True)) is not False
+    return {k: [fill(r) for r in flat.get(k, []) if on(r)] for k in ("items", "derived", "manual")}
+
+
 def referenced_fields(rules: dict, maps: list[dict]) -> set[str]:
     """Which element fields rules and maps actually use (drives which questions block)."""
     blob = json.dumps({"rules": rules, "maps": maps})
@@ -233,6 +250,21 @@ class RuleEngine:
 
     def surface_values(self, part: dict, surface: str) -> tuple[float | None, float | None, str]:
         g, n = part.get("gross_area"), part.get("net_area")
+        # walls: real sides (measure.py side_faces) sum their faces. Slab top / bottom stay the
+        # adopted main area (a slab's mesh top includes the area under walls; reported areas do not).
+        faces = part.get("faces") or []
+        side = {}
+        for f in faces:
+            if f.get("side") in ("a", "b"):
+                sg, sn = side.get(f["side"], (0.0, 0.0))
+                side[f["side"]] = (sg + (f.get("gross_area") or 0), sn + (f.get("net_area") or 0))
+        real = "_part" not in part and len(side) == 2 and side["a"] != side["b"]
+        if real and surface in ("side_a", "side_b", "larger", "smaller", "mean", "both"):
+            a, b = side["a"], side["b"]
+            pick = {"side_a": a, "side_b": b,
+                    "larger": max(a, b, key=lambda t: t[0]), "smaller": min(a, b, key=lambda t: t[0]),
+                    "mean": ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), "both": (a[0] + b[0], a[1] + b[1])}[surface]
+            return pick[0], pick[1], f"{surface} (faces)"
         if surface in ("main", "top", "bottom", "larger", "smaller", "mean", "side_a", "side_b"):
             return g, n, surface
         if surface == "both":
@@ -363,7 +395,9 @@ class RuleEngine:
             return out
         if bd == "face" and el.get("faces"):
             return [{**el, "gross_area": f["gross_area"], "net_area": f["net_area"], "side": f["side"],
-                     "_part": f"face {f['side']}"} for f in el["faces"]]
+                     "space": f.get("space"), "space_name": f.get("space_name"), "space_type": f.get("space_type"),
+                     "is_external": f.get("is_external", el.get("is_external")),
+                     "_part": f"face {f['side']}" + (f" {f['space_name']}" if f.get("space_name") else "")} for f in el["faces"]]
         if bd == "material" and el.get("layers"):
             groups = defaultdict(float)
             for l in el["layers"]:

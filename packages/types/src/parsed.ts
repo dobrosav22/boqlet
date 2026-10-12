@@ -208,6 +208,15 @@ export interface GeometryInfo {
   obbAxes?: [Vec3, Vec3, Vec3];
   /** Disjoint pieces in the mesh, when more than one; the oriented box then describes the largest. */
   bodyCount?: number;
+  /**
+   * Planar elements (walls, slabs, coverings, plates): area of the mesh faces on each side of the
+   * thin axis, openings already cut. `a` faces along `axis` (up for slabs), `b` against it.
+   */
+  sides?: { axis: Vec3; a: number; b: number };
+  /** Where a room's surface lies on a side of this element: contact area per space (m2). */
+  contacts?: { spaceId: string; side: "a" | "b"; area: number }[];
+  /** Spaces: the surfaces of the room solid (m2, m). */
+  room?: { floorArea: number; ceilingArea: number; wallArea: number; perimeter: number; height: number };
   /** Face winding was inconsistent and repaired before measuring. */
   normalsRepaired?: boolean;
   volumeBeforeRepair?: number;

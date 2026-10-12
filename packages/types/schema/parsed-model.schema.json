@@ -473,6 +473,84 @@
           "type": "number",
           "description": "Disjoint pieces in the mesh, when more than one; the oriented box then describes the largest."
         },
+        "sides": {
+          "type": "object",
+          "properties": {
+            "axis": {
+              "$ref": "#/definitions/Vec3"
+            },
+            "a": {
+              "type": "number"
+            },
+            "b": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "axis",
+            "a",
+            "b"
+          ],
+          "additionalProperties": false,
+          "description": "Planar elements (walls, slabs, coverings, plates): area of the mesh faces on each side of the thin axis, openings already cut. `a` faces along `axis` (up for slabs), `b` against it."
+        },
+        "contacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "spaceId": {
+                "type": "string"
+              },
+              "side": {
+                "type": "string",
+                "enum": [
+                  "a",
+                  "b"
+                ]
+              },
+              "area": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "spaceId",
+              "side",
+              "area"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Where a room's surface lies on a side of this element: contact area per space (m2)."
+        },
+        "room": {
+          "type": "object",
+          "properties": {
+            "floorArea": {
+              "type": "number"
+            },
+            "ceilingArea": {
+              "type": "number"
+            },
+            "wallArea": {
+              "type": "number"
+            },
+            "perimeter": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "floorArea",
+            "ceilingArea",
+            "wallArea",
+            "perimeter",
+            "height"
+          ],
+          "additionalProperties": false,
+          "description": "Spaces: the surfaces of the room solid (m2, m)."
+        },
         "normalsRepaired": {
           "type": "boolean",
           "description": "Face winding was inconsistent and repaired before measuring."

@@ -56,6 +56,12 @@ spatial index before large models. Material,
 type, profile, layer set, property and quantity set extraction keeps everything raw. Checks are
 grouped and summarised (`CheckCode`, see 04). The parser makes no decisions.
 
+Faces and rooms (`faces_and_rooms`): for walls, slabs, coverings and plates the mesh faces are split by
+direction along the oriented box's thin axis into side a (along the axis; up for slabs) and side b;
+for each room solid whose surface lies on a side within 0.1 m and faces it, the contact area is the
+room's triangles clipped to the element's extent (`contacts`). Room solids get floor, ceiling and wall
+areas, floor outline perimeter and height (`room`). Geometry only; decisions are in measure.
+
 Run standalone: `python -m ifc_boq.parse model.ifc out_dir [--schema ...] [--no-overlaps]`.
 
 ### 2. Names (`names.py`)
@@ -92,7 +98,8 @@ still need checking against a real ArchiCAD export).
 | family | nearest class listed in `families.ts`, walking the schema's supertypes (IfcAirTerminal -> IfcFlowTerminal) | |
 | discipline | "mep" for distribution elements, else the model's guess | MEP items in an architecture or infrastructure file were never counted |
 | height | door/window OverallHeight, else reported, else vertical extent | |
-| faces | walls: side a and b, each = main area (**approximation**; no per-face geometry yet). Slabs and coverings: top and bottom | Room-based finishes need real faces later |
+| faces | walls, slabs, coverings, plates: from geometry (parse `sides`, `contacts`): per side, one face per room lying on it (the room's contact area; openings shared in proportion) plus the part no room covers. Walls: sides a / b; slabs: top / bottom. Without geometry: each side = main area | `side_a`, `side_b`, `larger`, `smaller`, `mean`, `both` use the real wall sides; slab `top` / `bottom` stay the adopted main area (a slab mesh's top includes the area under walls) |
+| rooms (IfcSpace) | measured elements of family `space`: floor, ceiling and wall area, perimeter, height from `Qto_SpaceBaseQuantities`, else the room solid; net wall area = wall area less the openings in bounding elements near the room; skirting = perimeter less door widths; room type from the dictionary (`space_name`) | Revit's room `Area` is not used: it follows a Revit setting and was ~9% above the room solids on the Duplex (whose solids match Revit's own volumes) |
 | layers | one per material layer: area = main net area, volume = area x thickness, material resolved to a term | |
 | steel mass per metre | parsed from metric W-shape names (W310X60 -> 60 kg/m). Other section families (IPE, HEA...) need a section table, not bundled; rules fall back to volume x density | Geometry was 3.5-4.7% over Revit on Duplex beams |
 | main material | thickest non-air layer, resolved to a term | |

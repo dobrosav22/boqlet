@@ -13,7 +13,7 @@ Keep this page current: when you fix a limitation, delete its row.
 | Infrastructure location | Elements in IfcBridgePart / IfcRoadPart have no storey; lines have no location | Infrastructure BoQs cannot split by part | `storey`-like field for the nearest spatial container |
 | Terrain and planting | IfcGeographicElement counted (nr) by as-modelled | Grass, soil, river bed as "1 nr" | Site-works rule set: area / volume by predefined type or material |
 | IFC2x3 / IFC4 infrastructure | Exported as proxies and IfcBuilding | Only counted as unknown objects | Dictionary or rules on ObjectType ("sleeper", "rail"); nothing to do in the engine |
-| Faces | Wall sides a and b both equal the main area; no per-face geometry, no face-to-room links | `surface: side_a/side_b/larger/smaller/mean` give the same number; room-based finishes impossible | `measure.py` faces from geometry or `IfcRelSpaceBoundary` (the Duplex has 237 boundaries) |
+| Faces and rooms | Built (Oct 2026): real wall sides, faces per room from geometric contact (0.1 m), rooms measured with net wall area and skirting. Limits: contacts within one file only (an architectural room does not see a structural wall in another model); openings shared over a side in proportion, not placed; rooms bounded at wall centre lines by a tool are missed by the 0.1 m tolerance; slab top / bottom keep the main area | Room finishes across federated models need the architectural rooms and structural walls together | Contacts across models in `federation.py` (meshes or boxes beside the parsed model); opening placement on faces; `IfcRelSpaceBoundary` 2nd-level geometry where present |
 | Footprint / developed area | Only where measured; developed falls back to net area | Sloped roofs and stairs approximated | `measure.py` |
 | Deductions | `embedded` and `recesses` are ignored (a note is written); as-modelled's `deduct_embedded` slot has no effect | Columns through slabs, beams in walls never deducted | Needs embedded-element intersection from parse |
 | Steel | Nominal kg/m only for metric W shapes parsed from the name | Other sections fall back to volume x density | Bundle a section table (check licence) or read profile area |
@@ -59,8 +59,7 @@ Engineering, roughly in order of value:
    NIBS Office federated set). Run each with `npm run corpus`, fix quirks, add tests. Nothing else
    de-risks as much: the buildingSMART samples alone found ten engine bugs (09), but they all come
    from one exporter.
-2. **Real faces and rooms**: per-face areas from geometry and space boundaries; enables
-   room-based finishes and makes `side_a/side_b` meaningful.
+2. ~~**Real faces and rooms**~~ built (Oct 2026); next: room-to-face links across federated models.
 3. ~~**Federation v1**~~ built (Oct 2026); next: per-project saved scopes in the platform, mesh-based
    overlaps, coordinate alignment.
 4. **Platform skeleton in Java**: orgs, projects, model versions, decisions persisted, job table,

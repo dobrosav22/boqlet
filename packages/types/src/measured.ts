@@ -25,8 +25,11 @@ export interface Face {
   side: "a" | "b" | "top" | "bottom" | "edge" | "end";
   gross_area: number;
   net_area: number;
-  /** Room this face bounds (from IFC space boundaries or computed from geometry). */
+  /** Room this face bounds (computed from geometry: the room's surface lying on the face). */
   space?: string;
+  space_name?: string;
+  /** Dictionary term of the room, e.g. "space.bathroom". */
+  space_type?: string;
   is_external?: boolean;
   /** Outward normal, for orientation-based rules (facade direction). */
   normal?: [number, number, number];
@@ -110,6 +113,18 @@ export interface MeasuredElement {
   developed_area?: number;        // true sloped / unfolded area
   faces: Face[];
 
+  /* ---- rooms (IfcSpace) -------------------------------------------- */
+  floor_area?: number;
+  ceiling_area?: number;
+  /** Room wall surface, before openings (perimeter x height for a simple room). */
+  wall_area?: number;
+  /** Room wall surface less the doors and windows in the walls bounding it. */
+  wall_area_net?: number;
+  /** Perimeter less the widths of the doors in the walls bounding it. */
+  skirting_length?: number;
+  /** Elements whose faces bound the room. */
+  bounded_by?: string[];
+
   /* ---- volumes, perimeters, mass ----------------------------------- */
   gross_volume?: number;
   net_volume?: number;
@@ -158,6 +173,7 @@ export type MeasuredField =
   | "length" | "width" | "height" | "thickness" | "depth" | "diameter"
   | "cross_section_area" | "slope" | "elevation_base" | "elevation_top" | "profile_girth"
   | "gross_area" | "net_area" | "footprint_area" | "developed_area"
+  | "floor_area" | "ceiling_area" | "wall_area" | "wall_area_net" | "skirting_length"
   | "gross_volume" | "net_volume" | "perimeter"
   | "mass" | "nominal_mass_per_length" | "density"
   | "bar_diameter" | "bar_count" | "bar_length"

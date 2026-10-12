@@ -70,8 +70,8 @@ formwork, reinforcement, ceiling paint, skirting) is derived and **off by defaul
 still reproduce the Duplex acceptance numbers; `test_template_*` in `test_duplex.py` switch each
 answer on and check the effect (ceiling paint matches the hand-made BoQ's 243.46 m2). Not expressible
 yet: excluding existing or demolished elements for renovation work (needs a scope filter in the engine,
-since filtering in a rule would turn them into unmatched questions), real per-face wall areas, and
-deducting elements passing through slabs. Growing it: when standards
+since filtering in a rule would turn them into unmatched questions) and deducting elements passing
+through slabs. Room finishes are an answer now (`room_finishes`, off by default). Growing it: when standards
 keep needing a question the template lacks, add a slot with a neutral default, point the rule at
 it, and keep the acceptance test green. Patches built on the template pick up new questions with
 their defaults automatically. The questions still need review by someone who knows the standards
@@ -266,6 +266,12 @@ The engine runs whatever it is given and does not judge it: a wrong rule gives a
 faithfully calculated. It does catch mechanical problems: schema errors, integrity, references
 to missing data (questions), unmatched or double-claimed elements.
 
-Known gaps in what rules can express today (see 11): real per-face areas (faces are
-approximated), embedded-element deductions, room-based finishes (needs faces bounded to spaces),
-cross-model scope (federation).
+Faces and rooms: wall `side_a` / `side_b` / `larger` / `smaller` / `mean` / `both` are real sides; the
+`face` breakdown gives one part per face with `space`, `space_name`, `space_type`, `is_external`
+(e.g. paint per room type: breakdown face, lineKey `space_type`). Rooms (IfcSpace, family `space`) carry
+`floor_area`, `ceiling_area`, `wall_area`, `wall_area_net`, `skirting_length`, `perimeter`, `height`,
+`openings` (in their walls) and `bounded_by`; as-modelled's `room-floors`, `room-ceilings`, `room-walls`
+and `room-skirting` measure them when `room_finishes` is on.
+
+Known gaps in what rules can express today (see 11): embedded-element deductions; rooms and faces
+across federated models (contacts are found within one file).

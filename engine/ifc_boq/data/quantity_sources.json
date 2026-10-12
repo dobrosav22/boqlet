@@ -1,55 +1,213 @@
 {
-  "_doc": "Where reported quantities are looked for, in priority order. Each entry is [property-set glob, property name]. IFC quantity sets (quantities.reported) are searched first, then property sets (psets), so standard BaseQuantities win over authoring-tool sets. Add authoring tools here, not in code.",
+  "_doc": "Where reported quantities are looked for, in priority order. Each entry is [property-set glob, property name]. IFC quantity sets (quantities.reported) are searched first, then property sets (psets), so standard BaseQuantities win over authoring-tool sets. Add authoring tools here, not in code. Rooms (IfcSpace): floor_area, ceiling_area, wall_area, wall_area_net, room_perimeter. Revit's room Area is deliberately not a source: it follows a Revit setting (wall centre, core or finish).",
   "volume": [
-    ["Qto_*BaseQuantities", "NetVolume"],
-    ["BaseQuantities", "NetVolume"],
-    ["Qto_*BaseQuantities", "GrossVolume"],
-    ["BaseQuantities", "GrossVolume"],
-    ["PSet_Revit_Dimensions", "Volume"],
-    ["ArchiCADQuantities", "Net Volume"],
-    ["ArchiCADQuantities", "Volume"]
+    [
+      "Qto_*BaseQuantities",
+      "NetVolume"
+    ],
+    [
+      "BaseQuantities",
+      "NetVolume"
+    ],
+    [
+      "Qto_*BaseQuantities",
+      "GrossVolume"
+    ],
+    [
+      "BaseQuantities",
+      "GrossVolume"
+    ],
+    [
+      "PSet_Revit_Dimensions",
+      "Volume"
+    ],
+    [
+      "ArchiCADQuantities",
+      "Net Volume"
+    ],
+    [
+      "ArchiCADQuantities",
+      "Volume"
+    ]
   ],
   "area": [
-    ["Qto_SlabBaseQuantities", "NetArea"],
-    ["Qto_CoveringBaseQuantities", "NetArea"],
-    ["Qto_RoofBaseQuantities", "NetArea"],
-    ["Qto_WallBaseQuantities", "NetSideArea"],
-    ["Qto_*BaseQuantities", "NetArea"],
-    ["BaseQuantities", "NetArea"],
-    ["BaseQuantities", "NetSideArea"],
-    ["Qto_*BaseQuantities", "GrossArea"],
-    ["PSet_Revit_Dimensions", "Area"],
-    ["ArchiCADQuantities", "Area"]
+    [
+      "Qto_SlabBaseQuantities",
+      "NetArea"
+    ],
+    [
+      "Qto_CoveringBaseQuantities",
+      "NetArea"
+    ],
+    [
+      "Qto_RoofBaseQuantities",
+      "NetArea"
+    ],
+    [
+      "Qto_WallBaseQuantities",
+      "NetSideArea"
+    ],
+    [
+      "Qto_*BaseQuantities",
+      "NetArea"
+    ],
+    [
+      "BaseQuantities",
+      "NetArea"
+    ],
+    [
+      "BaseQuantities",
+      "NetSideArea"
+    ],
+    [
+      "Qto_*BaseQuantities",
+      "GrossArea"
+    ],
+    [
+      "PSet_Revit_Dimensions",
+      "Area"
+    ],
+    [
+      "ArchiCADQuantities",
+      "Area"
+    ]
   ],
   "length": [
-    ["Qto_*BaseQuantities", "Length"],
-    ["BaseQuantities", "Length"],
-    ["PSet_Revit_Dimensions", "Length"],
-    ["ArchiCADQuantities", "Length"]
+    [
+      "Qto_*BaseQuantities",
+      "Length"
+    ],
+    [
+      "BaseQuantities",
+      "Length"
+    ],
+    [
+      "PSet_Revit_Dimensions",
+      "Length"
+    ],
+    [
+      "ArchiCADQuantities",
+      "Length"
+    ]
   ],
   "width": [
-    ["Qto_*BaseQuantities", "Width"],
-    ["BaseQuantities", "Width"],
-    ["PSet_Revit_Dimensions", "Width"]
+    [
+      "Qto_*BaseQuantities",
+      "Width"
+    ],
+    [
+      "BaseQuantities",
+      "Width"
+    ],
+    [
+      "PSet_Revit_Dimensions",
+      "Width"
+    ]
   ],
   "height": [
-    ["Qto_*BaseQuantities", "Height"],
-    ["BaseQuantities", "Height"],
-    ["PSet_Revit_Dimensions", "Height"]
+    [
+      "Qto_*BaseQuantities",
+      "Height"
+    ],
+    [
+      "BaseQuantities",
+      "Height"
+    ],
+    [
+      "PSet_Revit_Dimensions",
+      "Height"
+    ]
   ],
   "thickness": [
-    ["Qto_*BaseQuantities", "Width"],
-    ["Qto_*BaseQuantities", "Depth"],
-    ["PSet_Revit_Dimensions", "Thickness"]
+    [
+      "Qto_*BaseQuantities",
+      "Width"
+    ],
+    [
+      "Qto_*BaseQuantities",
+      "Depth"
+    ],
+    [
+      "PSet_Revit_Dimensions",
+      "Thickness"
+    ]
   ],
   "perimeter": [
-    ["Qto_*BaseQuantities", "Perimeter"],
-    ["BaseQuantities", "Perimeter"],
-    ["PSet_Revit_Dimensions", "Perimeter"]
+    [
+      "Qto_*BaseQuantities",
+      "Perimeter"
+    ],
+    [
+      "BaseQuantities",
+      "Perimeter"
+    ],
+    [
+      "PSet_Revit_Dimensions",
+      "Perimeter"
+    ]
   ],
   "mass": [
-    ["Qto_*BaseQuantities", "NetWeight"],
-    ["Qto_*BaseQuantities", "GrossWeight"],
-    ["BaseQuantities", "NetWeight"]
+    [
+      "Qto_*BaseQuantities",
+      "NetWeight"
+    ],
+    [
+      "Qto_*BaseQuantities",
+      "GrossWeight"
+    ],
+    [
+      "BaseQuantities",
+      "NetWeight"
+    ]
+  ],
+  "floor_area": [
+    [
+      "Qto_SpaceBaseQuantities",
+      "NetFloorArea"
+    ],
+    [
+      "BaseQuantities",
+      "NetFloorArea"
+    ]
+  ],
+  "ceiling_area": [
+    [
+      "Qto_SpaceBaseQuantities",
+      "NetCeilingArea"
+    ],
+    [
+      "BaseQuantities",
+      "NetCeilingArea"
+    ]
+  ],
+  "wall_area": [
+    [
+      "Qto_SpaceBaseQuantities",
+      "GrossWallArea"
+    ],
+    [
+      "BaseQuantities",
+      "GrossWallArea"
+    ]
+  ],
+  "wall_area_net": [
+    [
+      "Qto_SpaceBaseQuantities",
+      "NetWallArea"
+    ],
+    [
+      "BaseQuantities",
+      "NetWallArea"
+    ]
+  ],
+  "room_perimeter": [
+    [
+      "Qto_SpaceBaseQuantities",
+      "GrossPerimeter"
+    ],
+    [
+      "BaseQuantities",
+      "GrossPerimeter"
+    ]
   ]
 }

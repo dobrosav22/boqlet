@@ -29,6 +29,7 @@ export const MEASURED_FIELDS = [
   "length", "width", "height", "thickness", "depth", "diameter",
   "cross_section_area", "slope", "elevation_base", "elevation_top", "profile_girth",
   "gross_area", "net_area", "footprint_area", "developed_area",
+  "floor_area", "ceiling_area", "wall_area", "wall_area_net", "skirting_length",
   "gross_volume", "net_volume", "perimeter",
   "mass", "nominal_mass_per_length", "density",
   "bar_diameter", "bar_count", "bar_length",
