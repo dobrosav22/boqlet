@@ -37,6 +37,37 @@ def _worth_asking(r: dict, settings: dict, x: Expr) -> bool:
     return any(a["field"] == r["field"] and (not a.get("when") or x.evaluate(a["when"], r.get("ctx", {}))) for a in rules)
 
 
+def names_in_model(parsed: dict, dictionaries: list[dict], resolution: dict | None = None) -> list[dict]:
+    """Every distinct name the model uses (materials, layer materials, type names), how the given
+    dictionaries resolve it, and on which elements. Used by the dictionary editor; runs no rules.
+
+    One row per (field, raw text, resolved term): the same text can mean different things on
+    different element classes when an entry has a `when` condition."""
+    resolution = resolution or {}
+    rv = Resolver(dictionaries, resolution)
+    _, resolutions = measure(parsed, rv, CalcLog())
+    rows: dict[tuple, dict] = {}
+    guids: dict[tuple, set] = defaultdict(set)
+    for r in resolutions:
+        key = (r["field"], r["raw"], r["term"])
+        row = rows.setdefault(key, {
+            "field": r["field"], "raw": r["raw"], "term": r["term"], "method": r["method"],
+            "layer": r.get("layer"), "dictionary": r.get("dictionary"), "entryId": r.get("entryId"),
+            "classes": [], "count": 0, "worthAsking": False,
+            "extracted": {k: v["value"] for k, v in rv.extract(r["field"], r["raw"], r.get("ctx", {})).items()},
+        })
+        cls = r.get("ctx", {}).get("ifc_class")
+        if cls and cls not in row["classes"]:
+            row["classes"].append(cls)
+        guids[key].add(r["guid"])
+        if r["term"] is None and _worth_asking(r, resolution, rv.expr):
+            row["worthAsking"] = True
+    for key, row in rows.items():
+        row["count"] = len(guids[key])
+        row["classes"].sort()
+    return sorted(rows.values(), key=lambda r: (r["field"], r["term"] is not None, r["raw"].lower()))
+
+
 def get_boq(parsed: dict, rules: dict, classifications: list[tuple[dict, dict]], dictionaries: list[dict],
             resolution: dict | None = None, decisions: list[dict] | None = None,
             rule_library: dict[str, dict] | None = None) -> dict:

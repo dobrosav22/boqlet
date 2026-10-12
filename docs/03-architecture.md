@@ -47,6 +47,8 @@ without being rewritten.
 | Answer questions | merges answers into decisions, generates again | `POST /api/runs` | decisions applied by question id |
 | Show preset JSON | Inputs tab | `GET /api/presets/{kind}/{id}` | raw file content |
 | Download | link | `GET /api/runs/{runId}/boq.xlsx` | stored file |
+| Names in a model (Library, dictionaries) | names tab | `POST /api/models/{modelId}/names` | `pipeline.names_in_model` over the cached parse; nothing is stored |
+| Check a draft preset (Library) | Check button, patch parents | `POST /api/presets/{kind}/check` | `presets.check` + `presets.flattened`; nothing is stored |
 
 The full result (lines, log, questions) is returned with every run. For the Duplex that is a few
 hundred KB; for large models the platform should page lines and logs instead.

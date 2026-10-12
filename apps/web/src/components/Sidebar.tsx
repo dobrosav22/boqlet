@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import type { Decision, ModelSummary, PresetsResponse } from "@ifc-boq/types";
 import { api } from "../api";
 import { bytes, ms } from "../format";
@@ -10,6 +10,7 @@ export interface Settings {
 }
 
 interface Props {
+  head: ReactNode;
   presets: PresetsResponse | null;
   presetsError: string | null;
   onRetryPresets: () => void;
@@ -49,10 +50,7 @@ export function Sidebar(p: Props) {
 
   return (
     <aside className="side">
-      <div className="brand">
-        <span className="brand-mark" aria-hidden />
-        IFC to BoQ <span className="muted">dev build</span>
-      </div>
+      {p.head}
 
       <div
         className={`drop ${drag ? "drag" : ""} ${uploading ? "busy" : ""}`}

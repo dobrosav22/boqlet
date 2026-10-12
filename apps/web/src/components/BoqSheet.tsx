@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import type { BoqLine, BoqResult } from "@ifc-boq/types";
 import { qty } from "../format";
 
@@ -6,6 +6,9 @@ interface Props {
   result: BoqResult;
   primary?: string;
   onShowInLog: (lineKey: string) => void;
+  /** Controlled selection (the open line), shared with the 3D panel. */
+  selected?: string | null;
+  onSelect?: (lineKey: string | null) => void;
 }
 
 interface Group {
@@ -15,8 +18,14 @@ interface Group {
 }
 
 /** The BoQ drawn as ruled dimension paper: Ref | Description | Quantity | Unit. Click a line for its calculation. */
-export function BoqSheet({ result, primary, onShowInLog }: Props) {
-  const [open, setOpen] = useState<string | null>(null);
+export function BoqSheet({ result, primary, onShowInLog, selected, onSelect }: Props) {
+  const [own, setOwn] = useState<string | null>(null);
+  const open = selected !== undefined ? selected : own;
+  const setOpen = onSelect ?? setOwn;
+  // a line selected elsewhere (clicked in the 3D model) scrolls into view
+  useEffect(() => {
+    if (open) document.querySelector(`[data-line="${CSS.escape(open)}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [open]);
   const groups = useMemo(() => {
     const map = new Map<string, Group>();
     for (const l of result.lines) {
@@ -57,6 +66,7 @@ export function BoqSheet({ result, primary, onShowInLog }: Props) {
                   onClick={() => setOpen(isOpen ? null : l.key)}
                   aria-expanded={isOpen}
                   role="row"
+                  data-line={l.key}
                 >
                   <span>{code}</span>
                   <span>

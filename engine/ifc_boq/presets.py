@@ -118,6 +118,118 @@ def load_classification(ref: str) -> tuple[dict, dict]:
     return cl, m
 
 
+EXPR_KEYS = {"if", "expr", "where", "partFilter", "when"}
+
+
+def _schema_problems(doc, kind: str, where: str) -> list[str]:
+    schema = _schema(SCHEMA_FOR[kind])
+    if schema is None:
+        return []
+    import jsonschema
+    v = jsonschema.Draft7Validator(schema)
+    return [f"{where}{'/'.join(str(p) for p in e.absolute_path) or '(root)'}: {e.message[:300]}"
+            for e in sorted(v.iter_errors(doc), key=lambda e: list(map(str, e.absolute_path)))[:25]]
+
+
+def _expr_problems(node, path: str = "") -> list[str]:
+    """Syntax-check every expression in a preset (keys known to hold one), without evaluating."""
+    from .expr import syntax_problem
+    out = []
+    if isinstance(node, dict):
+        base = f"{path}[{node['id']}]" if isinstance(node.get("id"), str) else path
+        for k, v in node.items():
+            here = f"{base}.{k}" if base else k
+            if isinstance(v, str) and (k in EXPR_KEYS or (k == "quantity" and "from" in node)):
+                if (p := syntax_problem(v)):
+                    out.append(f"{here}: {p}")
+            elif k == "lineKey" and isinstance(v, list):
+                out += [f"{here}: {p}" for s in v if isinstance(s, str) and (p := syntax_problem(s))]
+            else:
+                out += _expr_problems(v, here)
+    elif isinstance(node, list):
+        for x in node:
+            out += _expr_problems(x, path)
+    return out
+
+
+def check(kind: str, doc: dict, library: list[dict] | None = None) -> list[str]:
+    """Problems with a draft preset, as messages. [] = the engine would accept it.
+
+    kind: rules | dictionaries | classifications ({"codeList", "map"}).
+    `library`: other unsaved drafts of the same kind, so a draft patch can extend a draft.
+    Uses the same checks as loading and the preset tests; never runs a model.
+    """
+    from .classify import code_targets
+    from .rules import flatten, integrity
+    if kind == "rules":
+        problems = _schema_problems(doc, "rules", "")
+        if not problems:
+            lib = {**rule_sets(), **{d["id"]: d for d in library or [] if isinstance(d, dict) and "id" in d}}
+            lib[doc["id"]] = doc
+            try:
+                flat = flatten(doc, lib)
+                problems += integrity(flat)
+                from .expr import syntax_problem
+                problems += [f"slot {k}: {sp}" for k, p in flat["params"].items()
+                             if p.get("type") == "formula" and (sp := syntax_problem(p.get("value") or ""))]
+            except (ValueError, KeyError, RecursionError) as e:
+                problems.append(str(e) if not isinstance(e, RecursionError) else "The extends chain loops back on itself")
+        return problems + _expr_problems({k: v for k, v in doc.items() if k != "id"})
+    if kind == "dictionaries":
+        problems = _schema_problems(doc, "dictionaries", "")
+        if problems:
+            return problems
+        import re
+        from .names import py_regex
+        known = {t["id"] for d in dictionaries().values() if d["id"] != doc["id"] for t in d.get("terms", [])}
+        known |= {t["id"] for t in doc.get("terms", [])}
+        problems += [f"term '{t['id']}' is under '{t['broader']}', which is not defined"
+                     for t in doc.get("terms", []) if t.get("broader") and t["broader"] not in known]
+        problems += [f"entry '{e['id']}' points to undefined term '{e['term']}'"
+                     for e in doc["entries"] if e["term"] not in known]
+        for x in doc["entries"] + doc.get("extractors", []):
+            rx = x.get("regex") or (x.get("match") or {}).get("regex")
+            if rx:
+                try:
+                    re.compile(py_regex(rx))
+                except re.error as err:
+                    problems.append(f"'{x['id']}': regex does not compile: {err}")
+        for dup in {i for i in [e["id"] for e in doc["entries"]] if [e["id"] for e in doc["entries"]].count(i) > 1}:
+            problems.append(f"entry id '{dup}' is used more than once")
+        return problems + _expr_problems({k: v for k, v in doc.items() if k != "id"})
+    if kind == "classifications":
+        cl, m = doc.get("codeList"), doc.get("map")
+        problems = _schema_problems(cl, "codelist", "code list: ") + _schema_problems(m, "map", "map: ")
+        if problems:
+            return problems
+        codes = [c["code"] for c in cl["codes"]]
+        known = set(codes)
+        problems += [f"code '{c}' appears more than once" for c in sorted({c for c in codes if codes.count(c) > 1})]
+        problems += [f"code '{c['code']}' has parent '{c['parent']}', which is not in the list"
+                     for c in cl["codes"] if c.get("parent") and c["parent"] not in known]
+        if m["codeList"] != cl["id"]:
+            problems.append(f"map points to code list '{m['codeList']}', but the code list id is '{cl['id']}'")
+        for r in m["rules"]:
+            problems += [f"map rule '{r['id']}' gives code '{c}', which is not in the code list"
+                         for c in code_targets(r["code"]) if c not in known]
+        unmapped = m["onUnmapped"]
+        if isinstance(unmapped, dict) and unmapped.get("code") not in known:
+            problems.append(f"default code for unmapped lines '{unmapped.get('code')}' is not in the code list")
+        return problems + _expr_problems({k: v for k, v in m.items() if k != "id"})
+    raise ValueError(f"unknown preset kind '{kind}'")
+
+
+def flattened(doc: dict, library: list[dict] | None = None) -> dict | None:
+    """The draft rule set with its extends chain resolved, as the engine would run it; None if it cannot be."""
+    from .rules import flatten
+    lib = {**rule_sets(), **{d["id"]: d for d in library or [] if isinstance(d, dict) and "id" in d}}
+    try:
+        lib[doc["id"]] = doc
+        return flatten(doc, lib)
+    except Exception:  # a broken draft: check() reports why
+        return None
+
+
 def terms() -> list[dict]:
     out = {}
     for d in dictionaries().values():

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import type { Decision, ModelSummary, PresetsResponse, RunResponse } from "@ifc-boq/types";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
+import type { Decision, ModelSummary, PresetsResponse, RunResponse, SceneIndex } from "@ifc-boq/types";
 import { api } from "./api";
 import { Sidebar, type Settings } from "./components/Sidebar";
 import { BoqSheet } from "./components/BoqSheet";
@@ -7,7 +7,14 @@ import { LogView, type LogFilter } from "./components/LogView";
 import { QuestionsView } from "./components/QuestionsView";
 import { InputsView } from "./components/InputsView";
 import { CompareView, type Pinned } from "./components/CompareView";
+import { SideHead, type Mode } from "./components/SideHead";
+import { Library } from "./library/Library";
+import type { LibState } from "./library/store";
 import { ms } from "./format";
+import { buildLinks } from "./viewer/links";
+
+// three.js is large: load the 3D panel only when it is first shown
+const ModelPanel = lazy(() => import("./viewer/ModelPanel").then((m) => ({ default: m.ModelPanel })));
 
 type Tab = "boq" | "log" | "questions" | "inputs" | "compare";
 
@@ -23,6 +30,18 @@ export function App() {
   const [pinned, setPinned] = useState<Pinned | null>(null);
   const [tab, setTab] = useState<Tab>("boq");
   const [logFilter, setLogFilter] = useState<LogFilter>({ stages: [], showDetail: true, q: "" });
+  const [mode, setMode] = useState<Mode>("boq");
+  const [scene, setScene] = useState<SceneIndex | null>(null);
+  const [show3d, setShow3d] = useState(true);
+  const [selectedLine, setSelectedLine] = useState<string | null>(null);
+  const selectLine = useCallback((key: string | null) => setSelectedLine(key), []);
+  useEffect(() => {
+    setScene(null);
+    if (model) api.scene(model.modelId).then(setScene).catch(() => setShow3d(false));
+  }, [model]);
+  // Library drafts live here so they survive switching between the two modes.
+  const [lib, setLib] = useState<LibState>({});
+  const [libSel, setLibSel] = useState<string | null>(null);
 
   const loadPresets = () => {
     setPresetsError(null);
@@ -75,6 +94,8 @@ export function App() {
   };
 
   const result = run?.result;
+  const links = useMemo(() => (result ? buildLinks(result, scene) : null), [result, scene]);
+  const selected = result?.lines.find((l) => l.key === selectedLine) ?? null;
   const primary = settings.classifications[0];
   const blocking = result?.questions.filter((q) => q.blocking).length ?? 0;
   const runLabel = useMemo(() => {
@@ -84,9 +105,30 @@ export function App() {
     return `${rs}${cl ? ` / ${cl}` : ""}`;
   }, [presets, result, settings.classifications]);
 
+  const head = <SideHead mode={mode} onMode={setMode} />;
+  if (mode === "library") {
+    return (
+      <div className="app">
+        <Library
+          head={head}
+          model={model}
+          onOpenBoq={() => setMode("boq")}
+          presets={presets}
+          presetsError={presetsError}
+          onRetryPresets={loadPresets}
+          lib={lib}
+          setLib={setLib}
+          sel={libSel}
+          setSel={setLibSel}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <Sidebar
+        head={head}
         presets={presets}
         presetsError={presetsError}
         onRetryPresets={loadPresets}
@@ -143,6 +185,9 @@ export function App() {
                 <span className={`status status-${result.status}`}>
                   {result.status === "complete" ? "Complete" : `Needs input: ${blocking} question${blocking === 1 ? "" : "s"}`}
                 </span>
+                <button className={show3d ? "ghost on" : "ghost"} aria-pressed={show3d} onClick={() => setShow3d(!show3d)} disabled={!scene}>
+                  3D view
+                </button>
                 <button className="ghost" onClick={() => setPinned({ label: runLabel, result, classification: primary })}>
                   Pin for comparison
                 </button>
@@ -169,7 +214,16 @@ export function App() {
               ))}
             </nav>
             <section className="panel">
-              {tab === "boq" && <BoqSheet result={result} primary={primary} onShowInLog={showInLog} />}
+              {tab === "boq" && (
+                <div className={show3d && scene && links && model ? "boq-split" : undefined}>
+                  <BoqSheet result={result} primary={primary} onShowInLog={showInLog} selected={selectedLine} onSelect={selectLine} />
+                  {show3d && scene && links && model && (
+                    <Suspense fallback={<div className="model-panel"><div className="mp-canvas"><span className="mp-msg">Loading the 3D view…</span></div></div>}>
+                      <ModelPanel modelId={model.modelId} primary={primary} scene={scene} links={links} selected={selected} onSelectLine={selectLine} />
+                    </Suspense>
+                  )}
+                </div>
+              )}
               {tab === "log" && <LogView entries={result.log} filter={logFilter} onFilter={setLogFilter} />}
               {tab === "questions" && (
                 <QuestionsView result={result} presets={presets} decisions={decisions} running={running} onApply={applyAnswers} />

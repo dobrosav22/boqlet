@@ -10,6 +10,31 @@ from .export_xlsx import export
 from .pipeline import get_boq
 
 
+def model_scene(parsed: dict, mesh_ids: set[str]) -> dict:
+    """What the 3D viewer needs to connect geometry.glb to BoQ lines (SceneIndex in api.ts).
+
+    `parts` are the mesh nodes that draw an element: itself, or for aggregates without their own
+    body (a roof, a stair) the meshes of their parts, recursively."""
+    els = {e["id"]: e for e in parsed["elements"]}
+    storeys = {s["id"]: s.get("name") for s in parsed["spatial"] if s["kind"] == "storey"}
+
+    def parts(eid: str, depth: int = 0) -> list[str]:
+        if eid in mesh_ids:
+            return [eid]
+        if depth > 10:
+            return []
+        return [p for c in els.get(eid, {}).get("childIds", []) for p in parts(c, depth + 1)]
+
+    return {
+        "elements": {i: {k: v for k, v in {
+            "ifcClass": e["ifcClassBase"], "name": e.get("name"), "type": e.get("objectType"),
+            "storey": storeys.get(e.get("storeyId")), "parent": e.get("parentId"), "parts": parts(i),
+        }.items() if v not in (None, [])} for i, e in els.items()},
+        "spaces": [s["id"] for s in parsed["spatial"] if s["kind"] == "space" and s["id"] in mesh_ids],
+        "openings": [o["id"] for o in parsed.get("openings", []) if o["id"] in mesh_ids],
+    }
+
+
 def model_summary(model_id: str, parsed: dict, cached: bool) -> dict:
     h, st = parsed["header"], parsed["stats"]
     return {

@@ -27,6 +27,56 @@ Rules contain no measuring logic. They select elements and combine the measured 
 `MeasuredElement` (see 04). If a rule needs a value the engine does not measure, extend
 `MeasuredElement` and `measure.py`, not the rule set.
 
+## The master template: a standard is a set of answers
+
+Nobody is expected to write a rule set from scratch. `as-modelled` is the **master template**: it
+holds the rules (already written and wired to slots) and asks, through its slots, the questions a
+measurement standard answers, each with a neutral "as modelled" default. A company standard is a
+**patch on the template that stores only the answers that differ**. Someone with the rulebook open
+answers the questions in the Library's **Questions** tab; nothing else is needed for a typical
+standard, and the defaults keep the Duplex acceptance numbers.
+
+```json
+{ "id": "our-standard", "extends": "as-modelled",
+  "params": { "wall_unit": { "value": "volume_from_thickness" }, "masonry_volume_from": { "value": 0.2 },
+              "wall_opening_mode": { "value": "over_threshold" }, "wall_opening_threshold": { "value": 0.5 },
+              "formwork_walls_formula": { "value": "SUM(src.faces.gross_area WHERE side = \"a\") * 2" } } }
+```
+
+Control is never lost; each level goes one step deeper:
+
+| Level | How | Example |
+|---|---|---|
+| Value | number slot | opening size limit 0.5 m2, formwork allowance 1.05 |
+| Method | choice slot (`choose` in the rule) | walls in m2 / m3 / m3 from a thickness |
+| Include or not | boolean slot (`enabled` or an `IF(p.x, …)` in a line key) | formwork as its own item; wall lines per storey |
+| Own formula | **formula slot**, bound where a rule expects an expression | "how do you calculate wall formwork?" |
+| Replace a rule | override the rule by id in the patch (Item rules tab, "Change in this set") | anything the template did not foresee |
+| Add a rule | new id in the patch | a company-specific item |
+
+How a slot becomes a question (all optional; `rules.ts`, `SlotPrompt`): `section` (one of the rule
+set's `sections`, which give titles and order), `question` (worded as the rulebook would answer it),
+`help`, `example`, `optionLabels` for choices, and `dependsOn` (`{ param, values }`: the question
+only applies when another slot has one of these values; the UI dims it otherwise, without evaluating
+any expression). A formula slot (`type: "formula"`) holds an expression plus `unit` and `variables`
+(what the formula can read); a `formula` quantity's `expr` and a derived rule's `quantity` accept
+`{ "param": "<formula slot>" }`, and traces say which slot the formula came from.
+
+Template v1 has 13 sections and 53 questions: general (lines per storey), earthworks and
+substructure, concrete with formwork and reinforcement, walls, openings and deductions, floors and
+slabs, roofs, stairs and railings, finishes, steel and other members, services (MEP), preliminaries
+and sums, and what is included. Work that is rarely modelled (excavation, blinding, hardcore,
+formwork, reinforcement, ceiling paint, skirting) is derived and **off by default**, so the defaults
+still reproduce the Duplex acceptance numbers; `test_template_*` in `test_duplex.py` switch each
+answer on and check the effect (ceiling paint matches the hand-made BoQ's 243.46 m2). Not expressible
+yet: excluding existing or demolished elements for renovation work (needs a scope filter in the engine,
+since filtering in a rule would turn them into unmatched questions), real per-face wall areas, and
+deducting elements passing through slabs. Growing it: when standards
+keep needing a question the template lacks, add a slot with a neutral default, point the rule at
+it, and keep the acceptance test green. Patches built on the template pick up new questions with
+their defaults automatically. The questions still need review by someone who knows the standards
+(see 11).
+
 ## Anatomy of a rule set
 
 ```jsonc
@@ -177,7 +227,7 @@ item that derived rules still read from; it found exactly that bug in an early v
 
 | Preset | Extends | What it demonstrates |
 |---|---|---|
-| `as-modelled` | | The base: net quantities as modelled, all openings deducted, walls in m2 (m3 switch off by default), windows and doors counted, steel in t by nominal kg/m, roofs by developed area, 17 item rules covering every measurement family, 5 derived (formwork walls / slab edges / footings, rebar estimate, paint), 3 manual. Every standard-sensitive value is a slot. Reproduces the hand-made Duplex BoQ. |
+| `as-modelled` | | The master template (see above): 13 sections, 53 questions, 6 formula slots. Defaults give net quantities as modelled, all openings deducted, walls in m2 (m3 switch off by default), windows and doors counted, steel in t by nominal kg/m, roofs by developed area, 17 item rules covering every measurement family, 12 derived (formwork walls / slab edges / footings; rebar estimates for slabs / walls / footings; paint to walls and ceilings; skirting; excavation, blinding, hardcore), 3 manual. Every standard-sensitive value is a slot. Reproduces the hand-made Duplex BoQ. |
 | `standard-style-example` | as-modelled | What encoding a detailed standard looks like: openings over 0.5 m2 deducted with reveals added back, walls of 120 mm and more in m3, windows by area, rebar estimates on, walls replaced by `wall-layers` (one line per element type, material and thickness, air gaps skipped), derived formwork and paint re-pointed at `wall-layers`, a height band slot. Values are placeholders. |
 | `acme-house-rules` | standard-style-example | A firm's tweaks on top of a standard: three slot values, a skirting derived rule, a lump sum. |
 | `demo-tweaked` | as-modelled | The smallest possible custom rules: only three slot values changed (openings up to 1.0 m2 kept, windows by area). Compare it with as-modelled in the app. |

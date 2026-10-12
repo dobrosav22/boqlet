@@ -19,6 +19,8 @@ import csv
 import json
 import sys
 
+from ifc_boq.codelist_import import derive_hierarchy
+
 PRESETS = {
     "uniclass": {
         "code_col": "Code", "title_col": "Title", "separator": "_", "kind": "official",
@@ -71,24 +73,7 @@ def main(argv=None):
         codes.append(c)
 
     sep = p.get("separator")
-    if sep:
-        for c in codes:
-            if "parent" in c:
-                continue
-            parts = c["code"].split(sep)
-            while len(parts) > 1:
-                parts = parts[:-1]
-                cand = sep.join(parts)
-                if cand in seen:
-                    c["parent"] = cand
-                    break
-    by = {c["code"]: c for c in codes}
-    for c in codes:
-        lvl, cur = 0, c
-        while cur.get("parent") in by:
-            lvl += 1
-            cur = by[cur["parent"]]
-        c["level"] = lvl
+    derive_hierarchy(codes, sep)       # same rules as the app's import (ifc_boq/codelist_import.py)
 
     doc = {"schemaVersion": "1.0", "id": a.id, "name": a.name, "kind": p["kind"], "locale": a.locale, "codes": codes}
     for k in ("publisher", "levels", "licence"):

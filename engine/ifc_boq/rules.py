@@ -64,7 +64,8 @@ def integrity(rules: dict) -> list[str]:
     out = [f"derived rule '{d['id']}' reads from '{src}', which does not exist (removed or renamed?)"
            for d in rules.get("derived", []) for src in d["from"] if src not in ids]
     params = set(rules["params"])
-    for x in rules["items"] + rules.get("derived", []) + rules.get("manual", []):
+    formula_slots = [{"id": f"slot {k}", "value": p["value"]} for k, p in rules["params"].items() if p.get("type") == "formula"]
+    for x in rules["items"] + rules.get("derived", []) + rules.get("manual", []) + formula_slots:
         blob = json.dumps(x)
         for ref in re.findall(r'"param":\s*"([^"]+)"', blob) + re.findall(r"\bp\.([A-Za-z_][A-Za-z0-9_]*)", blob):
             if ref not in params:
@@ -108,6 +109,10 @@ class RuleEngine:
         if isinstance(v, dict) and "param" in v:
             return self.params.get(v["param"])
         return v
+
+    def formula_text(self, v) -> str:
+        """An expression for traces; a formula slot shows where it came from."""
+        return f"{self.val(v)}   (from slot {v['param']})" if isinstance(v, dict) and "param" in v else str(v)
 
     def enabled(self, x) -> bool:
         return self.val(x.get("enabled", True)) is not False
@@ -305,7 +310,7 @@ class RuleEngine:
             v, u, expl = self.quantity(spec[branch], part)
             return v, u, f"when {cond_txt} -> {branch}: {expl}"
         if k == "formula":
-            v, txt = self.x.explain(spec["expr"], self.ctx(part))
+            v, txt = self.x.explain(self.val(spec["expr"]) or "", self.ctx(part))
             return (float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None), spec["unit"], txt
         raise ValueError(f"Unknown quantity kind {k}")
 
@@ -515,6 +520,9 @@ class RuleEngine:
     def params_used(self, item) -> dict:
         blob = json.dumps(item)
         names = set(re.findall(r'"param":\s*"([^"]+)"', blob)) | set(re.findall(r"\bp\.([A-Za-z_][A-Za-z0-9_]*)", blob))
+        for n in list(names):                       # slots a formula slot itself reads
+            if isinstance(self.params.get(n), str) and self.rules["params"].get(n, {}).get("type") == "formula":
+                names |= set(re.findall(r"\bp\.([A-Za-z_][A-Za-z0-9_]*)", self.params[n]))
         return {n: self.params.get(n) for n in sorted(names)}
 
     # ---------------------------------------------------------------- finalize
@@ -569,7 +577,7 @@ class RuleEngine:
                         ctx = {**sctx, "src": sctx, "p": self.params}
                         if d.get("where") and not self.x.evaluate(d["where"], ctx):
                             continue
-                        v, txt = self.x.explain(d["quantity"], ctx)
+                        v, txt = self.x.explain(self.val(d["quantity"]) or "", ctx)
                         v = float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
                         factor = self.val(d.get("factor"))
                         if v is not None and factor not in (None, 1):
@@ -591,7 +599,7 @@ class RuleEngine:
                             line = {"key": " | ".join(str(x) for x in lk), "ruleId": d["id"], "ruleKind": "derived",
                                     "description": self.render(d["description"], sctx, {"src": sctx}),
                                     "unit": unit, "quantity": 0.0, "source": "derived", "family": srcline.get("family"),
-                                    "keys": keys, "trace": {"formula": d["quantity"], "params": self.params_used(d),
+                                    "keys": keys, "trace": {"formula": self.formula_text(d["quantity"]), "params": self.params_used(d),
                                                             "elements": [], "sourceLine": srcline["key"]},
                                     "tags": d.get("tags", []), "notes": [], "_fields": dict(srcline["_fields"]),
                                     "_mixed": list(srcline["_mixed"]), "location": srcline.get("location", {}),
@@ -696,5 +704,5 @@ def describe_spec(spec: dict, eng: RuleEngine | None = None) -> str:
     if k == "when":
         return f"IF {spec['if']} THEN {describe_spec(spec['then'], eng)} ELSE {describe_spec(spec['else'], eng)}"
     if k == "formula":
-        return spec["expr"]
+        return eng.formula_text(spec["expr"]) if eng else str(spec["expr"])
     return k

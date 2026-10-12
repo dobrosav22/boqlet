@@ -189,6 +189,13 @@
           },
           "description": "The slots. A standard is mostly a set of values for these."
         },
+        "sections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RuleSection"
+          },
+          "description": "How the slots are grouped into questions (settings questionnaire), in order."
+        },
         "items": {
           "type": "array",
           "items": {
@@ -393,6 +400,7 @@
       "anyOf": [
         {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "type": {
               "type": "string",
@@ -404,28 +412,65 @@
             "unit": {
               "$ref": "#/definitions/Unit"
             },
-            "label": {
-              "type": "string"
-            },
-            "help": {
-              "type": "string"
-            },
             "min": {
               "type": "number"
             },
             "max": {
               "type": "number"
+            },
+            "label": {
+              "type": "string",
+              "description": "Short name, used in tables and next to fields bound to the slot."
+            },
+            "section": {
+              "type": "string",
+              "description": "`RuleSet.sections[].id` this slot is asked in."
+            },
+            "question": {
+              "type": "string",
+              "description": "The question as a person reading their rulebook would answer it."
+            },
+            "help": {
+              "type": "string"
+            },
+            "example": {
+              "type": "string",
+              "description": "A worked example, e.g. \"A 10 m2 wall with a 0.6 m2 window: …\"."
+            },
+            "dependsOn": {
+              "type": "object",
+              "properties": {
+                "param": {
+                  "type": "string"
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "param",
+                "values"
+              ],
+              "additionalProperties": false,
+              "description": "Only relevant when another slot has one of these values (the questionnaire dims it otherwise)."
             }
           },
           "required": [
+            "label",
             "type",
-            "value",
-            "label"
-          ],
-          "additionalProperties": false
+            "value"
+          ]
         },
         {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "type": {
               "type": "string",
@@ -440,23 +485,67 @@
                 "type": "string"
               }
             },
+            "optionLabels": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "Readable text per option, e.g. { volume_from_thickness: \"m3 from a thickness, m2 below\" }."
+            },
             "label": {
-              "type": "string"
+              "type": "string",
+              "description": "Short name, used in tables and next to fields bound to the slot."
+            },
+            "section": {
+              "type": "string",
+              "description": "`RuleSet.sections[].id` this slot is asked in."
+            },
+            "question": {
+              "type": "string",
+              "description": "The question as a person reading their rulebook would answer it."
             },
             "help": {
               "type": "string"
+            },
+            "example": {
+              "type": "string",
+              "description": "A worked example, e.g. \"A 10 m2 wall with a 0.6 m2 window: …\"."
+            },
+            "dependsOn": {
+              "type": "object",
+              "properties": {
+                "param": {
+                  "type": "string"
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "param",
+                "values"
+              ],
+              "additionalProperties": false,
+              "description": "Only relevant when another slot has one of these values (the questionnaire dims it otherwise)."
             }
           },
           "required": [
-            "type",
-            "value",
+            "label",
             "options",
-            "label"
-          ],
-          "additionalProperties": false
+            "type",
+            "value"
+          ]
         },
         {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "type": {
               "type": "string",
@@ -466,21 +555,58 @@
               "type": "boolean"
             },
             "label": {
-              "type": "string"
+              "type": "string",
+              "description": "Short name, used in tables and next to fields bound to the slot."
+            },
+            "section": {
+              "type": "string",
+              "description": "`RuleSet.sections[].id` this slot is asked in."
+            },
+            "question": {
+              "type": "string",
+              "description": "The question as a person reading their rulebook would answer it."
             },
             "help": {
               "type": "string"
+            },
+            "example": {
+              "type": "string",
+              "description": "A worked example, e.g. \"A 10 m2 wall with a 0.6 m2 window: …\"."
+            },
+            "dependsOn": {
+              "type": "object",
+              "properties": {
+                "param": {
+                  "type": "string"
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "param",
+                "values"
+              ],
+              "additionalProperties": false,
+              "description": "Only relevant when another slot has one of these values (the questionnaire dims it otherwise)."
             }
           },
           "required": [
+            "label",
             "type",
-            "value",
-            "label"
-          ],
-          "additionalProperties": false
+            "value"
+          ]
         },
         {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "type": {
               "type": "string",
@@ -490,18 +616,122 @@
               "type": "string"
             },
             "label": {
-              "type": "string"
+              "type": "string",
+              "description": "Short name, used in tables and next to fields bound to the slot."
+            },
+            "section": {
+              "type": "string",
+              "description": "`RuleSet.sections[].id` this slot is asked in."
+            },
+            "question": {
+              "type": "string",
+              "description": "The question as a person reading their rulebook would answer it."
             },
             "help": {
               "type": "string"
+            },
+            "example": {
+              "type": "string",
+              "description": "A worked example, e.g. \"A 10 m2 wall with a 0.6 m2 window: …\"."
+            },
+            "dependsOn": {
+              "type": "object",
+              "properties": {
+                "param": {
+                  "type": "string"
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "param",
+                "values"
+              ],
+              "additionalProperties": false,
+              "description": "Only relevant when another slot has one of these values (the questionnaire dims it otherwise)."
             }
           },
           "required": [
+            "label",
             "type",
-            "value",
-            "label"
-          ],
-          "additionalProperties": false
+            "value"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "formula"
+            },
+            "value": {
+              "$ref": "#/definitions/Expr"
+            },
+            "unit": {
+              "$ref": "#/definitions/Unit"
+            },
+            "variables": {
+              "type": "string",
+              "description": "What the formula can use, e.g. \"src.* = the wall's measured fields\"."
+            },
+            "label": {
+              "type": "string",
+              "description": "Short name, used in tables and next to fields bound to the slot."
+            },
+            "section": {
+              "type": "string",
+              "description": "`RuleSet.sections[].id` this slot is asked in."
+            },
+            "question": {
+              "type": "string",
+              "description": "The question as a person reading their rulebook would answer it."
+            },
+            "help": {
+              "type": "string"
+            },
+            "example": {
+              "type": "string",
+              "description": "A worked example, e.g. \"A 10 m2 wall with a 0.6 m2 window: …\"."
+            },
+            "dependsOn": {
+              "type": "object",
+              "properties": {
+                "param": {
+                  "type": "string"
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "param",
+                "values"
+              ],
+              "additionalProperties": false,
+              "description": "Only relevant when another slot has one of these values (the questionnaire dims it otherwise)."
+            }
+          },
+          "required": [
+            "label",
+            "type",
+            "value"
+          ]
         }
       ],
       "description": "A named, editable slot. This is what a standard \"fills in\"."
@@ -534,6 +764,30 @@
           ]
         }
       ]
+    },
+    "Expr": {
+      "type": "string",
+      "description": "A formula in the small, safe expression language.\n\nGrammar (evaluated only by the engine, never by `eval`):   literals      12  0.5  \"text\"  true  false   operators     + - * /  ( )  = != > >= < <=  AND OR NOT   functions     IF(c,a,b)  MIN(a,b,..)  MAX(a,b,..)  ROUND(x,step)  CEIL(x,step)                 FLOOR(x,step)  ABS(x)  SQRT(x)  PI()  COALESCE(a,b,..)                 UNDER(term, \"concrete\")   true if a dictionary term is that term or beneath it   variables     any MeasuredField           e.g. net_area, thickness, length                 props[\"Pset_WallCommon.FireRating\"]                 p.<param>                   e.g. p.opening_threshold                 src.<field> / src.qty       (derived rules only: the source element / line)   aggregates    SUM | COUNT | MIN | MAX | AVG over a collection, with optional WHERE:                   SUM(openings.area WHERE area > p.opening_threshold)                   SUM(layers.volume WHERE material = \"concrete\")                   COUNT(openings WHERE kind = \"door\")                   SUM(faces.net_area WHERE side = \"a\")                 collections: openings, layers, faces, children"
+    },
+    "RuleSection": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "intro": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "additionalProperties": false,
+      "description": "A group of questions in the settings questionnaire, in display order."
     },
     "ItemRule": {
       "type": "object",
@@ -948,10 +1202,6 @@
       ],
       "description": "A literal value, or a slot to be filled from `params`."
     },
-    "Expr": {
-      "type": "string",
-      "description": "A formula in the small, safe expression language.\n\nGrammar (evaluated only by the engine, never by `eval`):   literals      12  0.5  \"text\"  true  false   operators     + - * /  ( )  = != > >= < <=  AND OR NOT   functions     IF(c,a,b)  MIN(a,b,..)  MAX(a,b,..)  ROUND(x,step)  CEIL(x,step)                 FLOOR(x,step)  ABS(x)  SQRT(x)  PI()  COALESCE(a,b,..)                 UNDER(term, \"concrete\")   true if a dictionary term is that term or beneath it   variables     any MeasuredField           e.g. net_area, thickness, length                 props[\"Pset_WallCommon.FireRating\"]                 p.<param>                   e.g. p.opening_threshold                 src.<field> / src.qty       (derived rules only: the source element / line)   aggregates    SUM | COUNT | MIN | MAX | AVG over a collection, with optional WHERE:                   SUM(openings.area WHERE area > p.opening_threshold)                   SUM(layers.volume WHERE material = \"concrete\")                   COUNT(openings WHERE kind = \"door\")                   SUM(faces.net_area WHERE side = \"a\")                 collections: openings, layers, faces, children"
-    },
     "Value<Breakdown>": {
       "anyOf": [
         {
@@ -1156,7 +1406,7 @@
               "const": "formula"
             },
             "expr": {
-              "$ref": "#/definitions/Expr"
+              "$ref": "#/definitions/Value%3CExpr%3E"
             },
             "unit": {
               "$ref": "#/definitions/Unit"
@@ -1372,6 +1622,17 @@
       ],
       "description": "A literal value, or a slot to be filled from `params`."
     },
+    "Value<Expr>": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Expr"
+        },
+        {
+          "$ref": "#/definitions/ParamRef"
+        }
+      ],
+      "description": "A literal value, or a slot to be filled from `params`."
+    },
     "Band": {
       "type": "object",
       "properties": {
@@ -1442,7 +1703,7 @@
           "description": "Optional narrowing of sources."
         },
         "quantity": {
-          "$ref": "#/definitions/Expr"
+          "$ref": "#/definitions/Value%3CExpr%3E"
         },
         "unit": {
           "$ref": "#/definitions/Unit"

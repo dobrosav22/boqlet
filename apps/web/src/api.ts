@@ -2,7 +2,21 @@
  * Thin client for the engine service (engine/ifc_boq/api.py).
  * The contract lives in @ifc-boq/types (api.ts); keep this file free of UI logic.
  */
-import type { ApiError, ModelSummary, PresetsResponse, RunRequest, RunResponse } from "@ifc-boq/types";
+import type {
+  ApiError,
+  CheckPresetRequest,
+  CheckPresetResponse,
+  CodeListBuildRequest,
+  CodeListBuildResponse,
+  ModelSummary,
+  NamesRequest,
+  NamesResponse,
+  PresetsResponse,
+  RunRequest,
+  RunResponse,
+  SceneIndex,
+  TableReadResponse,
+} from "@ifc-boq/types";
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
@@ -29,6 +43,31 @@ export const api = {
   presets: () => call<PresetsResponse>("/api/presets"),
   preset: (kind: "rules" | "dictionaries" | "classifications", id: string) =>
     call<unknown>(`/api/presets/${kind}/${encodeURIComponent(id)}`),
+  checkPreset: (kind: "rules" | "dictionaries" | "classifications", req: CheckPresetRequest) =>
+    call<CheckPresetResponse>(`/api/presets/${kind}/check`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req),
+    }),
+  names: (modelId: string, req: NamesRequest) =>
+    call<NamesResponse>(`/api/models/${encodeURIComponent(modelId)}/names`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req),
+    }),
+  readCodeTable: (file: File) => {
+    const body = new FormData();
+    body.append("file", file);
+    return call<TableReadResponse>("/api/codelists/read", { method: "POST", body });
+  },
+  buildCodes: (req: CodeListBuildRequest) =>
+    call<CodeListBuildResponse>("/api/codelists/build", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req),
+    }),
+  scene: (modelId: string) => call<SceneIndex>(`/api/models/${encodeURIComponent(modelId)}/scene`),
+  geometryUrl: (modelId: string) => `/api/models/${encodeURIComponent(modelId)}/geometry.glb`,
   uploadModel: (file: File) => {
     const body = new FormData();
     body.append("file", file);

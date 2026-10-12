@@ -45,7 +45,10 @@ A development build that proves the engine on a real file and lets developers po
 - **Web app** (`apps/web`, React 18 + Vite): drop an IFC, choose a rule set, classifications
   and dictionaries, generate, then inspect: the BoQ as a ruled sheet, each line's formula and
   element contributions, the full calculation log, questions with answer controls, the inputs
-  as JSON, and a side-by-side comparison of two runs. Download the Excel BoQ.
+  as JSON, and a side-by-side comparison of two runs. Download the Excel BoQ. A **Library** mode
+  shows and edits rule sets, classifications and dictionaries as forms (drafts in browser memory
+  only, checked by the engine, downloadable as JSON). A **3D view** beside the BoQ (three.js over
+  the engine's own geometry) highlights a line's elements and lists the lines of a clicked element.
 - **Engine** (`engine/ifc_boq`, Python): parse IFC to a cached `ParsedModel`, verify it,
   resolve names, measure, run rules, classify, ask questions, log every step, export Excel.
   Served locally by FastAPI on port 8787, and usable from the command line.

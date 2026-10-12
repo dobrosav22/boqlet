@@ -1,0 +1,105 @@
+/* 3D panel beside the BoQ sheet. Tokens from styles.css. */
+
+.boq-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.85fr);
+  gap: 20px;
+  align-items: start;
+}
+.boq-split .sheet {
+  max-width: none;
+}
+.model-panel {
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: calc(100vh - 24px);
+  min-height: 420px;
+}
+.mp-tools {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.mp-canvas {
+  position: relative;
+  flex: 1;
+  min-height: 260px;
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--paper-2);
+}
+.mp-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+.mp-canvas canvas:active {
+  cursor: grabbing;
+}
+.mp-msg {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--pencil);
+  font-size: 0.9rem;
+  padding: 16px;
+  text-align: center;
+}
+.mp-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 0.8rem;
+}
+.mp-legend li {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+.mp-info {
+  max-height: 32%;
+  overflow-y: auto;
+  border-top: 1px solid var(--ruling);
+  padding-top: 6px;
+}
+.mp-info p {
+  margin: 0 0 4px;
+}
+.mp-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.mp-lines li {
+  padding: 2px 0;
+}
+.ghost.on {
+  background: var(--accent);
+  color: #fff;
+}
+
+@media (max-width: 1200px) {
+  .boq-split {
+    grid-template-columns: 1fr;
+  }
+  .model-panel {
+    position: static;
+    height: 70vh;
+  }
+}

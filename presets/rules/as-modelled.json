@@ -1,12 +1,12 @@
 {
   "schemaVersion": "1.0",
   "id": "as-modelled",
-  "name": "As modelled",
+  "name": "As modelled (master template)",
   "version": "1.0.0",
   "meta": {
     "unitSystem": "metric",
     "locale": "en",
-    "description": "Net quantities as modelled; all openings deducted."
+    "description": "The master template: the questions a measurement standard answers, with neutral 'as modelled' answers as defaults. Build your own standard by extending it and changing only the answers that differ."
   },
   "defaults": {
     "rounding": {
@@ -17,24 +17,303 @@
     "onMissing": "flag",
     "breakdown": "element"
   },
-  "params": {
-    "wall_opening_mode": {
-      "type": "choice",
-      "value": "all",
-      "options": [
-        "none",
-        "all",
-        "over_threshold",
-        "excess_only",
-        "per_element_sum"
-      ],
-      "label": "Wall opening deduction"
+  "sections": [
+    {
+      "id": "general",
+      "title": "General",
+      "intro": "How lines are organised for every item."
     },
-    "wall_opening_threshold": {
+    {
+      "id": "earthworks",
+      "title": "Earthworks and substructure",
+      "intro": "Excavation, blinding and hardcore are rarely modelled; these answers derive them from footings and ground slabs."
+    },
+    {
+      "id": "concrete",
+      "title": "Concrete, formwork and reinforcement",
+      "intro": "Formwork and reinforcement are rarely modelled; these answers decide how they are derived."
+    },
+    {
+      "id": "walls",
+      "title": "Walls",
+      "intro": "Unit and face of walls."
+    },
+    {
+      "id": "openings",
+      "title": "Openings and deductions",
+      "intro": "What is deducted for windows, doors and voids, and how the openings themselves are measured."
+    },
+    {
+      "id": "floors",
+      "title": "Floors and slabs"
+    },
+    {
+      "id": "roofs",
+      "title": "Roofs"
+    },
+    {
+      "id": "stairs",
+      "title": "Stairs and railings"
+    },
+    {
+      "id": "finishes",
+      "title": "Finishes",
+      "intro": "Ceilings, floor and wall finishes, painting and skirting."
+    },
+    {
+      "id": "steel",
+      "title": "Steel and other members"
+    },
+    {
+      "id": "mep",
+      "title": "Services (MEP)"
+    },
+    {
+      "id": "prelims",
+      "title": "Preliminaries and sums"
+    },
+    {
+      "id": "scope",
+      "title": "What is included"
+    }
+  ],
+  "params": {
+    "lines_by_storey": {
+      "type": "boolean",
+      "value": false,
+      "label": "Lines per storey",
+      "section": "general",
+      "question": "Do you want separate BoQ lines for each storey?",
+      "help": "Without it, items of the same kind are summed over the whole building. Each line keeps its storey either way."
+    },
+    "excavation": {
+      "type": "boolean",
+      "value": false,
+      "label": "Excavation for footings",
+      "section": "earthworks",
+      "question": "Do you measure excavation for foundations?",
+      "help": "Earthworks are almost never modelled; this derives them from the footings."
+    },
+    "working_space": {
+      "type": "number",
+      "value": 0.3,
+      "unit": "m",
+      "label": "Working space",
+      "section": "earthworks",
+      "question": "How much working space is added on each side of a footing?",
+      "dependsOn": {
+        "param": "excavation",
+        "values": [
+          true
+        ]
+      }
+    },
+    "excavation_formula": {
+      "type": "formula",
+      "unit": "m3",
+      "label": "Formula: excavation",
+      "section": "earthworks",
+      "value": "(src.length + 2 * p.working_space) * (src.width + 2 * p.working_space) * src.height",
+      "question": "How do you calculate excavation for a footing?",
+      "variables": "src.* = the footing: length, width, height, net_volume; p.working_space",
+      "help": "Default: footing plan enlarged by the working space on every side, times the footing depth.",
+      "dependsOn": {
+        "param": "excavation",
+        "values": [
+          true
+        ]
+      }
+    },
+    "blinding": {
+      "type": "boolean",
+      "value": false,
+      "label": "Blinding under footings",
+      "section": "earthworks",
+      "question": "Do you measure blinding concrete under footings?"
+    },
+    "blinding_thickness": {
+      "type": "number",
+      "value": 0.05,
+      "unit": "m",
+      "label": "Blinding thickness",
+      "section": "earthworks",
+      "question": "How thick is the blinding layer?",
+      "dependsOn": {
+        "param": "blinding",
+        "values": [
+          true
+        ]
+      }
+    },
+    "hardcore": {
+      "type": "boolean",
+      "value": false,
+      "label": "Hardcore under ground slabs",
+      "section": "earthworks",
+      "question": "Do you measure a hardcore (gravel) bed under ground-floor slabs?"
+    },
+    "hardcore_thickness": {
+      "type": "number",
+      "value": 0.15,
+      "unit": "m",
+      "label": "Hardcore thickness",
+      "section": "earthworks",
+      "question": "How thick is the hardcore bed?",
+      "dependsOn": {
+        "param": "hardcore",
+        "values": [
+          true
+        ]
+      }
+    },
+    "formwork_separate": {
+      "type": "boolean",
+      "value": true,
+      "label": "Formwork as separate item",
+      "section": "concrete",
+      "question": "Is formwork measured as its own item?",
+      "help": "Some standards include formwork in the concrete item; then there are no formwork lines."
+    },
+    "formwork_factor": {
+      "type": "number",
+      "value": 1,
+      "label": "Formwork allowance factor",
+      "section": "concrete",
+      "question": "Do you add an allowance to formwork areas? (1 = none, 1.05 = 5 %)",
+      "dependsOn": {
+        "param": "formwork_separate",
+        "values": [
+          true
+        ]
+      }
+    },
+    "formwork_walls_formula": {
+      "type": "formula",
+      "value": "SUM(src.faces.gross_area WHERE side = \"a\" OR side = \"b\")",
+      "unit": "m2",
+      "label": "Formula: wall formwork",
+      "section": "concrete",
+      "question": "How do you calculate formwork to concrete walls?",
+      "variables": "src.* = the concrete wall: faces, length, height, thickness, net_area, openings",
+      "help": "Default: both faces of the wall, openings not deducted (gross).",
+      "dependsOn": {
+        "param": "formwork_separate",
+        "values": [
+          true
+        ]
+      }
+    },
+    "formwork_slab_edges_formula": {
+      "type": "formula",
+      "value": "src.perimeter * src.thickness",
+      "unit": "m2",
+      "label": "Formula: slab edge formwork",
+      "section": "concrete",
+      "question": "How do you calculate edge formwork to concrete slabs?",
+      "variables": "src.* = the concrete slab: perimeter, thickness, net_area, openings",
+      "dependsOn": {
+        "param": "formwork_separate",
+        "values": [
+          true
+        ]
+      }
+    },
+    "formwork_footings_formula": {
+      "type": "formula",
+      "value": "2 * src.length * src.height",
+      "unit": "m2",
+      "label": "Formula: footing formwork",
+      "section": "concrete",
+      "question": "How do you calculate formwork to the sides of footings?",
+      "variables": "src.* = the footing: length, width, height, perimeter",
+      "dependsOn": {
+        "param": "formwork_separate",
+        "values": [
+          true
+        ]
+      }
+    },
+    "rebar_estimates": {
+      "type": "boolean",
+      "value": false,
+      "label": "Reinforcement estimates",
+      "section": "concrete",
+      "question": "When the model has no reinforcement, do you estimate it from concrete volumes?"
+    },
+    "rebar_slab_kg_m3": {
       "type": "number",
       "value": 0,
-      "unit": "m2",
-      "label": "Wall opening threshold"
+      "unit": "kg/m3",
+      "label": "Reinforcement in slabs",
+      "section": "concrete",
+      "question": "How many kg of reinforcement per m3 of slab concrete?",
+      "dependsOn": {
+        "param": "rebar_estimates",
+        "values": [
+          true
+        ]
+      }
+    },
+    "rebar_wall_kg_m3": {
+      "type": "number",
+      "value": 0,
+      "unit": "kg/m3",
+      "label": "Reinforcement in walls",
+      "section": "concrete",
+      "question": "How many kg of reinforcement per m3 of wall concrete?",
+      "dependsOn": {
+        "param": "rebar_estimates",
+        "values": [
+          true
+        ]
+      }
+    },
+    "rebar_footing_kg_m3": {
+      "type": "number",
+      "value": 0,
+      "unit": "kg/m3",
+      "label": "Reinforcement in footings",
+      "section": "concrete",
+      "question": "How many kg of reinforcement per m3 of footing concrete?",
+      "dependsOn": {
+        "param": "rebar_estimates",
+        "values": [
+          true
+        ]
+      }
+    },
+    "wall_unit": {
+      "type": "choice",
+      "value": "area",
+      "options": [
+        "area",
+        "volume",
+        "volume_from_thickness"
+      ],
+      "optionLabels": {
+        "area": "m2 (area)",
+        "volume": "m3 (volume)",
+        "volume_from_thickness": "m3 from a thickness, m2 below it"
+      },
+      "label": "Wall unit",
+      "section": "walls",
+      "question": "In what unit are walls measured?",
+      "help": "Many standards measure thin walls and linings by area, and thick masonry or concrete walls by volume."
+    },
+    "masonry_volume_from": {
+      "type": "number",
+      "value": 0.25,
+      "unit": "m",
+      "label": "m3 from wall thickness",
+      "section": "walls",
+      "question": "From which thickness are walls measured in m3?",
+      "help": "Walls at least this thick are measured by volume, thinner ones by area.",
+      "dependsOn": {
+        "param": "wall_unit",
+        "values": [
+          "volume_from_thickness"
+        ]
+      }
     },
     "wall_surface": {
       "type": "choice",
@@ -48,18 +327,97 @@
         "smaller",
         "mean"
       ],
-      "label": "Wall face measured"
+      "label": "Wall face measured",
+      "section": "walls",
+      "question": "Which face of a wall is measured?",
+      "optionLabels": {
+        "main": "Centreline / main face",
+        "side_a": "One side (a)",
+        "side_b": "Other side (b)",
+        "both": "Both sides added",
+        "larger": "The larger face",
+        "smaller": "The smaller face",
+        "mean": "Average of both faces"
+      },
+      "help": "The engine does not measure each face separately yet, so all choices except 'both sides' currently give the same area."
+    },
+    "wall_opening_mode": {
+      "type": "choice",
+      "value": "all",
+      "options": [
+        "none",
+        "all",
+        "over_threshold",
+        "excess_only",
+        "per_element_sum"
+      ],
+      "label": "Wall opening deduction",
+      "section": "openings",
+      "question": "Which openings (windows, doors, voids) are deducted from walls?",
+      "optionLabels": {
+        "none": "Never deduct openings",
+        "all": "Deduct every opening",
+        "over_threshold": "Deduct openings larger than a size, in full",
+        "excess_only": "Deduct only the part of each opening above a size",
+        "per_element_sum": "Deduct all openings if together they exceed a size"
+      },
+      "example": "A 3 x 10 m wall with one 0.6 m2 window: deduct every opening gives 29.4 m2; deduct only openings over 1 m2 gives 30 m2."
+    },
+    "wall_opening_threshold": {
+      "type": "number",
+      "value": 0,
+      "unit": "m2",
+      "label": "Wall opening size limit",
+      "section": "openings",
+      "question": "What is the size limit for deducting openings from walls?",
+      "help": "In m2 when compared by area, in m when compared by width.",
+      "dependsOn": {
+        "param": "wall_opening_mode",
+        "values": [
+          "over_threshold",
+          "excess_only",
+          "per_element_sum"
+        ]
+      }
+    },
+    "opening_compare_by": {
+      "type": "choice",
+      "value": "area",
+      "options": [
+        "area",
+        "width"
+      ],
+      "optionLabels": {
+        "area": "The opening's area",
+        "width": "The opening's width"
+      },
+      "label": "Opening size measured by",
+      "section": "openings",
+      "question": "Is that size limit about an opening's area or its width?",
+      "dependsOn": {
+        "param": "wall_opening_mode",
+        "values": [
+          "over_threshold",
+          "excess_only",
+          "per_element_sum"
+        ]
+      }
     },
     "wall_add_reveals": {
       "type": "boolean",
       "value": false,
-      "label": "Add reveals of deducted openings"
-    },
-    "masonry_volume_from": {
-      "type": "number",
-      "value": 99,
-      "unit": "m",
-      "label": "Measure walls in m3 from this thickness (99 = never)"
+      "label": "Add reveals back",
+      "section": "openings",
+      "question": "When an opening is deducted, are its reveals (the sides of the opening) added back?",
+      "dependsOn": {
+        "param": "wall_opening_mode",
+        "values": [
+          "all",
+          "over_threshold",
+          "excess_only",
+          "per_element_sum"
+        ]
+      }
     },
     "slab_opening_mode": {
       "type": "choice",
@@ -70,13 +428,32 @@
         "over_threshold",
         "excess_only"
       ],
-      "label": "Slab opening deduction"
+      "label": "Slab opening deduction",
+      "section": "openings",
+      "question": "Which openings are deducted from floor and roof slabs?",
+      "optionLabels": {
+        "none": "Never deduct openings",
+        "all": "Deduct every opening",
+        "over_threshold": "Deduct openings larger than a size, in full",
+        "excess_only": "Deduct only the part of each opening above a size",
+        "per_element_sum": "Deduct all openings if together they exceed a size"
+      }
     },
     "slab_opening_threshold": {
       "type": "number",
       "value": 0,
       "unit": "m2",
-      "label": "Slab opening threshold"
+      "label": "Slab opening size limit",
+      "section": "openings",
+      "question": "What is the size limit for deducting openings from slabs?",
+      "dependsOn": {
+        "param": "slab_opening_mode",
+        "values": [
+          "over_threshold",
+          "excess_only",
+          "per_element_sum"
+        ]
+      }
     },
     "deduct_embedded": {
       "type": "choice",
@@ -86,42 +463,15 @@
         "all",
         "over_threshold"
       ],
-      "label": "Deduct columns/beams passing through"
-    },
-    "roof_surface": {
-      "type": "choice",
-      "value": "developed",
-      "options": [
-        "developed",
-        "footprint"
-      ],
-      "label": "Roof area basis"
-    },
-    "steel_mass_basis": {
-      "type": "choice",
-      "value": "nominal_per_length",
-      "options": [
-        "nominal_per_length",
-        "volume_density",
-        "reported"
-      ],
-      "label": "Steel mass basis"
-    },
-    "steel_density": {
-      "type": "number",
-      "value": 7850,
-      "unit": "kg/m3",
-      "label": "Steel density"
-    },
-    "linear_basis": {
-      "type": "choice",
-      "value": "axis",
-      "options": [
-        "axis",
-        "overall",
-        "clear"
-      ],
-      "label": "Length basis for beams/columns"
+      "label": "Deduct elements passing through",
+      "section": "openings",
+      "question": "Are columns and beams passing through slabs deducted?",
+      "optionLabels": {
+        "none": "No",
+        "all": "Yes, all",
+        "over_threshold": "Yes, larger ones"
+      },
+      "help": "Not applied by the engine yet (it needs embedded-element geometry). The answer is kept for when it is."
     },
     "window_measure": {
       "type": "choice",
@@ -131,7 +481,14 @@
         "area",
         "perimeter"
       ],
-      "label": "Windows measured by"
+      "label": "Windows measured by",
+      "section": "openings",
+      "question": "How are windows measured?",
+      "optionLabels": {
+        "count": "Number of windows",
+        "area": "Area (width x height)",
+        "perimeter": "Perimeter"
+      }
     },
     "door_measure": {
       "type": "choice",
@@ -140,40 +497,312 @@
         "count",
         "area"
       ],
-      "label": "Doors measured by"
+      "label": "Doors measured by",
+      "section": "openings",
+      "question": "How are doors measured?",
+      "optionLabels": {
+        "count": "Number of doors",
+        "area": "Area (width x height)"
+      }
     },
-    "formwork_factor": {
+    "slab_surface": {
+      "type": "choice",
+      "value": "top",
+      "options": [
+        "top",
+        "bottom",
+        "footprint"
+      ],
+      "optionLabels": {
+        "top": "Top surface",
+        "bottom": "Underside",
+        "footprint": "Plan area (footprint)"
+      },
+      "label": "Slab area basis",
+      "section": "floors",
+      "question": "Which surface of a floor slab is measured?"
+    },
+    "slab_concrete_separate": {
+      "type": "boolean",
+      "value": true,
+      "label": "Slab concrete as own item",
+      "section": "floors",
+      "question": "Is the concrete in floor slabs measured as its own item (m3), besides the slab area (m2)?",
+      "help": "Reinforcement estimates for slabs are taken from this item."
+    },
+    "roof_surface": {
+      "type": "choice",
+      "value": "developed",
+      "options": [
+        "developed",
+        "footprint"
+      ],
+      "label": "Roof area basis",
+      "section": "roofs",
+      "question": "Is roof area measured along the slope or in plan?",
+      "optionLabels": {
+        "developed": "Along the slope (true area)",
+        "footprint": "In plan (horizontal projection)"
+      }
+    },
+    "roof_breakdown": {
+      "type": "choice",
+      "value": "element",
+      "options": [
+        "element",
+        "layer"
+      ],
+      "optionLabels": {
+        "element": "One line per roof type",
+        "layer": "One line per roof layer (membrane, insulation, deck…)"
+      },
+      "label": "Roof lines",
+      "section": "roofs",
+      "question": "Is a roof one item, or is each layer of its build-up measured separately?"
+    },
+    "stairs_measure": {
+      "type": "choice",
+      "value": "count",
+      "options": [
+        "count",
+        "plan_area"
+      ],
+      "optionLabels": {
+        "count": "Number of stairs",
+        "plan_area": "Plan area (length x width)"
+      },
+      "label": "Stairs measured by",
+      "section": "stairs",
+      "question": "How are stairs measured?"
+    },
+    "railing_measure": {
+      "type": "choice",
+      "value": "length",
+      "options": [
+        "length",
+        "count"
+      ],
+      "optionLabels": {
+        "length": "Length",
+        "count": "Number of railings"
+      },
+      "label": "Railings measured by",
+      "section": "stairs",
+      "question": "How are railings and balustrades measured?"
+    },
+    "railing_basis": {
+      "type": "choice",
+      "value": "overall",
+      "options": [
+        "overall",
+        "axis"
+      ],
+      "optionLabels": {
+        "overall": "Overall length",
+        "axis": "Along the axis"
+      },
+      "label": "Railing length",
+      "section": "stairs",
+      "question": "Which length of a railing is measured?",
+      "dependsOn": {
+        "param": "railing_measure",
+        "values": [
+          "length"
+        ]
+      }
+    },
+    "paint_walls": {
+      "type": "boolean",
+      "value": true,
+      "label": "Paint to walls",
+      "section": "finishes",
+      "question": "Do you measure painting to plasterboard wall surfaces?"
+    },
+    "paint_walls_formula": {
+      "type": "formula",
+      "unit": "m2",
+      "label": "Formula: wall paint",
+      "section": "finishes",
+      "value": "SUM(src.layers.area WHERE UNDER(material, \"board.plasterboard\"))",
+      "question": "How do you calculate the painted wall area?",
+      "variables": "src.* = the wall: layers (with material, area, thickness), faces, openings, net_area",
+      "help": "Default: the area of every plasterboard layer of the wall.",
+      "dependsOn": {
+        "param": "paint_walls",
+        "values": [
+          true
+        ]
+      }
+    },
+    "paint_ceilings": {
+      "type": "boolean",
+      "value": false,
+      "label": "Paint to ceilings",
+      "section": "finishes",
+      "question": "Do you measure painting to ceilings as its own item?"
+    },
+    "skirting": {
+      "type": "boolean",
+      "value": false,
+      "label": "Skirting",
+      "section": "finishes",
+      "question": "Do you measure skirting along floor finishes?",
+      "help": "Taken from modelled floor coverings. Models that put floor finishes in slab layers give no skirting."
+    },
+    "skirting_formula": {
+      "type": "formula",
+      "unit": "m",
+      "label": "Formula: skirting",
+      "section": "finishes",
+      "value": "src.perimeter - SUM(src.openings.width WHERE kind = \"door\")",
+      "question": "How do you calculate skirting length?",
+      "variables": "src.* = the floor covering: perimeter, openings, net_area",
+      "help": "Default: the perimeter of the floor finish less door openings.",
+      "dependsOn": {
+        "param": "skirting",
+        "values": [
+          true
+        ]
+      }
+    },
+    "finishes_by_type": {
+      "type": "boolean",
+      "value": true,
+      "label": "Finishes by type",
+      "section": "finishes",
+      "question": "Are finishes (ceilings, floor and wall coverings) split by their type name?",
+      "help": "No: one line per kind of finish (ceiling, flooring…) whatever its type."
+    },
+    "steel_mass_basis": {
+      "type": "choice",
+      "value": "nominal_per_length",
+      "options": [
+        "nominal_per_length",
+        "volume_density",
+        "reported"
+      ],
+      "label": "Steel mass basis",
+      "section": "steel",
+      "question": "How is the weight of steel sections found?",
+      "optionLabels": {
+        "nominal_per_length": "Length x nominal kg/m of the section",
+        "volume_density": "Volume x density",
+        "reported": "Weight given in the model"
+      }
+    },
+    "steel_density": {
+      "type": "number",
+      "value": 7850,
+      "unit": "kg/m3",
+      "label": "Steel density",
+      "section": "steel",
+      "question": "What steel density do you use?"
+    },
+    "linear_basis": {
+      "type": "choice",
+      "value": "axis",
+      "options": [
+        "axis",
+        "overall",
+        "clear"
+      ],
+      "label": "Length basis for beams/columns",
+      "section": "steel",
+      "question": "Which length is measured for beams, columns and other members?",
+      "optionLabels": {
+        "axis": "Along the axis",
+        "overall": "Overall length incl. overlaps",
+        "clear": "Clear span between supports"
+      }
+    },
+    "members_measure": {
+      "type": "choice",
+      "value": "length",
+      "options": [
+        "length",
+        "count",
+        "volume"
+      ],
+      "optionLabels": {
+        "length": "Length",
+        "count": "Number of members",
+        "volume": "Volume (m3)"
+      },
+      "label": "Other members measured by",
+      "section": "steel",
+      "question": "How are beams, columns and members that are not steel (timber, concrete) measured?"
+    },
+    "include_mep": {
+      "type": "boolean",
+      "value": true,
+      "label": "Include services",
+      "section": "mep",
+      "question": "Are building services (pipes, ducts, cables, fixtures) part of this BoQ?",
+      "help": "Often they are priced in a separate MEP bill, or measured from the MEP model."
+    },
+    "pipe_basis": {
+      "type": "choice",
+      "value": "axis",
+      "options": [
+        "axis",
+        "overall"
+      ],
+      "optionLabels": {
+        "axis": "Along the axis (centreline)",
+        "overall": "Overall length"
+      },
+      "label": "Pipe length basis",
+      "section": "mep",
+      "question": "Which length of pipes, ducts and cables is measured?",
+      "dependsOn": {
+        "param": "include_mep",
+        "values": [
+          true
+        ]
+      }
+    },
+    "pipe_allowance": {
       "type": "number",
       "value": 1,
-      "label": "Formwork factor"
+      "label": "Allowance for fittings",
+      "section": "mep",
+      "question": "Do you add an allowance for fittings to pipe and duct lengths? (1 = none, 1.1 = 10 %)",
+      "dependsOn": {
+        "param": "include_mep",
+        "values": [
+          true
+        ]
+      }
     },
-    "rebar_slab_kg_m3": {
-      "type": "number",
-      "value": 0,
-      "unit": "kg/m3",
-      "label": "Reinforcement estimate, slabs (0 = off)"
+    "include_prelims": {
+      "type": "boolean",
+      "value": true,
+      "label": "Include preliminaries",
+      "section": "prelims",
+      "question": "Does the BoQ include preliminaries (site setup, scaffolding)?",
+      "help": "These lines have no model behind them; the quantity is entered by the user."
     },
-    "rebar_wall_kg_m3": {
-      "type": "number",
-      "value": 0,
-      "unit": "kg/m3",
-      "label": "Reinforcement estimate, walls (0 = off)"
-    },
-    "rebar_footing_kg_m3": {
-      "type": "number",
-      "value": 0,
-      "unit": "kg/m3",
-      "label": "Reinforcement estimate, footings (0 = off)"
+    "include_provisional": {
+      "type": "boolean",
+      "value": true,
+      "label": "Include provisional sums",
+      "section": "prelims",
+      "question": "Does the BoQ include provisional sums (e.g. landscaping)?"
     },
     "include_furniture": {
       "type": "boolean",
       "value": false,
-      "label": "Include loose furniture"
+      "label": "Include loose furniture",
+      "section": "scope",
+      "question": "Is loose furniture included in the BoQ?"
     },
-    "rebar_estimates": {
+    "include_proxies": {
       "type": "boolean",
-      "value": false,
-      "label": "Add reinforcement estimates from concrete volumes"
+      "value": true,
+      "label": "Count unknown objects",
+      "section": "scope",
+      "question": "Are unclassified model objects (proxies) counted as items?",
+      "help": "No: they are left out and listed as excluded. Either way they are reported."
     }
   },
   "items": [
@@ -185,52 +814,107 @@
         "ifcClass": "IfcWall"
       },
       "quantity": {
-        "kind": "when",
-        "if": "thickness >= p.masonry_volume_from",
-        "then": {
-          "kind": "volume",
-          "start": "gross",
-          "deductions": [
-            {
-              "what": "openings",
-              "mode": {
-                "param": "wall_opening_mode"
-              },
-              "threshold": {
-                "param": "wall_opening_threshold"
-              },
-              "compareBy": "area"
-            }
-          ]
+        "kind": "choose",
+        "pick": {
+          "param": "wall_unit"
         },
-        "else": {
-          "kind": "area",
-          "surface": {
-            "param": "wall_surface"
-          },
-          "start": "gross",
-          "deductions": [
-            {
-              "what": "openings",
-              "mode": {
-                "param": "wall_opening_mode"
-              },
-              "threshold": {
-                "param": "wall_opening_threshold"
-              },
-              "compareBy": "area",
-              "addReveals": {
-                "param": "wall_add_reveals"
+        "options": {
+          "area": {
+            "kind": "area",
+            "surface": {
+              "param": "wall_surface"
+            },
+            "start": "gross",
+            "deductions": [
+              {
+                "what": "openings",
+                "mode": {
+                  "param": "wall_opening_mode"
+                },
+                "threshold": {
+                  "param": "wall_opening_threshold"
+                },
+                "compareBy": {
+                  "param": "opening_compare_by"
+                },
+                "addReveals": {
+                  "param": "wall_add_reveals"
+                }
               }
+            ]
+          },
+          "volume": {
+            "kind": "volume",
+            "start": "gross",
+            "deductions": [
+              {
+                "what": "openings",
+                "mode": {
+                  "param": "wall_opening_mode"
+                },
+                "threshold": {
+                  "param": "wall_opening_threshold"
+                },
+                "compareBy": {
+                  "param": "opening_compare_by"
+                }
+              }
+            ]
+          },
+          "volume_from_thickness": {
+            "kind": "when",
+            "if": "thickness >= p.masonry_volume_from",
+            "then": {
+              "kind": "volume",
+              "start": "gross",
+              "deductions": [
+                {
+                  "what": "openings",
+                  "mode": {
+                    "param": "wall_opening_mode"
+                  },
+                  "threshold": {
+                    "param": "wall_opening_threshold"
+                  },
+                  "compareBy": {
+                    "param": "opening_compare_by"
+                  }
+                }
+              ]
+            },
+            "else": {
+              "kind": "area",
+              "surface": {
+                "param": "wall_surface"
+              },
+              "start": "gross",
+              "deductions": [
+                {
+                  "what": "openings",
+                  "mode": {
+                    "param": "wall_opening_mode"
+                  },
+                  "threshold": {
+                    "param": "wall_opening_threshold"
+                  },
+                  "compareBy": {
+                    "param": "opening_compare_by"
+                  },
+                  "addReveals": {
+                    "param": "wall_add_reveals"
+                  }
+                }
+              ]
             }
-          ]
+          }
         }
       },
       "lineKey": [
         "type_name",
-        "is_external"
+        "is_external",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "Wall, {type_name}, {thickness*1000} mm",
+      "description": "Wall, {type_name}, {thickness*1000} mm{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
       "claims": [
         "body"
       ],
@@ -256,7 +940,9 @@
       },
       "quantity": {
         "kind": "area",
-        "surface": "top",
+        "surface": {
+          "param": "slab_surface"
+        },
         "start": "gross",
         "deductions": [
           {
@@ -278,9 +964,10 @@
         ]
       },
       "lineKey": [
-        "type_name"
+        "type_name",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "Slab, {type_name}",
+      "description": "Slab, {type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
       "claims": [
         "body"
       ],
@@ -309,15 +996,19 @@
         "start": "net"
       },
       "lineKey": [
-        "type_name"
+        "type_name",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "In-situ concrete, {type_name}",
+      "description": "In-situ concrete, {type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
       "claims": [
         "concrete"
       ],
       "tags": [
         "concrete"
-      ]
+      ],
+      "enabled": {
+        "param": "slab_concrete_separate"
+      }
     },
     {
       "id": "roofs",
@@ -343,15 +1034,20 @@
         "start": "net"
       },
       "lineKey": [
-        "type_name"
+        "type_name",
+        "IF(p.roof_breakdown = \"layer\", material, \"\")",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "Roof, {type_name}",
+      "description": "Roof, {type_name}{expr: IF(p.roof_breakdown = \"layer\", \", layer \" + material, \"\")}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
       "claims": [
         "body"
       ],
       "tags": [
         "roof"
-      ]
+      ],
+      "breakdown": {
+        "param": "roof_breakdown"
+      }
     },
     {
       "id": "coverings",
@@ -367,9 +1063,10 @@
       },
       "lineKey": [
         "predefined_type",
-        "type_name"
+        "IF(p.finishes_by_type, type_name, \"\")",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "{predefined_type}, {type_name}",
+      "description": "{predefined_type}{expr: IF(p.finishes_by_type, \", \" + type_name, \"\")}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
       "claims": [
         "finish"
       ],
@@ -392,9 +1089,10 @@
         "start": "net"
       },
       "lineKey": [
-        "type_name"
+        "type_name",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "Concrete foundation, {type_name}",
+      "description": "Concrete foundation, {type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
       "claims": [
         "body"
       ],
@@ -435,9 +1133,10 @@
         "unit": "t"
       },
       "lineKey": [
-        "profile"
+        "profile",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "Structural steel {profile}",
+      "description": "Structural steel {profile}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
       "claims": [
         "body"
       ],
@@ -469,16 +1168,32 @@
         ]
       },
       "quantity": {
-        "kind": "length",
-        "basis": {
-          "param": "linear_basis"
+        "kind": "choose",
+        "pick": {
+          "param": "members_measure"
+        },
+        "options": {
+          "length": {
+            "kind": "length",
+            "basis": {
+              "param": "linear_basis"
+            }
+          },
+          "count": {
+            "kind": "count"
+          },
+          "volume": {
+            "kind": "volume",
+            "start": "net"
+          }
         }
       },
       "lineKey": [
         "ifc_class",
-        "type_name"
+        "type_name",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "{ifc_class}, {type_name}",
+      "description": "{ifc_class}, {type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
       "claims": [
         "body"
       ]
@@ -513,9 +1228,10 @@
       },
       "lineKey": [
         "family_name",
-        "type_name"
+        "type_name",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "Window {family_name}, {type_name}",
+      "description": "Window {family_name}, {type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
       "claims": [
         "body"
       ],
@@ -549,9 +1265,10 @@
       "lineKey": [
         "family_name",
         "type_name",
-        "is_external"
+        "is_external",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "Door {family_name}, {type_name}",
+      "description": "Door {family_name}, {type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
       "claims": [
         "body"
       ],
@@ -567,13 +1284,27 @@
         "ifcClass": "IfcRailing"
       },
       "quantity": {
-        "kind": "length",
-        "basis": "overall"
+        "kind": "choose",
+        "pick": {
+          "param": "railing_measure"
+        },
+        "options": {
+          "length": {
+            "kind": "length",
+            "basis": {
+              "param": "railing_basis"
+            }
+          },
+          "count": {
+            "kind": "count"
+          }
+        }
       },
       "lineKey": [
-        "type_name"
+        "type_name",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "Railing {type_name}",
+      "description": "Railing {type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
       "claims": [
         "body"
       ],
@@ -587,12 +1318,26 @@
         "ifcClass": "IfcStair"
       },
       "quantity": {
-        "kind": "count"
+        "kind": "choose",
+        "pick": {
+          "param": "stairs_measure"
+        },
+        "options": {
+          "count": {
+            "kind": "count"
+          },
+          "plan_area": {
+            "kind": "formula",
+            "expr": "length * width",
+            "unit": "m2"
+          }
+        }
       },
       "lineKey": [
-        "type_name"
+        "type_name",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "Stair {type_name}",
+      "description": "Stair {type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
       "claims": [
         "body"
       ]
@@ -616,9 +1361,10 @@
         "unit": "t"
       },
       "lineKey": [
-        "bar_diameter"
+        "bar_diameter",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "Reinforcement, dia {bar_diameter*1000} mm",
+      "description": "Reinforcement, dia {bar_diameter*1000} mm{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
       "claims": [
         "body"
       ],
@@ -640,20 +1386,29 @@
       },
       "quantity": {
         "kind": "length",
-        "basis": "axis"
+        "basis": {
+          "param": "pipe_basis"
+        }
       },
       "lineKey": [
         "ifc_class",
         "system",
-        "nominal_size"
+        "nominal_size",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "{ifc_class} {nominal_size}, system {system}",
+      "description": "{ifc_class} {nominal_size}, system {system}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
       "claims": [
         "body"
       ],
       "tags": [
         "mep"
-      ]
+      ],
+      "factor": {
+        "param": "pipe_allowance"
+      },
+      "enabled": {
+        "param": "include_mep"
+      }
     },
     {
       "id": "mep-items",
@@ -669,15 +1424,19 @@
       "lineKey": [
         "ifc_class",
         "predefined_type",
-        "nominal_size"
+        "nominal_size",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "{ifc_class} {predefined_type} {nominal_size}",
+      "description": "{ifc_class} {predefined_type} {nominal_size}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
       "claims": [
         "body"
       ],
       "tags": [
         "mep"
-      ]
+      ],
+      "enabled": {
+        "param": "include_mep"
+      }
     },
     {
       "id": "furniture",
@@ -693,9 +1452,10 @@
         "kind": "count"
       },
       "lineKey": [
-        "type_name"
+        "type_name",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "{type_name}",
+      "description": "{type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
       "claims": [
         "body"
       ],
@@ -713,10 +1473,14 @@
         "kind": "count"
       },
       "lineKey": [
-        "type_name"
+        "type_name",
+        "IF(p.lines_by_storey, storey, \"\")"
       ],
-      "description": "Unclassified object {type_name}",
-      "onMissing": "ask"
+      "description": "Unclassified object {type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
+      "onMissing": "ask",
+      "enabled": {
+        "param": "include_proxies"
+      }
     }
   ],
   "derived": [
@@ -728,13 +1492,21 @@
       ],
       "scope": "element",
       "where": "UNDER(src.material, \"concrete\")",
-      "quantity": "SUM(src.faces.gross_area WHERE side = \"a\" OR side = \"b\") * p.formwork_factor",
+      "quantity": {
+        "param": "formwork_walls_formula"
+      },
       "unit": "m2",
       "description": "Formwork to walls, both faces",
       "tags": [
         "formwork"
       ],
-      "lineKey": []
+      "lineKey": [],
+      "factor": {
+        "param": "formwork_factor"
+      },
+      "enabled": {
+        "param": "formwork_separate"
+      }
     },
     {
       "id": "formwork-slab-edges",
@@ -743,12 +1515,20 @@
         "slab-concrete"
       ],
       "scope": "element",
-      "quantity": "src.perimeter * src.thickness * p.formwork_factor",
+      "quantity": {
+        "param": "formwork_slab_edges_formula"
+      },
       "unit": "m2",
       "description": "Edge formwork to slabs",
       "tags": [
         "formwork"
-      ]
+      ],
+      "factor": {
+        "param": "formwork_factor"
+      },
+      "enabled": {
+        "param": "formwork_separate"
+      }
     },
     {
       "id": "formwork-footings",
@@ -757,13 +1537,21 @@
         "footings"
       ],
       "scope": "element",
-      "quantity": "2 * src.length * src.height * p.formwork_factor",
+      "quantity": {
+        "param": "formwork_footings_formula"
+      },
       "unit": "m2",
       "description": "Formwork to sides of foundations",
       "onMissing": "flag",
       "tags": [
         "formwork"
-      ]
+      ],
+      "factor": {
+        "param": "formwork_factor"
+      },
+      "enabled": {
+        "param": "formwork_separate"
+      }
     },
     {
       "id": "rebar-estimate-slabs",
@@ -781,7 +1569,8 @@
       "tags": [
         "rebar",
         "estimate"
-      ]
+      ],
+      "where": "p.rebar_slab_kg_m3 > 0"
     },
     {
       "id": "paint-walls",
@@ -790,13 +1579,156 @@
         "walls"
       ],
       "scope": "element",
-      "quantity": "SUM(src.layers.area WHERE UNDER(material, \"board.plasterboard\"))",
+      "quantity": {
+        "param": "paint_walls_formula"
+      },
       "unit": "m2",
       "description": "Paint to plasterboard wall surfaces",
       "tags": [
         "finish"
       ],
       "where": "COUNT(src.layers WHERE UNDER(material, \"board.plasterboard\")) > 0",
+      "lineKey": [],
+      "enabled": {
+        "param": "paint_walls"
+      }
+    },
+    {
+      "id": "rebar-estimate-walls",
+      "label": "Reinforcement estimate, walls",
+      "from": [
+        "walls"
+      ],
+      "scope": "element",
+      "where": "UNDER(src.material, \"concrete\") AND p.rebar_wall_kg_m3 > 0",
+      "quantity": "src.net_volume * p.rebar_wall_kg_m3 / 1000",
+      "unit": "t",
+      "description": "Reinforcement to concrete walls (estimated)",
+      "enabled": {
+        "param": "rebar_estimates"
+      },
+      "tags": [
+        "rebar",
+        "estimate"
+      ],
+      "lineKey": []
+    },
+    {
+      "id": "rebar-estimate-footings",
+      "label": "Reinforcement estimate, footings",
+      "from": [
+        "footings"
+      ],
+      "scope": "line",
+      "where": "p.rebar_footing_kg_m3 > 0",
+      "quantity": "src.qty * p.rebar_footing_kg_m3 / 1000",
+      "unit": "t",
+      "description": "Reinforcement to footings (estimated)",
+      "enabled": {
+        "param": "rebar_estimates"
+      },
+      "tags": [
+        "rebar",
+        "estimate"
+      ],
+      "lineKey": []
+    },
+    {
+      "id": "excavation-footings",
+      "label": "Excavation for footings",
+      "from": [
+        "footings"
+      ],
+      "scope": "element",
+      "quantity": {
+        "param": "excavation_formula"
+      },
+      "unit": "m3",
+      "description": "Excavation for foundations",
+      "enabled": {
+        "param": "excavation"
+      },
+      "tags": [
+        "earthworks"
+      ],
+      "lineKey": []
+    },
+    {
+      "id": "blinding-footings",
+      "label": "Blinding under footings",
+      "from": [
+        "footings"
+      ],
+      "scope": "element",
+      "quantity": "src.length * src.width * p.blinding_thickness",
+      "unit": "m3",
+      "description": "Blinding concrete under foundations, {p.blinding_thickness*1000} mm",
+      "enabled": {
+        "param": "blinding"
+      },
+      "tags": [
+        "concrete",
+        "earthworks"
+      ],
+      "lineKey": []
+    },
+    {
+      "id": "hardcore-slabs",
+      "label": "Hardcore under ground slabs",
+      "from": [
+        "slabs"
+      ],
+      "scope": "element",
+      "where": "src.storey_elevation <= 0",
+      "quantity": "src.net_area * p.hardcore_thickness",
+      "unit": "m3",
+      "description": "Hardcore bed under ground slabs, {p.hardcore_thickness*1000} mm",
+      "enabled": {
+        "param": "hardcore"
+      },
+      "tags": [
+        "earthworks"
+      ],
+      "lineKey": []
+    },
+    {
+      "id": "paint-ceilings",
+      "label": "Paint to ceilings",
+      "from": [
+        "coverings"
+      ],
+      "scope": "line",
+      "where": "predefined_type = \"CEILING\"",
+      "quantity": "src.qty",
+      "unit": "m2",
+      "description": "Paint to ceilings",
+      "enabled": {
+        "param": "paint_ceilings"
+      },
+      "tags": [
+        "finish"
+      ],
+      "lineKey": []
+    },
+    {
+      "id": "skirting",
+      "label": "Skirting",
+      "from": [
+        "coverings"
+      ],
+      "scope": "element",
+      "where": "src.predefined_type = \"FLOORING\"",
+      "quantity": {
+        "param": "skirting_formula"
+      },
+      "unit": "m",
+      "description": "Skirting",
+      "enabled": {
+        "param": "skirting"
+      },
+      "tags": [
+        "finish"
+      ],
       "lineKey": []
     }
   ],
@@ -805,19 +1737,28 @@
       "id": "prelims-site-setup",
       "kind": "preliminary",
       "description": "Site setup and welfare",
-      "unit": "item"
+      "unit": "item",
+      "enabled": {
+        "param": "include_prelims"
+      }
     },
     {
       "id": "prelims-scaffolding",
       "kind": "preliminary",
       "description": "Scaffolding",
-      "unit": "item"
+      "unit": "item",
+      "enabled": {
+        "param": "include_prelims"
+      }
     },
     {
       "id": "ps-landscaping",
       "kind": "provisional_sum",
       "description": "Landscaping (provisional)",
-      "unit": "sum"
+      "unit": "sum",
+      "enabled": {
+        "param": "include_provisional"
+      }
     }
   ]
 }

@@ -29,10 +29,17 @@ Keep this page current: when you fix a limitation, delete its row.
 - The API is **synchronous**; large files block the request. Upload limit 300 MB (`IFC_BOQ_MAX_UPLOAD_MB`).
 - **Answers live in browser memory** for the current model and are sent with every run; reloading
   the page loses them. The CLI accepts a decisions file.
-- Presets are **read-only** in the UI (JSON viewer). Edit files in `presets/`; the engine reloads
+- The **Library** (rule set, classification and dictionary editors) keeps drafts in browser memory only:
+  they are lost on reload and are **not used by BoQ runs**. Download a draft and place it in `presets/`
+  to use it. Runs read the files in `presets/`; the engine reloads
   them on every run.
 - No auth, single user, CORS allows only localhost:5173. Not for deployment.
 - `engine/.cache` grows with every upload and run; delete it freely.
+- On Windows, uvicorn's auto-reload stops the old engine worker with a Ctrl+C console event. When
+  `npm run dev` runs without a console window (started by an IDE task or a background tool rather than a
+  terminal), the event never arrives: the reload hangs and the old worker keeps serving the old code
+  (new endpoints answer "Not Found"). Run it in a terminal, or restart it after engine changes and end
+  any leftover `python.exe ... spawn_main` processes.
 - The full result (lines, log) is returned in every response; fine for small models, page it in
   the platform.
 - The UI loads the Archivo font from Google Fonts; offline it falls back to the system font.
@@ -51,11 +58,14 @@ Engineering, roughly in order of value:
    cross-model duplicate check, one BoQ.
 4. **Platform skeleton in Java**: orgs, projects, model versions, decisions persisted, job table,
    the engine as a worker (see 03 for the mapping). Generate DTOs from `packages/types/schema`.
-5. **Rule editor v1**: forms over slots (parameters) with live preview through the engine; JSON
+5. **Rule editor v1**: the Library has the questionnaire over the master template plus the full editor; still
+   missing: live preview against a sample model, review of the template's 53 questions by a QS, and an
+   engine scope filter so renovation work can exclude existing / demolished elements. Original note: forms over slots (parameters) with live preview through the engine; JSON
    editing for power users.
 6. **Revisions**: re-run on a new version, carry decisions, change report per line.
-7. **3D viewer** (That Open Engine) with line-to-element highlighting using `trace.elements`
-   and `geometry.glb`.
+7. **3D viewer for the product**: the dev build has one (three.js over `geometry.glb`, `apps/web/src/viewer`);
+   the product may move to That Open Engine (D66) for sections, plans and measuring. The link stays the
+   same: line `trace.elements` -> `SceneIndex.parts` -> mesh nodes named by GlobalId.
 8. **Client template import** (spreadsheet, then GAEB).
 9. **IDS input check** per preset.
 

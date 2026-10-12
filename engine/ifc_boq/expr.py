@@ -192,6 +192,23 @@ def compile_expr(src: str):
     return _P(src).parse()
 
 
+def syntax_problem(src: str) -> str | None:
+    """Parse without evaluating: a syntax error or an unknown function, else None (used by editors)."""
+    try:
+        node = compile_expr(src)
+    except ExprError as e:
+        return str(e)
+    known = set(default_functions()) | AGGREGATES
+    stack = [node]
+    while stack:
+        n = stack.pop()
+        if isinstance(n, tuple):
+            if n and n[0] == "call" and n[1] not in known:
+                return f"Unknown function {n[1]} in {src!r}"
+            stack.extend(x for x in n if isinstance(x, tuple))
+    return None
+
+
 # ------------------------------------------------------------------------ evaluation
 def resolve(ctx: Any, path) -> Any:
     cur = ctx

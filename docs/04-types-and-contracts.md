@@ -139,6 +139,12 @@ interface by a compile-time check) so it can appear in the JSON Schema.
 | `GET /api/models/{modelId}` | | `ModelSummary` |
 | `POST /api/runs` | `RunRequest` (modelId, ruleSet id, dictionary ids, classification ids, decisions) | `RunResponse` (runId, full `BoqResult`, xlsxUrl) |
 | `GET /api/runs/{runId}/boq.xlsx` | | the Excel file |
+| `POST /api/models/{modelId}/names` | `NamesRequest` (dictionary documents, drafts allowed) | `NamesResponse`: every distinct name in the model with its resolution (term, layer, dictionary, entry), element count, classes, worthAsking, extracted values |
+| `GET /api/models/{modelId}/geometry.glb` | | the engine's meshes, one node per GlobalId (elements, openings, spaces) |
+| `GET /api/models/{modelId}/scene` | | `SceneIndex`: per element its class, name, storey, aggregate parent and the mesh nodes that draw it (a roof is drawn by its slab) |
+| `POST /api/codelists/read` | multipart `file` (.xlsx, .csv, .tsv, .txt) | `TableReadResponse`: sheets of text rows, each with a guess of header row, columns and code separator |
+| `POST /api/codelists/build` | `CodeListBuildRequest` (rows, header row, column mapping, hierarchy, separator) | `CodeListBuildResponse`: codes with parents and levels, problems, stats |
+| `POST /api/presets/{kind}/check` | `CheckPresetRequest` (doc = a draft preset; classification = `{ codeList, map }`; library = other unsaved drafts) | `CheckPresetResponse` (ok, problems, and for rule sets the flattened set). Schema, extends chain and integrity, expression syntax, unknown terms and codes. Saves nothing. |
 
 Errors return `ApiError` `{ detail }` with a 4xx/5xx status. The contract is deliberately
 job-shaped (see 03-architecture.md) so it can move behind the Java backend and a queue.

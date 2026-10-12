@@ -26,26 +26,60 @@ import type { MeasuredField, Unit } from "./measured";
  * 1. Slots: parameters and values
  * ========================================================================== */
 
+/**
+ * How a slot is presented as a question in the settings questionnaire. All optional:
+ * a slot without them still works, it is just listed under "Other settings".
+ */
+export interface SlotPrompt {
+  /** Short name, used in tables and next to fields bound to the slot. */
+  label: string;
+  /** `RuleSet.sections[].id` this slot is asked in. */
+  section?: string;
+  /** The question as a person reading their rulebook would answer it. */
+  question?: string;
+  help?: string;
+  /** A worked example, e.g. "A 10 m2 wall with a 0.6 m2 window: …". */
+  example?: string;
+  /** Only relevant when another slot has one of these values (the questionnaire dims it otherwise). */
+  dependsOn?: { param: string; values: (string | number | boolean)[] };
+}
+
 /** A named, editable slot. This is what a standard "fills in". */
 export type Param =
-  | {
+  | (SlotPrompt & {
       type: "number";
       value: number;
       unit?: Unit;
-      label: string;
-      help?: string;
       min?: number;
       max?: number;
-    }
-  | {
+    })
+  | (SlotPrompt & {
       type: "choice";
       value: string;
       options: readonly string[];
-      label: string;
-      help?: string;
-    }
-  | { type: "boolean"; value: boolean; label: string; help?: string }
-  | { type: "text"; value: string; label: string; help?: string };
+      /** Readable text per option, e.g. { volume_from_thickness: "m3 from a thickness, m2 below" }. */
+      optionLabels?: Record<string, string>;
+    })
+  | (SlotPrompt & { type: "boolean"; value: boolean })
+  | (SlotPrompt & { type: "text"; value: string })
+  /**
+   * A formula the standard supplies ("tell me your formula for wall formwork").
+   * Bound where a rule expects an expression: a `formula` quantity or a derived rule's quantity.
+   */
+  | (SlotPrompt & {
+      type: "formula";
+      value: Expr;
+      unit?: Unit;
+      /** What the formula can use, e.g. "src.* = the wall's measured fields". */
+      variables?: string;
+    });
+
+/** A group of questions in the settings questionnaire, in display order. */
+export interface RuleSection {
+  id: string;
+  title: string;
+  intro?: string;
+}
 
 /** Reference to a named parameter in `RuleSet.params`. */
 export interface ParamRef {
@@ -243,8 +277,8 @@ export type QuantitySpec =
       then: QuantitySpec;
       else: QuantitySpec;
     }
-  /** Safety valve: any formula. */
-  | { kind: "formula"; expr: Expr; unit: Unit };
+  /** Safety valve: any formula, written here or taken from a formula slot. */
+  | { kind: "formula"; expr: Value<Expr>; unit: Unit };
 
 /* ============================================================================
  * 4. Item rules: element -> BoQ line
@@ -336,7 +370,7 @@ export interface DerivedRule {
   scope: "element" | "line";
   /** Optional narrowing of sources. */
   where?: Expr;
-  quantity: Expr;                  // e.g. "src.qty * p.rebar_slab_kg_per_m3"
+  quantity: Value<Expr>;           // e.g. "src.qty * p.rebar_slab_kg_per_m3", or a formula slot
   unit: Unit;
   factor?: Value<number>;
   rounding?: Rounding;
@@ -401,6 +435,8 @@ export interface RuleSet {
 
   /** The slots. A standard is mostly a set of values for these. */
   params: Record<string, Param>;
+  /** How the slots are grouped into questions (settings questionnaire), in order. */
+  sections?: RuleSection[];
 
   items: ItemRule[];
   derived?: DerivedRule[];

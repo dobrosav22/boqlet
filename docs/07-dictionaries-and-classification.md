@@ -14,6 +14,18 @@ IFC names are free text: "BETON MB30", "C25/30", "Concrete - Cast In Situ", "Gip
 `board.plasterboard`, `acme.wall.z25`). Rules and maps then match on terms, so one rule set
 works on any model, from any office, in any language.
 
+### Names in a model (normal way in)
+
+A dictionary is normally edited from a loaded model, in the Library's "Names in the model" tab: every
+distinct material, layer material and type name in the IFC, how many elements use it and on which
+classes, what it currently means and which dictionary entry says so (layer and match method), and
+what extractors read from it. Giving a name a term is a pick from the vocabulary; several names can
+be given one term at once, as exact names or as one "starts with" entry when they share a prefix,
+optionally "only on" their IFC classes (writes a `when` condition). Names a BoQ run would ask about
+(`askFor` in the resolution settings) are marked "worth answering". Resolution is done by the engine
+(`pipeline.names_in_model`, `POST /api/models/{modelId}/names`, which accepts unsaved draft
+dictionaries); the browser only writes entries. The Entries tab remains for regex and expressions.
+
 ### Building blocks
 
 | Block | What it is | Example |
@@ -88,7 +100,30 @@ Classification **only labels lines**. It never changes a quantity (D14). Two sep
 company code and a client's tender position at once. The UI groups the sheet by the **first**
 ticked system; the Excel Lines sheet shows all.
 
-### Map rules
+### The table: codes per line kind (normal way in)
+
+A map is normally edited as a table in the Library ("Codes per line"): one row per kind of BoQ line,
+taken from a rule set (by default the master template, whose rule ids every standard built on it
+shares), and a code picked from the code list for each row. Derived rows can take "same as its
+source line". A row can be **split** by a fixed choice: inside / outside, material, or element type
+(material and element-type values are dictionary terms), each value with its own code plus an
+"everything else" code. "Suggest codes" proposes codes for empty rows by matching words of the line
+name to code titles; the user accepts them.
+
+The table reads and writes ordinary map rules, so the engine is unchanged (`ClassTable.tsx`):
+
+| Row | Map rule written | Priority |
+|---|---|---|
+| plain | `{ "id": "t-walls", "match": { "ruleId": "walls" }, "code": "D.01" }` | 5 |
+| split value | `{ "id": "t-walls-true", "match": { "all": [ { "ruleId": "walls" }, { "where": "is_external = true" } ] }, "code": "D.01" }` (also `UNDER(material, "concrete")`, `UNDER(element_type, "wall.party")`) | 6 |
+
+Table rules are put first and given priority 5 and 6, so they win over older or hand-written
+("advanced") rules, which keep applying to anything the table does not code. More specific terms are
+written first so they win ties ("Concrete block" before "Masonry"). Split values read the line's most
+common material or element type; a line that mixes them gets the existing `mixed_line` warning. Tested
+in `test_classification_table_shape` (`test_duplex.py`).
+
+### Map rules (advanced)
 
 ```json
 { "id": "drywall", "match": { "where": "ifc_class = \"IfcWall\" AND (UNDER(element_type, \"wall.partition\") OR UNDER(element_type, \"wall.lining\"))" },
@@ -118,7 +153,16 @@ the code list.
 | `demo-trades` | 10 trade sections: 00 Preliminaries, 01 Concrete works, 02 Masonry, 03 Drywall and partitions, 04 Carpentry and joinery, 05 Steelwork and metalwork, 06 Finishes, 07 Roofing, 08 Furniture, 99 Other | 10 rules by material term and IFC class rather than rule id, so it works with any rule set; unmapped lines go to 99 |
 | `uniclass2015-ef` | **Not committed.** `npm run import:uniclass` downloads the Elements/functions table from a community CSV mirror (github.com/buildig/uniclass-2015) and converts it with `engine/scripts/import_codelist.py`. Production should load NBS's current release under NBS terms. | 15 rules; sources include `ifc` for files that already carry Uniclass references. On the Duplex 64 of 68 line skeletons got an EF code; the 4 without are preliminaries and sums, which EF does not cover. |
 
-Import any published list: `python engine/scripts/import_codelist.py table.csv out.json --preset uniclass --id ... --name ...`
+Import a code list in the Library (Code list tab, "Import from Excel or CSV"): choose a .xlsx, .csv,
+.tsv or .txt file, see it, and pick the sheet, header row, code / title / description columns, where
+the hierarchy comes from (separator in the codes, a parent-code column, a level column, or none) and
+which other columns to keep as `extra`. The engine guesses all of these (local-language headers,
+title blocks above the header, `;` delimiters, legacy encodings), builds the codes and reports
+duplicates, missing parents and empty titles; the import adds to or replaces the list.
+Engine: `ifc_boq/codelist_import.py` (`read_table`, `build_codes`; tested in `test_codelist_import.py`),
+`POST /api/codelists/read` and `/build`. Old .xls files are not read (save as .xlsx).
+
+Command line, for published lists: `python engine/scripts/import_codelist.py table.csv out.json --preset uniclass --id ... --name ...`
 (see the script's `--help` for column options).
 
 ## Choosing a code list for a market (summary of 08)

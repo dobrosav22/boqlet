@@ -4,6 +4,12 @@ api.py - local HTTP service for the web app (contract: packages/types/src/api.ts
     GET  /api/health
     GET  /api/presets                     -> PresetsResponse
     GET  /api/presets/{kind}/{id}         -> raw preset JSON (kind: rules | dictionaries | classifications)
+    POST /api/presets/{kind}/check        -> CheckPresetResponse (problems in a draft preset; nothing is saved)
+    POST /api/models/{modelId}/names      -> NamesResponse (every name in the model and what it resolves to)
+    GET  /api/models/{modelId}/geometry.glb -> meshes, one node per GlobalId (elements, openings, spaces)
+    GET  /api/models/{modelId}/scene      -> SceneIndex (element -> mesh nodes, names, storeys) for the viewer
+    POST /api/codelists/read (multipart)  -> TableReadResponse (sheets of a CSV / Excel file, with guesses)
+    POST /api/codelists/build             -> CodeListBuildResponse (rows + column mapping -> codes)
     POST /api/models    (multipart file)  -> ModelSummary   (parses once per file content)
     GET  /api/models/{modelId}            -> ModelSummary
     POST /api/runs      (RunRequest)      -> RunResponse    (BoqResult + xlsx url)
@@ -24,7 +30,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from . import __version__, presets, service, store
+from . import __version__, codelist_import, pipeline, presets, service, store
 
 app = FastAPI(title="IFC -> BoQ engine", version=__version__)
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -37,6 +43,23 @@ class DecisionIn(BaseModel):
     scope: str = "project"
     answer: str | float | bool | None = None
     note: str | None = None
+
+
+class CheckPresetRequest(BaseModel):
+    doc: dict
+    library: list[dict] = []
+
+
+class NamesRequest(BaseModel):
+    dictionaries: list[dict]
+
+
+class CodeListBuildRequest(BaseModel):
+    rows: list[list[str]]
+    headerRow: int = 0
+    mapping: dict
+    hierarchy: str = "separator"
+    separator: str | None = None
 
 
 class RunRequest(BaseModel):
@@ -88,6 +111,18 @@ def get_preset(kind: str, preset_id: str):
     return lib[preset_id]
 
 
+@app.post("/api/presets/{kind}/check")
+def check_preset(kind: str, req: CheckPresetRequest):
+    if kind not in ("rules", "dictionaries", "classifications"):
+        raise HTTPException(404, "unknown kind")
+    try:
+        problems = presets.check(kind, req.doc, req.library)
+        flat = presets.flattened(req.doc, req.library) if kind == "rules" else None
+    except ValueError as e:  # the bundled presets on disk are broken
+        raise HTTPException(500, str(e))
+    return {"ok": not problems, "problems": problems, "flattened": flat}
+
+
 @app.post("/api/models")
 def upload_model(file: UploadFile = File(...)):
     name = file.filename or "model.ifc"
@@ -116,6 +151,69 @@ def get_model(model_id: str):
         return service.model_summary(model_id, store.get_parsed(model_id), True)
     except (KeyError, ValueError):
         raise HTTPException(404, "Model not found. Upload it again.")
+
+
+@app.post("/api/models/{model_id}/names")
+def model_names(model_id: str, req: NamesRequest):
+    for i, d in enumerate(req.dictionaries):
+        try:
+            presets.validate(d, "dictionaries", f"dictionary {d.get('id', i)}")
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+    try:
+        parsed = store.get_parsed(model_id)
+    except (KeyError, ValueError):
+        raise HTTPException(404, "Model not found. Upload it again.")
+    return {"names": pipeline.names_in_model(parsed, req.dictionaries, presets.resolution())}
+
+
+def _glb_path(model_id: str) -> Path:
+    try:
+        p = store.model_dir(model_id) / "geometry.glb"
+    except ValueError:
+        raise HTTPException(404, "Model not found.")
+    if not p.exists():
+        raise HTTPException(404, "No geometry for this model. Upload it again.")
+    return p
+
+
+@app.get("/api/models/{model_id}/geometry.glb")
+def model_geometry(model_id: str):
+    return FileResponse(_glb_path(model_id), media_type="model/gltf-binary")
+
+
+@app.get("/api/models/{model_id}/scene")
+def model_scene(model_id: str):
+    import json as _json
+    import struct
+    data = _glb_path(model_id).read_bytes()
+    n = struct.unpack("<I", data[12:16])[0]                  # glb: header, then the JSON chunk
+    mesh_ids = {x.get("name") for x in _json.loads(data[20:20 + n]).get("nodes", []) if "mesh" in x}
+    try:
+        parsed = store.get_parsed(model_id)
+    except (KeyError, ValueError):
+        raise HTTPException(404, "Model not found. Upload it again.")
+    return service.model_scene(parsed, mesh_ids)
+
+
+@app.post("/api/codelists/read")
+def read_codelist_file(file: UploadFile = File(...)):
+    data = file.file.read(MAX_UPLOAD_MB * (1 << 20) + 1)
+    if len(data) > MAX_UPLOAD_MB * (1 << 20):
+        raise HTTPException(413, f"File larger than {MAX_UPLOAD_MB} MB")
+    try:
+        return codelist_import.read_table(file.filename or "codes.csv", data)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:  # a corrupt or password-protected workbook
+        raise HTTPException(400, f"Could not read the file: {e}")
+
+
+@app.post("/api/codelists/build")
+def build_codelist(req: CodeListBuildRequest):
+    if req.mapping.get("code") is None or req.mapping.get("title") is None:
+        raise HTTPException(400, "Choose the code column and the title column.")
+    return codelist_import.build_codes(req.rows, req.headerRow, req.mapping, req.hierarchy, req.separator)
 
 
 @app.post("/api/runs")

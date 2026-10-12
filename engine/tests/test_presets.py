@@ -35,6 +35,44 @@ def test_classification_maps_only_emit_known_codes():
                 assert code in known, f"{cid}: {r['id']} -> {code}"
 
 
+def test_check_accepts_every_bundled_preset():
+    for rid, r in presets.rule_sets().items():
+        assert presets.check("rules", r) == [], rid
+    for did, d in presets.dictionaries().items():
+        assert presets.check("dictionaries", d) == [], did
+    for cid, c in presets.classifications().items():
+        if c["available"]:
+            assert presets.check("classifications", {"codeList": c["codeList"], "map": c["map"]}) == [], cid
+
+
+def test_check_reports_draft_problems():
+    import copy
+    lib = presets.rule_sets()
+    draft = copy.deepcopy(lib["demo-custom"])
+    draft["items"][0]["partFilter"] = "thickness >"
+    draft["derived"] = [{"id": "x", "label": "x", "from": ["gone"], "scope": "line",
+                         "quantity": "FOO(src.qty)", "unit": "m2", "description": "x"}]
+    problems = presets.check("rules", draft)
+    assert any("partFilter" in p for p in problems)
+    assert any("Unknown function FOO" in p for p in problems)
+    assert any("'gone'" in p for p in problems)
+    assert presets.check("rules", {**lib["demo-tweaked"], "extends": "nope"})
+    patch = {"schemaVersion": "1.0", "id": "p2", "name": "p2", "version": "1", "extends": "draft-base"}
+    base = {**lib["demo-tweaked"], "id": "draft-base"}
+    assert presets.check("rules", patch, [base]) == []
+
+    c = presets.classifications()["demo-trades"]
+    m = copy.deepcopy(c["map"])
+    m["rules"][0]["code"] = "ZZ"
+    assert any("'ZZ'" in p for p in presets.check("classifications", {"codeList": c["codeList"], "map": m}))
+
+    d = copy.deepcopy(presets.dictionaries()["acme-company"])
+    d["entries"][0]["term"] = "no.such.term"
+    d["entries"][1]["match"] = {"regex": "(unclosed"}
+    problems = presets.check("dictionaries", d)
+    assert any("no.such.term" in p for p in problems) and any("regex" in p for p in problems)
+
+
 def test_dictionary_entries_point_to_defined_terms():
     terms = {t["id"] for d in presets.dictionaries().values() for t in d.get("terms", [])}
     for d in presets.dictionaries().values():

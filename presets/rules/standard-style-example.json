@@ -18,9 +18,6 @@
     "wall_add_reveals": {
       "value": true
     },
-    "masonry_volume_from": {
-      "value": 0.12
-    },
     "slab_opening_mode": {
       "value": "over_threshold"
     },
@@ -44,6 +41,12 @@
     },
     "rebar_estimates": {
       "value": true
+    },
+    "wall_unit": {
+      "value": "volume_from_thickness"
+    },
+    "masonry_volume_from": {
+      "value": 0.12
     }
   },
   "items": [
@@ -115,12 +118,18 @@
       ],
       "scope": "line",
       "where": "UNDER(src.material, \"concrete\")",
-      "quantity": "2 * src.qty * p.formwork_factor",
+      "quantity": "2 * src.qty",
       "unit": "m2",
       "description": "Formwork to walls, both faces",
       "tags": [
         "formwork"
-      ]
+      ],
+      "factor": {
+        "param": "formwork_factor"
+      },
+      "enabled": {
+        "param": "formwork_separate"
+      }
     },
     {
       "id": "paint-walls",
@@ -136,6 +145,26 @@
       "tags": [
         "finish"
       ]
+    },
+    {
+      "id": "rebar-estimate-walls",
+      "label": "Reinforcement estimate, walls",
+      "from": [
+        "wall-layers"
+      ],
+      "scope": "element",
+      "where": "UNDER(src.material, \"concrete\") AND p.rebar_wall_kg_m3 > 0",
+      "quantity": "src.net_volume * p.rebar_wall_kg_m3 / 1000",
+      "unit": "t",
+      "description": "Reinforcement to concrete walls (estimated)",
+      "enabled": {
+        "param": "rebar_estimates"
+      },
+      "tags": [
+        "rebar",
+        "estimate"
+      ],
+      "lineKey": []
     }
   ],
   "remove": [
