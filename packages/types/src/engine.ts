@@ -35,8 +35,60 @@ export interface ModelInput {
   id: string;
   ifc: string | Uint8Array;        // path / URL or bytes
   discipline: string;              // architecture | structure | mep | ...
-  /** What to take from this model in a federated project (not implemented yet). */
-  scope?: { include?: Selector[]; exclude?: Selector[] };
+  /** What to take from this model in a federated project, on top of what its discipline owns. */
+  scope?: ModelScope;
+}
+
+/**
+ * Adjusts a model's default ownership (D44): `include` adds elements its discipline does
+ * not own, `exclude` drops elements whatever owns them ("ignore furniture in this model").
+ */
+export interface ModelScope {
+  include?: Selector[];
+  exclude?: Selector[];
+}
+
+/**
+ * Federation settings (preset data, presets/settings/federation.json). Several models are
+ * combined into one set of elements and measured once (D43): same GlobalId kept once, each
+ * element taken from the model whose discipline owns it, overlaps between models asked.
+ */
+export interface FederationSettings {
+  schemaVersion: "1.0";
+  id: string;
+  name: string;
+  version: string;
+  /**
+   * What each discipline provides by default. `owns`: selectors over MeasuredElement.
+   * `rest`: owns whatever no other listed discipline owns (architecture, typically).
+   * A model whose discipline is not listed owns everything in it.
+   */
+  disciplines: Record<string, { label?: string; owns?: Selector[]; rest?: boolean }>;
+  /** Storeys of different models within this distance (m) are the same level. */
+  storeyTolerance: number;
+  /**
+   * Two elements of one IFC class from different models whose bounding boxes overlap by at least
+   * this share of the smaller box are taken to be the same object (0-1).
+   */
+  duplicateOverlap: number;
+}
+
+/** What federation did with one model of a run. */
+export interface ModelReport {
+  id: string;
+  fileName: string;
+  discipline: string;
+  elements: number;
+  /** Elements this model provides to the BoQ. */
+  taken: number;
+  /** Not owned by this model's discipline and found in the model that owns them. */
+  leftToOthers: number;
+  /** Removed by the model's scope `exclude`. */
+  excludedByScope: number;
+  /** Same GlobalId as an element kept from another model. */
+  duplicates: number;
+  /** Not owned by this model, but the owning model has nothing in its place: taken here (a hole avoided). */
+  takenWithoutOwner: number;
 }
 
 /**
@@ -76,7 +128,7 @@ export interface BoqLine {
   trace: {
     formula: string;
     params: Record<string, unknown>;
-    elements: { guid: string; name?: string; quantity: number | null; note?: string }[];
+    elements: { guid: string; name?: string; quantity: number | null; note?: string; model?: string }[];
     sourceLine?: string;           // derived lines: the line they were derived from
   };
   codes: Record<string, LineCode>; // keyed by CodeList.id
@@ -165,6 +217,8 @@ export interface BoqResult {
   warnings: Warning[];
   /** Verification checks from parsing (volume mismatches, overlaps, ...). */
   checks: Check[];
+  /** The models combined into this BoQ (one entry for a single model). */
+  models: ModelReport[];
   stats: {
     elements: number;
     measuredElements: number;

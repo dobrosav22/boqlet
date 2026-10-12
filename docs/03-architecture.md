@@ -62,8 +62,17 @@ hundred KB; for large models the platform should page lines and logs instead.
 | `measure.py` | Adoption policy: which number to trust per element | Know about rules |
 | `rules.py` | Executing a rule set over measured elements | Measure geometry or read IFC |
 | `classify.py` | Codes per line per system | Change quantities |
+| `federation.py` | Combining several models' measured elements: storeys, same GlobalId, ownership, overlaps | Read files or know about rules |
 | `pipeline.py` | Order of stages, coverage, questions, stats | Contain stage logic |
-| `service.py`, `api.py`, `cli.py` | Wiring: preset ids, storage, HTTP, terminal | Contain engine logic |
+| `service.py`, `api.py`, `cli.py`, `store.py`, `corpus.py` | Wiring: preset ids, storage, HTTP, terminal | Contain engine logic |
+
+**Temporary versus lasting.** `api.py`, `store.py` and the request shapes in `api.ts` are a
+**temporary demo backend**: store an upload, list it, run it. The production backend (Java, D-series
+in 02) will own users, projects, storage and jobs and replace them; keep them thin CRUD and never put
+a decision in them. Everything that decides something is engine code: plain functions over the
+contract types in `packages/types`, data in and data out, no HTTP, no file paths, no storage. The
+Python engine stays as a worker for now; it may move to Java later, so engine code should stay
+easy to translate (no reliance on Python-only tricks where a plain loop would do).
 
 ## Target: the platform
 

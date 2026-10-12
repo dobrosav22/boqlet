@@ -110,6 +110,12 @@ Users say "take concrete from this model, ignore X; take electrics from that one
 Scope settings are saved per project and re-applied to new versions; companies can save templates
 ("our standard three-discipline split").
 
+**Built (v1, engine `federation.py`, see 05):** steps 1-3 above plus same-GlobalId merging and storey
+alignment by elevation. Simplifications: shared coordinates are assumed (a warning when models do not
+overlap in space); overlaps are found with bounding boxes, not solids; an element its model does not own
+is left to the owning model only when that model has an element of the same IFC class in its place,
+otherwise it is kept (a hole avoided, with a warning). Saving scopes per project is the platform's job.
+
 ## Users, roles and access
 
 The organisation owns everything; people get roles per project. Nothing leaves when an employee

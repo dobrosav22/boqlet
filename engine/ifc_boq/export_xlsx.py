@@ -204,6 +204,14 @@ def export(result: dict, meta: dict) -> bytes:
         r += 1
         _row(wi, r, [name, json.dumps(p.get("value")) if not isinstance(p.get("value"), (int, float, str)) else p.get("value"),
                      p.get("unit", ""), p.get("label", "")])
+    if len(result.get("models", [])) > 1:
+        r += 2
+        _header(wi, r, ["Model (federation)", "Discipline", "Taken", "Of elements / left to others / duplicates / excluded / taken without owner"],
+                [28, 40, 8, 70])
+        for m in result["models"]:
+            r += 1
+            _row(wi, r, [m["fileName"], m["discipline"], m["taken"],
+                         f"{m['elements']} / {m['leftToOthers']} / {m['duplicates']} / {m['excludedByScope']} / {m['takenWithoutOwner']}"])
     if meta.get("decisions"):
         r += 2
         _header(wi, r, ["Decision (question id)", "Answer", "", ""], [28, 40, 8, 70])

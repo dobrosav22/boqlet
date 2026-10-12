@@ -1,7 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import type { Decision, ModelSummary, PresetsResponse, RunResponse, SceneIndex } from "@ifc-boq/types";
 import { api } from "./api";
-import { Sidebar, type Settings } from "./components/Sidebar";
+import { Sidebar, type LoadedModel, type Settings } from "./components/Sidebar";
 import { BoqSheet } from "./components/BoqSheet";
 import { LogView, type LogFilter } from "./components/LogView";
 import { QuestionsView } from "./components/QuestionsView";
@@ -21,7 +21,11 @@ type Tab = "boq" | "log" | "questions" | "inputs" | "compare";
 export function App() {
   const [presets, setPresets] = useState<PresetsResponse | null>(null);
   const [presetsError, setPresetsError] = useState<string | null>(null);
-  const [model, setModel] = useState<ModelSummary | null>(null);
+  // Several models can be combined into one BoQ (federation); `model` is the first included one.
+  const [models, setModels] = useState<LoadedModel[]>([]);
+  const active = useMemo(() => models.filter((m) => m.on), [models]);
+  const model: ModelSummary | null = active[0]?.summary ?? null;
+  const activeKey = active.map((m) => m.summary.modelId).join(",");
   const [settings, setSettings] = useState<Settings>({ ruleSet: "", dictionaries: [], classifications: [] });
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [run, setRun] = useState<RunResponse | null>(null);
@@ -37,8 +41,16 @@ export function App() {
   const selectLine = useCallback((key: string | null) => setSelectedLine(key), []);
   useEffect(() => {
     setScene(null);
-    if (model) api.scene(model.modelId).then(setScene).catch(() => setShow3d(false));
-  }, [model]);
+    if (!active.length) return;
+    // one scene index over all included models (element GlobalIds are unique across them)
+    Promise.all(active.map((m) => api.scene(m.summary.modelId)))
+      .then((ss) => setScene({
+        elements: Object.assign({}, ...ss.map((x) => x.elements)),
+        spaces: ss.flatMap((x) => x.spaces),
+        openings: ss.flatMap((x) => x.openings),
+      }))
+      .catch(() => setShow3d(false));
+  }, [activeKey]);
   // Library drafts live here so they survive switching between the two modes.
   const [lib, setLib] = useState<LibState>({});
   const [libSel, setLibSel] = useState<string | null>(null);
@@ -60,11 +72,15 @@ export function App() {
   useEffect(loadPresets, []);
 
   const generate = async (withDecisions = decisions) => {
-    if (!model) return;
+    if (!active.length) return;
     setRunning(true);
     setRunError(null);
     try {
-      const r = await api.run({ modelId: model.modelId, ...settings, decisions: withDecisions });
+      const r = await api.run({
+        models: active.map((m) => ({ modelId: m.summary.modelId, discipline: m.discipline })),
+        ...settings,
+        decisions: withDecisions,
+      });
       setRun(r);
       if (r.result.status === "needs_input") setTab("questions");
     } catch (e) {
@@ -74,12 +90,18 @@ export function App() {
     }
   };
 
+  // A dropped file joins the models of this BoQ; answers stay (question ids are content-based).
   const onModel = (m: ModelSummary) => {
-    setModel(m);
+    setModels((prev) => (prev.some((x) => x.summary.modelId === m.modelId) ? prev
+      : [...prev, { summary: m, discipline: m.disciplineGuess ?? "unknown", on: true }]));
     setRun(null);
-    setDecisions([]);
     setPinned(null);
     setTab("boq");
+  };
+  const onModels = (next: LoadedModel[]) => {
+    setModels(next);
+    setRun(null);
+    setPinned(null);
   };
 
   const applyAnswers = (answers: Decision[]) => {
@@ -132,8 +154,9 @@ export function App() {
         presets={presets}
         presetsError={presetsError}
         onRetryPresets={loadPresets}
-        model={model}
+        models={models}
         onModel={onModel}
+        onModels={onModels}
         settings={settings}
         onSettings={setSettings}
         decisions={decisions}
@@ -175,7 +198,7 @@ export function App() {
           <>
             <header className="result-head">
               <div>
-                <h1>{model?.fileName}</h1>
+                <h1>{active.map((m) => m.summary.fileName).join(" + ")}</h1>
                 <p className="muted">
                   {runLabel}. {result.stats.lines} lines from {result.stats.measuredElements} of {result.stats.elements} elements,
                   calculated in {ms(result.stats.durationMs)}.
@@ -219,7 +242,7 @@ export function App() {
                   <BoqSheet result={result} primary={primary} onShowInLog={showInLog} selected={selectedLine} onSelect={selectLine} />
                   {show3d && scene && links && model && (
                     <Suspense fallback={<div className="model-panel"><div className="mp-canvas"><span className="mp-msg">Loading the 3D view…</span></div></div>}>
-                      <ModelPanel modelId={model.modelId} primary={primary} scene={scene} links={links} selected={selected} onSelectLine={selectLine} />
+                      <ModelPanel modelIds={active.map((m) => m.summary.modelId)} primary={primary} scene={scene} links={links} selected={selected} onSelectLine={selectLine} />
                     </Suspense>
                   )}
                 </div>

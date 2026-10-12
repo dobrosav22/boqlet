@@ -84,6 +84,54 @@ def referenced_fields(rules: dict, maps: list[dict]) -> set[str]:
 
 
 # ============================================================================ engine
+def select(sel: dict, el: dict, expr: Expr, val=lambda v: v, ctx=None) -> bool:
+    """Does a Selector (rules.ts) match a measured element? Shared by rules and federation.
+    `val` resolves parameter slots; `ctx` is the expression context for `expr` selectors."""
+    if "all" in sel:
+        return all(select(s, el, expr, val, ctx) for s in sel["all"])
+    if "any" in sel:
+        return any(select(s, el, expr, val, ctx) for s in sel["any"])
+    if "not" in sel:
+        return not select(sel["not"], el, expr, val, ctx)
+    if "ifcClass" in sel:
+        cls = sel["ifcClass"] if isinstance(sel["ifcClass"], list) else [sel["ifcClass"]]
+        return el["ifc_class"] in cls or el["ifc_class_raw"] in cls
+    if "family" in sel:
+        fams = sel["family"] if isinstance(sel["family"], list) else [sel["family"]]
+        return el["family"] in fams
+    if "expr" in sel:
+        return bool(expr.evaluate(sel["expr"], ctx if ctx is not None else el))
+    f, op, v = sel["field"], sel["op"], val(sel.get("value"))
+    x = el.get("props", {}).get(f[6:]) if f.startswith("props.") else el.get(f)
+    if op == "eq":
+        return x == v
+    if op == "neq":
+        return x != v
+    if op == "in":
+        return x in (v or [])
+    if op == "not_in":
+        return x not in (v or [])
+    if op == "contains":
+        return x is not None and str(v).lower() in str(x).lower()
+    if op == "starts_with":
+        return x is not None and str(x).lower().startswith(str(v).lower())
+    if op == "matches":
+        return x is not None and re.search(str(v), str(x), re.I) is not None
+    if op == "under":
+        return expr.under(x, v)
+    if op == "exists":
+        return x is not None
+    if op == "missing":
+        return x is None
+    if op == "between":
+        return x is not None and v is not None and v[0] <= x <= v[1]
+    if op in ("gt", "gte", "lt", "lte"):
+        if x is None or v is None:
+            return False
+        return {"gt": x > v, "gte": x >= v, "lt": x < v, "lte": x <= v}[op]
+    raise ValueError(f"Unknown selector op '{op}'")
+
+
 class RuleEngine:
     def __init__(self, rules: dict, elements: list[dict], expr: Expr, log: CalcLog,
                  decisions: dict[str, object] | None = None):
@@ -132,49 +180,7 @@ class RuleEngine:
         return {**part, "p": self.params}
 
     def select(self, sel: dict, el: dict) -> bool:
-        if "all" in sel:
-            return all(self.select(s, el) for s in sel["all"])
-        if "any" in sel:
-            return any(self.select(s, el) for s in sel["any"])
-        if "not" in sel:
-            return not self.select(sel["not"], el)
-        if "ifcClass" in sel:
-            cls = sel["ifcClass"] if isinstance(sel["ifcClass"], list) else [sel["ifcClass"]]
-            return el["ifc_class"] in cls or el["ifc_class_raw"] in cls
-        if "family" in sel:
-            fams = sel["family"] if isinstance(sel["family"], list) else [sel["family"]]
-            return el["family"] in fams
-        if "expr" in sel:
-            return bool(self.x.evaluate(sel["expr"], self.ctx(el)))
-        f, op, v = sel["field"], sel["op"], self.val(sel.get("value"))
-        x = el.get("props", {}).get(f[6:]) if f.startswith("props.") else el.get(f)
-        if op == "eq":
-            return x == v
-        if op == "neq":
-            return x != v
-        if op == "in":
-            return x in (v or [])
-        if op == "not_in":
-            return x not in (v or [])
-        if op == "contains":
-            return x is not None and str(v).lower() in str(x).lower()
-        if op == "starts_with":
-            return x is not None and str(x).lower().startswith(str(v).lower())
-        if op == "matches":
-            return x is not None and re.search(str(v), str(x), re.I) is not None
-        if op == "under":
-            return self.x.under(x, v)
-        if op == "exists":
-            return x is not None
-        if op == "missing":
-            return x is None
-        if op == "between":
-            return x is not None and v is not None and v[0] <= x <= v[1]
-        if op in ("gt", "gte", "lt", "lte"):
-            if x is None or v is None:
-                return False
-            return {"gt": x > v, "gte": x >= v, "lt": x < v, "lte": x <= v}[op]
-        raise ValueError(f"Unknown selector op '{op}'")
+        return select(sel, el, self.x, self.val, self.ctx(el))
 
     # ---------------------------------------------------------------- quantities
     def deductions(self, gross: float, rules: list[dict], part: dict, per: str) -> tuple[float, list[str]]:
@@ -539,7 +545,8 @@ class RuleEngine:
                     "tags": item.get("tags", []), "notes": [], "_parts": [], "_missing": 0, "_rule": item}
             self.lines[lk] = line
             self.lines_by_rule[rid].append(line)
-        line["trace"]["elements"].append({"guid": el["guid"], "name": (el.get("name") or "") + (f" [{part['_part']}]" if part.get("_part") else ""),
+        line["trace"]["elements"].append({"guid": el["guid"], "model": el.get("model_id"),
+                                          "name": (el.get("name") or "") + (f" [{part['_part']}]" if part.get("_part") else ""),
                                           "quantity": None if v is None else round(v, 6), "note": note or expl})
         line["_parts"].append(part)
         if v is None:

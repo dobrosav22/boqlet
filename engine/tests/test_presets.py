@@ -15,6 +15,7 @@ def test_all_presets_load_and_validate():
     assert presets.dictionaries()
     assert presets.classifications()
     presets.resolution()
+    assert presets.federation()["disciplines"]
 
 
 @pytest.mark.parametrize("rid", sorted(presets.rule_sets()))

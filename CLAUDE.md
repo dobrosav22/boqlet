@@ -16,8 +16,11 @@ getBoq(models, rules, classifications, dictionaries, decisions) -> BoqResult
 
 This repository is a **development build and the seed of a larger monorepo**. Today it is
 a React app plus a local Python engine. The planned production backend is **Java** (owns
-users, projects, storage, jobs). The Python engine stays as a worker. Nothing for the
-Java backend has been written yet; do not start it unless asked.
+users, projects, storage, jobs). The Python engine stays as a worker for now (it may move to Java
+later, undecided). Nothing for the Java backend has been written yet; do not start it unless asked.
+`api.py`, `store.py` and the request shapes in `api.ts` are a **temporary demo backend**: keep them
+thin CRUD. Anything that decides something belongs in the engine as plain functions over the
+contract types (see `docs/03-architecture.md`, code boundaries).
 
 ## Run it
 
@@ -94,11 +97,11 @@ Environment: `IFC_BOQ_PYTHON` (python to use), `IFC_BOQ_SKIP_ENGINE_SETUP=1`,
 ## Status in one paragraph
 
 Working end to end on the NIBS Duplex (Revit 2011, IFC2x3): parse, verify,
-dictionary resolution, measuring, rule execution (items, derived, manual), classification
+dictionary resolution, measuring, federation of several models into one BoQ, rule execution
+(items, derived, manual), classification
 into any number of code lists, questions and answers, calculation log, Excel export, and a dev
-UI. The engine reproduces the hand-made Duplex BoQ exactly. Not yet built: multiple models per
-BoQ (federation), per-face geometry for room-based finishes, overlap and contradiction
-questions, AI name suggestions, model revisions, background jobs, users and projects, the
+UI. The engine reproduces the hand-made Duplex BoQ exactly. Not yet built: per-face geometry for
+room-based finishes, contradiction questions, AI name suggestions, model revisions, background jobs, users and projects, the
 Java backend. Also run on 309 public IFC files from 30 authoring tools (buildingSMART samples,
 DURAARK, the Auckland OpenIFC repository, Schependomlaan): no engine errors, output valid
 against the contract; quantities checked only for the Duplex and the buildingSMART samples.

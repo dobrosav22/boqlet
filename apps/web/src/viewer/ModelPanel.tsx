@@ -11,8 +11,9 @@ import { colorsFor, type ColorMode, type Links } from "./links";
 
 const hex = (n: number) => `#${n.toString(16).padStart(6, "0")}`;
 
-export function ModelPanel({ modelId, primary, scene, links, selected, onSelectLine }: {
-  modelId: string;
+export function ModelPanel({ modelIds, primary, scene, links, selected, onSelectLine }: {
+  /** Every model of the BoQ; their geometry is loaded into one scene. */
+  modelIds: string[];
   primary?: string;
   scene: SceneIndex | null;
   links: Links;
@@ -27,7 +28,8 @@ export function ModelPanel({ modelId, primary, scene, links, selected, onSelectL
   const [spaces, setSpaces] = useState(false);
   const [picked, setPicked] = useState<string | null>(null);
 
-  // one viewer per model
+  // one viewer for the models of this BoQ
+  const idsKey = modelIds.join(",");
   useEffect(() => {
     if (!host.current || !scene) return;
     const v = new SceneView(host.current);
@@ -35,14 +37,18 @@ export function ModelPanel({ modelId, primary, scene, links, selected, onSelectL
     setReady(false);
     setError(null);
     const classes = new Map(Object.entries(scene.elements).map(([g, e]) => [g, e.ifcClass]));
-    v.load(api.geometryUrl(modelId), classes, scene.spaces, scene.openings)
-      .then(() => setReady(true))
+    modelIds
+      .reduce((p, id) => p.then(() => v.load(api.geometryUrl(id), classes, scene.spaces, scene.openings)), Promise.resolve())
+      .then(() => {
+        v.fit();
+        setReady(true);
+      })
       .catch((e: Error) => setError(`Could not load the 3D model: ${e.message}`));
     return () => {
       v.dispose();
       view.current = null;
     };
-  }, [modelId, scene]);
+  }, [idsKey, scene]);
 
   useEffect(() => {
     if (view.current) view.current.onPick = (guid) => {

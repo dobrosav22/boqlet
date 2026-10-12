@@ -183,6 +183,27 @@ pre {
   word-break: break-all;
   margin-bottom: 6px;
 }
+.model + .model {
+  border-top: 1px solid var(--ruling);
+  padding-top: 8px;
+  margin-top: 8px;
+}
+.model-off {
+  opacity: 0.5;
+}
+.model-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.model-head .model-name {
+  flex: 1;
+}
+.model-disc {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--pencil);
+}
 .model dl {
   display: grid;
   grid-template-columns: 76px 1fr;

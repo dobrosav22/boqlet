@@ -49,6 +49,13 @@
           },
           "description": "Verification checks from parsing (volume mismatches, overlaps, ...)."
         },
+        "models": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ModelReport"
+          },
+          "description": "The models combined into this BoQ (one entry for a single model)."
+        },
         "stats": {
           "type": "object",
           "properties": {
@@ -98,6 +105,7 @@
         "questions",
         "warnings",
         "checks",
+        "models",
         "stats"
       ],
       "additionalProperties": false
@@ -1882,6 +1890,9 @@
                   },
                   "note": {
                     "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -2280,6 +2291,56 @@
         "null"
       ],
       "description": "ParsedModel — the reusable JSON produced from one IFC file (one model version).\n\nLayer 1 of 2:   ParsedModel       faithful snapshot of the IFC. No decisions, no dictionary,                     no adopted quantities. Reused by the rules pipeline, the 3D                     viewer, revision comparison, review questions and federation.   MeasuredElement   (measured.ts) derived FROM this, with names normalised and                     quantities adopted. Cheap to recompute; this layer is not.\n\nConventions   - Ids are IFC GlobalIds wherever the IFC has one (stable across versions,     used to match elements between revisions). Catalogue entries without a     GlobalId (materials, layer sets) get a deterministic id \"mat:<step id>\".   - All lengths, areas, volumes are converted to SI (m, m2, m3). The original     unit is recorded in `header.units`.   - Coordinates are world coordinates of the file (before any federation     alignment, which is a separate step).   - Heavy geometry (meshes) is NOT in this JSON. Elements point into a     separate geometry store (e.g. a .glb with one node per GlobalId)."
+    },
+    "ModelReport": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "fileName": {
+          "type": "string"
+        },
+        "discipline": {
+          "type": "string"
+        },
+        "elements": {
+          "type": "number"
+        },
+        "taken": {
+          "type": "number",
+          "description": "Elements this model provides to the BoQ."
+        },
+        "leftToOthers": {
+          "type": "number",
+          "description": "Not owned by this model's discipline and found in the model that owns them."
+        },
+        "excludedByScope": {
+          "type": "number",
+          "description": "Removed by the model's scope `exclude`."
+        },
+        "duplicates": {
+          "type": "number",
+          "description": "Same GlobalId as an element kept from another model."
+        },
+        "takenWithoutOwner": {
+          "type": "number",
+          "description": "Not owned by this model, but the owning model has nothing in its place: taken here (a hole avoided)."
+        }
+      },
+      "required": [
+        "id",
+        "fileName",
+        "discipline",
+        "elements",
+        "taken",
+        "leftToOthers",
+        "excludedByScope",
+        "duplicates",
+        "takenWithoutOwner"
+      ],
+      "additionalProperties": false,
+      "description": "What federation did with one model of a run."
     }
   }
 }

@@ -62,8 +62,15 @@ class CodeListBuildRequest(BaseModel):
     separator: str | None = None
 
 
-class RunRequest(BaseModel):
+class RunModelIn(BaseModel):
     modelId: str
+    discipline: str | None = None
+    scope: dict | None = None
+
+
+class RunRequest(BaseModel):
+    modelId: str | None = None
+    models: list[RunModelIn] = []
     ruleSet: str
     dictionaries: list[str] = []
     classifications: list[str] = []
@@ -220,7 +227,7 @@ def build_codelist(req: CodeListBuildRequest):
 @app.post("/api/runs")
 def create_run(req: RunRequest):
     try:
-        run_id, result = service.run_and_store(req.modelId, req.model_dump())
+        run_id, result = service.run_and_store(req.model_dump(exclude_none=True))
     except KeyError:
         raise HTTPException(404, "Model not found. Upload it again.")
     except ValueError as e:

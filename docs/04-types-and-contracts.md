@@ -123,7 +123,14 @@ interface by a compile-time check) so it can appear in the JSON Schema.
 | `warnings[]` | code, message, guids, ruleId (e.g. double claims, mixed fields under a map rule, integrity problems) |
 | `checks[]` | verification checks from parsing |
 | `log[]` | ordered `LogEntry`: seq, stage, level (info/detail/warning), message, ruleId, lineKey, guid, data |
+| `models[]` | `ModelReport` per model combined (one for a single model): file name, discipline, elements, taken, left to others, excluded by scope, duplicate GlobalIds, taken without owner |
 | `stats` | elements, measured, excluded, unmatched, lines, flagged lines, decisions applied, duration |
+
+Trace elements carry `model` (the model id) so a line can be followed back to its file.
+
+`FederationSettings` (`engine.ts`, schema `federation-settings`, preset `presets/settings/federation.json`):
+`disciplines` (each with `owns` selectors or `rest: true`), `storeyTolerance` (m), `duplicateOverlap`
+(0-1). `ModelScope` = `{ include?, exclude? }` selectors per model (D44).
 
 `Decision` = `{ questionId, scope: "project" | "company", answer, note?, decidedBy?, decidedAt? }`.
 `answer: null` means "leave it" (dismiss without answering).
@@ -137,7 +144,7 @@ interface by a compile-time check) so it can appear in the JSON Schema.
 | `GET /api/presets/{kind}/{id}` | kind = rules, dictionaries, classifications | the raw preset JSON (classification returns `{ codeList, map }`) |
 | `POST /api/models` | multipart field `file` | `ModelSummary` (modelId = SHA-256, schema, authoring app, storeys, counts, checks, parse time, cached) |
 | `GET /api/models/{modelId}` | | `ModelSummary` |
-| `POST /api/runs` | `RunRequest` (modelId, ruleSet id, dictionary ids, classification ids, decisions) | `RunResponse` (runId, full `BoqResult`, xlsxUrl) |
+| `POST /api/runs` | `RunRequest` (`models: [{modelId, discipline?, scope?}]` or a single `modelId`; ruleSet id, dictionary ids, classification ids, decisions) | `RunResponse` (runId, full `BoqResult`, xlsxUrl) |
 | `GET /api/runs/{runId}/boq.xlsx` | | the Excel file |
 | `POST /api/models/{modelId}/names` | `NamesRequest` (dictionary documents, drafts allowed) | `NamesResponse`: every distinct name in the model with its resolution (term, layer, dictionary, entry), element count, classes, worthAsking, extracted values |
 | `GET /api/models/{modelId}/geometry.glb` | | the engine's meshes, one node per GlobalId (elements, openings, spaces) |

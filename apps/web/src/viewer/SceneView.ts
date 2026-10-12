@@ -65,11 +65,12 @@ export class SceneView {
     this.resize();
   }
 
-  /** Load geometry.glb; `classes` gives each element's IFC class for default colours. */
+  /** Load a geometry.glb; `classes` gives each element's IFC class for default colours.
+   *  Call once per model: the meshes of several models share one scene. */
   async load(url: string, classes: Map<string, string>, spaces: string[], openings: string[]) {
-    this.classOf = classes;
-    this.spaces = new Set(spaces);
-    this.openings = new Set(openings);
+    classes.forEach((c, g) => this.classOf.set(g, c));
+    spaces.forEach((g) => this.spaces.add(g));
+    openings.forEach((g) => this.openings.add(g));
     const gltf = await new GLTFLoader().loadAsync(url);
     gltf.scene.traverse((o) => {
       if (!(o instanceof THREE.Mesh)) return;

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0",
+  "id": "federation-default",
+  "name": "Default discipline ownership",
+  "version": "1",
+  "disciplines": {
+    "structure": {
+      "label": "Structure: foundations, frame, load-bearing concrete and steel, reinforcement",
+      "owns": [
+        { "ifcClass": ["IfcFooting", "IfcPile", "IfcDeepFoundation", "IfcCaissonFoundation", "IfcBeam", "IfcColumn", "IfcMember",
+                       "IfcReinforcingBar", "IfcReinforcingMesh", "IfcTendon", "IfcTendonAnchor", "IfcBearing"] },
+        { "all": [
+          { "ifcClass": ["IfcWall", "IfcSlab", "IfcPlate"] },
+          { "any": [
+            { "field": "load_bearing", "op": "eq", "value": true },
+            { "field": "material", "op": "under", "value": "concrete" },
+            { "field": "material", "op": "under", "value": "metal.steel" }
+          ] }
+        ] }
+      ]
+    },
+    "mep": {
+      "label": "Services: distribution elements (pipes, ducts, cables, terminals, equipment)",
+      "owns": [ { "field": "discipline", "op": "eq", "value": "mep" } ]
+    },
+    "architecture": {
+      "label": "Architecture: everything the other disciplines do not own",
+      "rest": true
+    }
+  },
+  "storeyTolerance": 0.25,
+  "duplicateOverlap": 0.5
+}

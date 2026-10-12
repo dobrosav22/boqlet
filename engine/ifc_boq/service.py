@@ -49,14 +49,18 @@ def model_summary(model_id: str, parsed: dict, cached: bool) -> dict:
     }
 
 
-def run(parsed: dict, request: dict) -> tuple[dict, dict]:
-    """request = RunRequest (preset ids). Returns (BoqResult, export meta)."""
+def run(models, request: dict) -> tuple[dict, dict]:
+    """models: one ParsedModel, or [{"id", "parsed", "discipline"?, "scope"?}] (federation).
+    request = RunRequest (preset ids). Returns (BoqResult, export meta)."""
     rule_set, lib = presets.load_rule_set(request.get("ruleSet") or presets.DEFAULTS["ruleSet"])
     dicts = [presets.load_dictionary(d) for d in (request.get("dictionaries") or presets.DEFAULTS["dictionaries"])]
     systems = [presets.load_classification(c) for c in (request.get("classifications") or [])]
-    result = get_boq(parsed, rule_set, systems, dicts, presets.resolution(), request.get("decisions") or [], lib)
+    result = get_boq(models, rule_set, systems, dicts, presets.resolution(), request.get("decisions") or [], lib,
+                     federation=presets.federation())
+    parsed_list = [models] if isinstance(models, dict) else [m["parsed"] for m in models]
     meta = {
-        "modelName": parsed["header"]["source"]["fileName"], "modelId": parsed["header"]["source"]["sha256"],
+        "modelName": " + ".join(p["header"]["source"]["fileName"] for p in parsed_list),
+        "modelId": ", ".join(p["header"]["source"]["sha256"] for p in parsed_list),
         "dictionaries": [f"{d['name']} ({d['layer']})" for d in dicts],
         "classifications": [{"id": cl["id"], "name": cl["name"]} for cl, _ in systems],
         "decisions": request.get("decisions") or [],
@@ -65,9 +69,15 @@ def run(parsed: dict, request: dict) -> tuple[dict, dict]:
     return result, meta
 
 
-def run_and_store(model_id: str, request: dict) -> tuple[str, dict]:
-    parsed = store.get_parsed(model_id)
-    result, meta = run(parsed, request)
+def run_and_store(request: dict) -> tuple[str, dict]:
+    """Dev server: the stored models a RunRequest names (`models`, or the single `modelId`)."""
+    wanted = request.get("models") or ([{"modelId": request["modelId"]}] if request.get("modelId") else [])
+    if not wanted:
+        raise ValueError("No model in the request: give modelId or models.")
+    models = [{"id": m["modelId"], "parsed": store.get_parsed(m["modelId"]),
+               **({"discipline": m["discipline"]} if m.get("discipline") else {}),
+               **({"scope": m["scope"]} if m.get("scope") else {})} for m in wanted]
+    result, meta = run(models, request)
     run_id = store.save_run(request, result)
     store.run_path(run_id, "xlsx").write_bytes(export(result, meta))
     return run_id, result

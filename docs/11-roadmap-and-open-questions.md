@@ -8,7 +8,6 @@ Keep this page current: when you fix a limitation, delete its row.
 | Area | Limitation | Consequence | Where to fix |
 |---|---|---|---|
 | Test coverage | Two authoring tools: Revit 2011 (Duplex) and SketchUp + IFC-manager (buildingSMART certification scene in IFC2x3 / IFC4 / IFC4.3, plus ISO examples). No Archicad, Tekla, Allplan, current Revit, Bonsai | Other tools will surface new quirks | Corpus (09, `npm run corpus`), `parse.py`, `measure.py`, `data/quantity_sources.json` |
-| Federation duplicates | Discipline models share GUIDs (a chimney placeholder in Architecture, the solid in Structural; one roof GUID aggregating slabs in one model and timber in another) | Each model alone is right; adding models naively double counts | Federation stage: merge by GlobalId, prefer the occurrence with geometry, union aggregate parts |
 | Multi-language names | The seed dictionary resolves English plus a few languages entry by entry. Real projects block on local material names: Dutch (`Kalkzandsteen`, `Staal`, `Metselwerk`, `spaanplaat` in Schependomlaan), Norwegian (`tegl`, `gipsplate` in DURAARK; a few added ad hoc), German (`Leer`) | Most "needs input" results on real files are a name, not an engine problem | Decide a general approach (per-language seed packs, a public term source such as bSDD, or AI suggestions with confirmation) instead of adding languages one at a time |
 | Placeholder material names | "Default" (and similar) becomes a blocking name question | Correct but unexplained | A `placeholder_material` parse check, or a dictionary term for "unspecified" with a non-blocking question |
 | Infrastructure location | Elements in IfcBridgePart / IfcRoadPart have no storey; lines have no location | Infrastructure BoQs cannot split by part | `storey`-like field for the nearest spatial container |
@@ -22,7 +21,7 @@ Keep this page current: when you fix a limitation, delete its row.
 | Questions | `overlap`, `contradiction` and `double_claim` questions are not raised (overlaps and contradictions are parse checks; double claims are warnings); `classification_conflict` answers are informative only | User cannot resolve those through the UI | `pipeline.py`, `classify.py`, deterministic ids |
 | Overlap check | O(n²) pairs with a bounding-box test | Too slow for large models | Spatial index (R-tree / BVH) |
 | AI name suggestions | Settings exist, nothing implemented | Unknown names always go to a question | `names.py`; per unique name, cached, thresholds from settings |
-| Federation | One model per run; `ModelInput.scope` unused | No multi-discipline BoQs | Design in 10; new pipeline stage before measure |
+| Federation | v1 built (`federation.py`): ownership, scope, same-GlobalId merge, storeys, overlap questions. Bounding-box overlaps only; shared coordinates assumed; an aggregate's rolled-up area is not recomputed when some of its parts are left to another model | Possible misses on long diagonal elements; models in different coordinates are not aligned | Mesh-based overlap test (needs meshes beside the parsed model); alignment step; re-roll aggregates after federation |
 | Revisions | No version diff; no change report per line | | Match lines by key and elements by GlobalId |
 | Item library / client templates | Not built; no GAEB, no "import a BoQ as template" | | New input or rule-set extension |
 | Export | Excel only | | GAEB, ÖNORM A 2063, CSV, IfcCostSchedule |
@@ -62,9 +61,8 @@ Engineering, roughly in order of value:
    from one exporter.
 2. **Real faces and rooms**: per-face areas from geometry and space boundaries; enables
    room-based finishes and makes `side_a/side_b` meaningful.
-3. **Federation v1**: several models per run, discipline defaults, include/exclude scope,
-   cross-model duplicate check (by GlobalId: the certification scene repeats elements across its
-   discipline models, some as body-less placeholders), one BoQ.
+3. ~~**Federation v1**~~ built (Oct 2026); next: per-project saved scopes in the platform, mesh-based
+   overlaps, coordinate alignment.
 4. **Platform skeleton in Java**: orgs, projects, model versions, decisions persisted, job table,
    the engine as a worker (see 03 for the mapping). Generate DTOs from `packages/types/schema`.
 5. **Rule editor v1**: the Library has the questionnaire over the master template plus the full editor; still

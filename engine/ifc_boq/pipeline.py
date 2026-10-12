@@ -1,15 +1,21 @@
 """
-pipeline.py - getBoq: ParsedModel + rules + classifications + dictionaries (+ decisions) -> BoqResult.
+pipeline.py - getBoq: ParsedModel(s) + rules + classifications + dictionaries (+ decisions) -> BoqResult.
 
     result = get_boq(parsed, rules, classifications=[(code_list, map)], dictionaries=[...],
                      resolution=settings, decisions=[...])
+    result = get_boq([{"id": "arch", "parsed": p1, "discipline": "architecture"},
+                      {"id": "str", "parsed": p2, "discipline": "structure", "scope": {...}}],
+                     rules, ..., federation=FederationSettings)
+
+One ParsedModel is a federation of one; a list is combined by federation.py before the rules.
 
 `rules` may be a flattened RuleSet or a RuleSetPatch together with `rule_library`
 (all rule sets by id) so the chain can be flattened here.
 
 Order of work (each step writes to the calculation log):
   1. parse summary              (the ParsedModel is produced by parse.py and cached)
-  2. names + measure            dictionaries -> terms; adopt quantities per element
+  2. names + measure            dictionaries -> terms; adopt quantities per element, per model
+     federation                 several models -> one set of elements (federation.py)
   3. rules                      items -> lines, then derived lines, then manual lines
   4. coverage                   unmatched / excluded / covered-by-parent elements
   5. classification             codes per line per system
@@ -22,12 +28,35 @@ from collections import defaultdict
 
 from .classify import classify
 from .expr import Expr, fmt
+from .federation import combine
 from .log import CalcLog
 from .measure import build as measure
 from .names import Resolver, decision_entries
 from .rules import RuleEngine, flatten, integrity, referenced_fields, unmatched_id
 
 INTERNAL = ("_fields", "_mixed", "_parts", "_source_key", "_manual_kind")
+
+
+def element_boxes(parsed: dict) -> dict[str, tuple]:
+    """GlobalId -> (min xyz, max xyz) in world coordinates: the element's own mesh, or for an
+    aggregate without a body of its own the union of its parts' boxes."""
+    els = {e["id"]: e for e in parsed["elements"]}
+    out: dict[str, tuple] = {}
+
+    def box(g: str, depth: int = 0):
+        if g in out or depth > 20:
+            return out.get(g)
+        geo = els[g]["quantities"]["geometry"]
+        if geo.get("bboxMin") and geo.get("bboxMax"):
+            out[g] = (geo["bboxMin"], geo["bboxMax"])
+        else:
+            parts = [b for c in els[g].get("childIds", []) if c in els for b in [box(c, depth + 1)] if b]
+            if parts:
+                out[g] = ([min(b[0][i] for b in parts) for i in range(3)], [max(b[1][i] for b in parts) for i in range(3)])
+        return out.get(g)
+    for g in els:
+        box(g)
+    return out
 
 
 def _worth_asking(r: dict, settings: dict, x: Expr) -> bool:
@@ -70,22 +99,31 @@ def names_in_model(parsed: dict, dictionaries: list[dict], resolution: dict | No
 
 def get_boq(parsed: dict, rules: dict, classifications: list[tuple[dict, dict]], dictionaries: list[dict],
             resolution: dict | None = None, decisions: list[dict] | None = None,
-            rule_library: dict[str, dict] | None = None) -> dict:
+            rule_library: dict[str, dict] | None = None, federation: dict | None = None) -> dict:
     t0 = time.time()
     log = CalcLog()
     resolution = resolution or {}
     decisions = decisions or []
     answers = {d["questionId"]: d.get("answer") for d in decisions}
 
-    # 1. parse summary ------------------------------------------------------------------
-    h, st = parsed["header"], parsed["stats"]
-    log.info("parse", f"{h['source']['fileName']}: {h['ifcSchema']}, {h.get('authoringApp', {}).get('fullName', 'unknown tool')}, "
-                      f"{st['elementCount']} elements, {st['openingCount']} openings, {st['spaceCount']} spaces "
-                      f"(discipline guess: {h.get('disciplineGuess')})")
-    if parsed["verification"]["summary"]:
-        log.info("parse", "verification: " + ", ".join(f"{k} x{v}" for k, v in parsed["verification"]["summary"].items()))
+    models = ([{"id": None, "parsed": parsed}] if isinstance(parsed, dict) and "header" in parsed
+              else [dict(m) for m in parsed])
+    for m in models:
+        h = m["parsed"]["header"]
+        m["id"] = m.get("id") or h["source"]["sha256"][:12]
+        m["fileName"] = h["source"]["fileName"]
+        m["discipline"] = m.get("discipline") or h.get("disciplineGuess") or "unknown"
 
-    # 2. names + measure ----------------------------------------------------------------
+    # 1. parse summary ------------------------------------------------------------------
+    for m in models:
+        h, st = m["parsed"]["header"], m["parsed"]["stats"]
+        log.info("parse", f"{h['source']['fileName']}: {h['ifcSchema']}, {h.get('authoringApp', {}).get('fullName', 'unknown tool')}, "
+                          f"{st['elementCount']} elements, {st['openingCount']} openings, {st['spaceCount']} spaces "
+                          f"(discipline guess: {h.get('disciplineGuess')}" + (f", run as {m['discipline']})" if len(models) > 1 else ")"))
+        if m["parsed"]["verification"]["summary"]:
+            log.info("parse", "verification: " + ", ".join(f"{k} x{v}" for k, v in m["parsed"]["verification"]["summary"].items()))
+
+    # 2. names + measure (per model), federation ------------------------------------------
     flat = rules if "extends" not in rules else flatten(rules, rule_library or {})
     if "chain" not in flat:
         flat = flatten(flat, {})
@@ -93,7 +131,12 @@ def get_boq(parsed: dict, rules: dict, classifications: list[tuple[dict, dict]],
     rv = Resolver(dictionaries, resolution, dec_entries)
     log.info("names", "dictionaries: " + ", ".join(f"{d['id']} ({d['layer']})" for d in dictionaries)
              + (f"; {len(dec_entries)} name answer(s) from decisions" if dec_entries else ""))
-    elements, resolutions = measure(parsed, rv, log)
+    resolutions = []
+    for m in models:
+        m["elements"], res = measure(m["parsed"], rv, log, model_id=m["id"], discipline=m["discipline"])
+        m["boxes"] = element_boxes(m["parsed"])
+        resolutions += res
+    elements, model_reports, fed_questions, fed_warnings = combine(models, federation or {}, rv.expr, log, answers)
     distinct = {}
     for r in resolutions:
         distinct.setdefault((r["field"], r["raw"]), {**r, "count": 0})["count"] += 1
@@ -109,7 +152,7 @@ def get_boq(parsed: dict, rules: dict, classifications: list[tuple[dict, dict]],
     # 3. rules ----------------------------------------------------------------------------
     log.info("match", f"rule set '{flat['name']}' ({' -> '.join(flat['chain'])}), "
                       f"{len(flat['items'])} item rules, {len(flat.get('derived', []))} derived, {len(flat.get('manual', []))} manual")
-    warnings: list[dict] = [{"code": "rule_set", "message": p} for p in integrity(flat)]
+    warnings: list[dict] = [{"code": "rule_set", "message": p} for p in integrity(flat)] + fed_warnings
     for w in warnings:
         log.warn("match", w["message"])
     eng = RuleEngine(flat, elements, rv.expr, log, answers)
@@ -120,7 +163,7 @@ def get_boq(parsed: dict, rules: dict, classifications: list[tuple[dict, dict]],
     manual_lines = eng.run_manual()
     lines = item_lines + derived_lines + manual_lines
     warnings += eng.warnings
-    questions: list[dict] = list(eng.questions)
+    questions: list[dict] = list(eng.questions) + fed_questions
 
     # 4. coverage -------------------------------------------------------------------------
     parent_of = {e["guid"]: e.get("parent_guid") for e in elements}
@@ -216,7 +259,9 @@ def get_boq(parsed: dict, rules: dict, classifications: list[tuple[dict, dict]],
         "lines": out_lines,
         "questions": questions,
         "warnings": warnings,
-        "checks": parsed["verification"]["checks"],
+        "checks": [c if len(models) == 1 else {**c, "id": f"{m['fileName']}:{c['id']}"}
+                   for m in models for c in m["parsed"]["verification"]["checks"]],
+        "models": model_reports,
         "stats": {
             "elements": len(elements), "measuredElements": len(eng.matched), "excludedElements": len(eng.excluded),
             "unmatchedElements": unmatched_n, "lines": len(out_lines), "flaggedLines": flagged,

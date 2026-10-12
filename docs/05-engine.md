@@ -22,7 +22,8 @@ are conveniences for the dev API and CLI.
 |---|---|---|---|---|
 | 1 | parse | `parse.py` | IFC file | `ParsedModel` + `geometry.glb`, verification checks. Slow; cached by file hash. |
 | 2 | names | `names.py` | raw names + dictionaries + name decisions | term per (field, raw text); extracted values |
-| 3 | measure | `measure.py` | ParsedModel + resolver | `MeasuredElement[]` with one adopted number per quantity and its provenance |
+| 3 | measure | `measure.py` | ParsedModel + resolver, per model | `MeasuredElement[]` with one adopted number per quantity and its provenance |
+| 3b | match (federation) | `federation.py` | every model's measured elements + boxes, FederationSettings, scopes | one combined `MeasuredElement[]`, `ModelReport[]`, `overlap` questions, warnings |
 | 4 | match / quantity | `rules.py` `run_items` | elements + flattened rule set + decisions | item lines with traces |
 | 5 | derived | `rules.py` `run_derived` | item lines | derived lines |
 | 6 | manual | `rules.py` `run_manual` | rule set | manual lines |
@@ -100,6 +101,24 @@ still need checking against a real ArchiCAD export).
 
 Every adopted value records its provenance (`reported`, `geometry`, `derived`, `user`), and the
 measure stage logs one detail line per element explaining the choice.
+
+### 3b. Federation (`federation.py`)
+
+`get_boq` takes one ParsedModel or a list `[{id, parsed, discipline?, scope?}]`; one model is a
+federation of one (D43, D44, design in 10). Each model is measured on its own (cached parse,
+model id and discipline on every element), then `combine()` builds one element set before rules:
+
+| Step | What happens |
+|---|---|
+| storeys | levels within `storeyTolerance` across models are one level; an architecture model's name wins, else the most common; a name used at two levels is a warning |
+| coordinates | models whose element boxes do not overlap at all: a warning (shared coordinates assumed) |
+| same GlobalId | kept once: the copy with a measurable body, then the one its model owns, then the first; parts of a dropped copy are measured on their own (the structural roof's girders under the architectural roof's GlobalId) |
+| ownership | taken if the model's discipline owns it (`presets/settings/federation.json`: `owns` selectors, or `rest`) or `scope.include` selects it; `scope.exclude` always drops it. Not owned: left to the owning model if it has an element of the same IFC class whose box overlaps by `duplicateOverlap`, else taken here with a `federation_hole` warning. A discipline not in the settings owns everything |
+| overlaps | taken elements of one IFC class from different models with overlapping boxes: one `overlap` question per model pair and class, id `overlap:{a}\|{b}:{IfcClass}` with model keys = discipline (or discipline/file name). Answer: the model to keep, or `both`. Unanswered: both kept, `federation_overlap` warning |
+
+The result lists every model in `BoqResult.models` (taken, left to others, duplicates, excluded,
+taken without owner); trace elements carry their model id. The selector evaluator is shared with
+the rules (`rules.select`). Settings are passed in by the caller; the engine never loads presets.
 
 ### 4-6. Rules (`rules.py`)
 

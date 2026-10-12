@@ -7,6 +7,7 @@ Layout:
   presets/classifications/<id>/codelist.json    CodeList
   presets/classifications/<id>/map.json         ClassificationMap
   presets/settings/resolution.json              ResolutionSettings
+  presets/settings/federation.json              FederationSettings (discipline ownership)
 
 Every file is validated against packages/types/schema/*.schema.json when those
 schemas exist (they are generated from the TypeScript types: npm run codegen).
@@ -22,7 +23,7 @@ from pathlib import Path
 from .paths import PRESETS, SCHEMAS
 
 SCHEMA_FOR = {"rules": "rule-set", "dictionaries": "dictionary", "codelist": "codelist", "map": "classification-map",
-              "resolution": "resolution-settings"}
+              "resolution": "resolution-settings", "federation": "federation-settings"}
 
 
 @lru_cache(maxsize=16)
@@ -79,6 +80,15 @@ def classifications() -> dict[str, dict]:
 def resolution() -> dict:
     p = PRESETS / "settings" / "resolution.json"
     return _load(p, "resolution") if p.exists() else {"unresolved": "ask"}
+
+
+FEDERATION_DEFAULT = {"schemaVersion": "1.0", "id": "federation-none", "name": "No ownership", "version": "1",
+                      "disciplines": {}, "storeyTolerance": 0.25, "duplicateOverlap": 0.5}
+
+
+def federation() -> dict:
+    p = PRESETS / "settings" / "federation.json"
+    return _load(p, "federation") if p.exists() else dict(FEDERATION_DEFAULT)
 
 
 def load_rule_set(ref: str) -> tuple[dict, dict[str, dict]]:

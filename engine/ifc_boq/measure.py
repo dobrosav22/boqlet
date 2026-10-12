@@ -117,8 +117,11 @@ def common_pset(el: dict) -> dict:
     return {}
 
 
-def build(parsed: dict, rv: Resolver, log: CalcLog) -> tuple[list[dict], list[dict]]:
-    """Returns (MeasuredElement dicts, name resolutions for questions)."""
+def build(parsed: dict, rv: Resolver, log: CalcLog, model_id: str | None = None,
+          discipline: str | None = None) -> tuple[list[dict], list[dict]]:
+    """Returns (MeasuredElement dicts, name resolutions for questions).
+    model_id / discipline: set by federation (the run's id for this model, the user's tag);
+    default to the file hash and the parser's discipline guess."""
     mats = {m["id"]: m["name"] for m in parsed["catalogues"]["materials"]}
     lsets = {l["id"]: l for l in parsed["catalogues"]["layerSets"]}
     types = {t["id"]: t for t in parsed["catalogues"]["types"]}
@@ -134,7 +137,8 @@ def build(parsed: dict, rv: Resolver, log: CalcLog) -> tuple[list[dict], list[di
         if r["kind"] == "space_boundary":
             spaces_of[r["elementId"]].add(r["spaceId"])
     by_id = {e["id"]: e for e in parsed["elements"]}
-    model_discipline = parsed["header"].get("disciplineGuess", "unknown")
+    model_discipline = discipline or parsed["header"].get("disciplineGuess", "unknown")
+    model_id = model_id or parsed["header"]["source"]["sha256"][:12]
     schema = parsed["header"].get("ifcSchema", "IFC4")
     resolutions: list[dict] = []
     out: list[dict] = []
@@ -353,7 +357,7 @@ def build(parsed: dict, rv: Resolver, log: CalcLog) -> tuple[list[dict], list[di
         ifc_codes = [classifications[c] for c in el.get("classificationIds", []) if c in classifications]
 
         m = {
-            "guid": el["id"], "model_id": parsed["header"]["source"]["sha256"][:12], "discipline": discipline,
+            "guid": el["id"], "model_id": model_id, "discipline": discipline,
             "ifc_class": cls, "ifc_class_raw": el["ifcClass"], "predefined_type": el.get("predefinedType"),
             "family": fam, "name": el.get("name"), "family_name": family_name, "type_name": type_name,
             "material": mat["term"] if mat else None, "material_raw": main_raw,

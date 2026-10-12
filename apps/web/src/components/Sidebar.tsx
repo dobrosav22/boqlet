@@ -3,6 +3,15 @@ import type { Decision, ModelSummary, PresetsResponse } from "@ifc-boq/types";
 import { api } from "../api";
 import { bytes, ms } from "../format";
 
+/** An uploaded model and how it takes part in the BoQ (federation: several models, one BoQ). */
+export interface LoadedModel {
+  summary: ModelSummary;
+  discipline: string;
+  on: boolean;
+}
+
+const DISCIPLINES = ["architecture", "structure", "mep"];
+
 export interface Settings {
   ruleSet: string;
   dictionaries: string[];
@@ -14,8 +23,9 @@ interface Props {
   presets: PresetsResponse | null;
   presetsError: string | null;
   onRetryPresets: () => void;
-  model: ModelSummary | null;
+  models: LoadedModel[];
   onModel: (m: ModelSummary) => void;
+  onModels: (models: LoadedModel[]) => void;
   settings: Settings;
   onSettings: (s: Settings) => void;
   decisions: Decision[];
@@ -45,8 +55,8 @@ export function Sidebar(p: Props) {
     }
   };
 
-  const m = p.model;
-  const topClasses = m ? Object.entries(m.byClass).sort((a, b) => b[1] - a[1]).slice(0, 6) : [];
+  const many = p.models.length > 1;
+  const update = (i: number, patch: Partial<LoadedModel>) => p.onModels(p.models.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
   return (
     <aside className="side">
@@ -77,46 +87,83 @@ export function Sidebar(p: Props) {
           </>
         ) : (
           <>
-            <strong>{m ? "Drop another IFC file" : "Drop an IFC file here"}</strong>
-            <span>or click to choose one</span>
+            <strong>{p.models.length ? "Add another IFC file" : "Drop an IFC file here"}</strong>
+            <span>{p.models.length ? "Models of one project are combined into one BoQ" : "or click to choose one"}</span>
           </>
         )}
       </div>
       {uploadError && <p className="error">{uploadError}</p>}
 
-      {m && (
-        <div className="model">
-          <div className="model-name">{m.fileName}</div>
-          <dl>
-            <dt>Schema</dt>
-            <dd>{m.ifcSchema}</dd>
-            <dt>Made with</dt>
-            <dd>{m.authoringApp ?? "unknown"}</dd>
-            <dt>Contents</dt>
-            <dd>
-              {m.elementCount} elements, {m.openingCount} openings, {m.spaceCount} spaces
-            </dd>
-            <dt>Storeys</dt>
-            <dd>{m.storeys.map((s) => s.name).join(", ")}</dd>
-            <dt>Parsed</dt>
-            <dd>
-              {bytes(m.sizeBytes)} in {ms(m.parseMs)}
-              {m.cached ? " (cached)" : ""}
-            </dd>
-          </dl>
-          <div className="chips">
-            {topClasses.map(([c, n]) => (
-              <span key={c} className="chip">
-                {c.replace(/^Ifc/, "")} {n}
-              </span>
-            ))}
+      {p.models.map((lm, i) => {
+        const m = lm.summary;
+        const topClasses = Object.entries(m.byClass).sort((a, b) => b[1] - a[1]).slice(0, 6);
+        const options = [...new Set([...DISCIPLINES, lm.discipline])];
+        return (
+          <div key={m.modelId} className={`model ${lm.on ? "" : "model-off"}`}>
+            <div className="model-head">
+              {many && (
+                <input type="checkbox" checked={lm.on} onChange={() => update(i, { on: !lm.on })} aria-label={`Include ${m.fileName}`} />
+              )}
+              <div className="model-name">{m.fileName}</div>
+              <button className="link" onClick={() => p.onModels(p.models.filter((_, j) => j !== i))} aria-label={`Remove ${m.fileName}`}>
+                Remove
+              </button>
+            </div>
+            {many && (
+              <label className="model-disc">
+                Discipline{" "}
+                <select value={lm.discipline} onChange={(e) => update(i, { discipline: e.target.value })}>
+                  {options.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <dl>
+              <dt>Schema</dt>
+              <dd>{m.ifcSchema}</dd>
+              <dt>Made with</dt>
+              <dd>{m.authoringApp ?? "unknown"}</dd>
+              <dt>Contents</dt>
+              <dd>
+                {m.elementCount} elements, {m.openingCount} openings, {m.spaceCount} spaces
+              </dd>
+              {!many && (
+                <>
+                  <dt>Storeys</dt>
+                  <dd>{m.storeys.map((s) => s.name).join(", ")}</dd>
+                  <dt>Parsed</dt>
+                  <dd>
+                    {bytes(m.sizeBytes)} in {ms(m.parseMs)}
+                    {m.cached ? " (cached)" : ""}
+                  </dd>
+                </>
+              )}
+            </dl>
+            {!many && (
+              <div className="chips">
+                {topClasses.map(([c, n]) => (
+                  <span key={c} className="chip">
+                    {c.replace(/^Ifc/, "")} {n}
+                  </span>
+                ))}
+              </div>
+            )}
+            {!many && Object.keys(m.checks).length > 0 && (
+              <p className="small muted">
+                Checks: {Object.entries(m.checks).map(([k, v]) => `${k.replace(/_/g, " ")} ${v}`).join(", ")}
+              </p>
+            )}
           </div>
-          {Object.keys(m.checks).length > 0 && (
-            <p className="small muted">
-              Checks: {Object.entries(m.checks).map(([k, v]) => `${k.replace(/_/g, " ")} ${v}`).join(", ")}
-            </p>
-          )}
-        </div>
+        );
+      })}
+      {many && (
+        <p className="hint">
+          Each element is taken from the model whose discipline owns it; the same element in two models is counted once.
+          Overlaps the engine cannot decide become questions.
+        </p>
       )}
 
       {p.presetsError && (
@@ -184,14 +231,14 @@ export function Sidebar(p: Props) {
 
       {p.decisions.length > 0 && (
         <p className="small">
-          {p.decisions.length} answer{p.decisions.length === 1 ? "" : "s"} applied to this model.{" "}
+          {p.decisions.length} answer{p.decisions.length === 1 ? "" : "s"} applied to this BoQ.{" "}
           <button className="link" onClick={p.onClearDecisions}>
             Clear
           </button>
         </p>
       )}
 
-      <button className="primary" disabled={!m || !p.settings.ruleSet || p.running} onClick={p.onGenerate}>
+      <button className="primary" disabled={!p.models.some((x) => x.on) || !p.settings.ruleSet || p.running} onClick={p.onGenerate}>
         {p.running ? "Generating" : "Generate BoQ"}
       </button>
     </aside>

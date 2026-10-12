@@ -9,7 +9,7 @@
  *   export          -> xlsx of a run
  */
 
-import type { BoqResult, Decision } from "./engine";
+import type { BoqResult, Decision, ModelScope } from "./engine";
 import type { RuleSet } from "./rules";
 import type { DictField, Dictionary, Resolution } from "./dictionary";
 import type { Code } from "./classification";
@@ -171,9 +171,19 @@ export interface ModelSummary {
   cached: boolean;
 }
 
-/** POST /api/runs */
-export interface RunRequest {
+/** One uploaded model in a run. Discipline defaults to the model's disciplineGuess. */
+export interface RunModel {
   modelId: string;
+  discipline?: string;
+  scope?: ModelScope;
+}
+
+/** POST /api/runs  (dev server; the production backend will define its own) */
+export interface RunRequest {
+  /** One model (kept for the single-model UI and scripts). */
+  modelId?: string;
+  /** Several models combined into one BoQ (federation). Takes precedence over modelId. */
+  models?: RunModel[];
   ruleSet: string;                 // preset id
   dictionaries: string[];          // preset ids, any layer order
   classifications: string[];       // preset ids

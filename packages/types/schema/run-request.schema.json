@@ -6,7 +6,15 @@
       "type": "object",
       "properties": {
         "modelId": {
-          "type": "string"
+          "type": "string",
+          "description": "One model (kept for the single-model UI and scripts)."
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RunModel"
+          },
+          "description": "Several models combined into one BoQ (federation). Takes precedence over modelId."
         },
         "ruleSet": {
           "type": "string"
@@ -31,14 +39,353 @@
         }
       },
       "required": [
-        "modelId",
         "ruleSet",
         "dictionaries",
         "classifications",
         "decisions"
       ],
       "additionalProperties": false,
-      "description": "POST /api/runs"
+      "description": "POST /api/runs  (dev server; the production backend will define its own)"
+    },
+    "RunModel": {
+      "type": "object",
+      "properties": {
+        "modelId": {
+          "type": "string"
+        },
+        "discipline": {
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/definitions/ModelScope"
+        }
+      },
+      "required": [
+        "modelId"
+      ],
+      "additionalProperties": false,
+      "description": "One uploaded model in a run. Discipline defaults to the model's disciplineGuess."
+    },
+    "ModelScope": {
+      "type": "object",
+      "properties": {
+        "include": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Selector"
+          }
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Selector"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "description": "Adjusts a model's default ownership (D44): `include` adds elements its discipline does not own, `exclude` drops elements whatever owns them (\"ignore furniture in this model\")."
+    },
+    "Selector": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "all": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Selector"
+              }
+            }
+          },
+          "required": [
+            "all"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "any": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Selector"
+              }
+            }
+          },
+          "required": [
+            "any"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "not": {
+              "$ref": "#/definitions/Selector"
+            }
+          },
+          "required": [
+            "not"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "field": {
+              "$ref": "#/definitions/SelectorField"
+            },
+            "op": {
+              "$ref": "#/definitions/SelectorOp"
+            },
+            "value": {
+              "$ref": "#/definitions/Value%3Cunknown%3E"
+            }
+          },
+          "required": [
+            "field",
+            "op"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "family": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/ElementFamily"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/ElementFamily"
+                  }
+                }
+              ]
+            }
+          },
+          "required": [
+            "family"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "ifcClass": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "includeSubtypes": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "ifcClass"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "expr": {
+              "$ref": "#/definitions/Expr"
+            }
+          },
+          "required": [
+            "expr"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "SelectorField": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/MeasuredField"
+        },
+        {
+          "type": "string",
+          "const": "ifc_class"
+        },
+        {
+          "type": "string",
+          "const": "predefined_type"
+        },
+        {
+          "type": "string",
+          "const": "type_name"
+        },
+        {
+          "type": "string",
+          "const": "family"
+        },
+        {
+          "type": "string",
+          "const": "family_name"
+        },
+        {
+          "type": "string",
+          "const": "material"
+        },
+        {
+          "type": "string",
+          "const": "element_type"
+        },
+        {
+          "type": "string",
+          "const": "space_type"
+        },
+        {
+          "type": "string",
+          "const": "discipline"
+        },
+        {
+          "type": "string",
+          "const": "storey"
+        },
+        {
+          "type": "string",
+          "const": "space"
+        },
+        {
+          "type": "string",
+          "const": "zone"
+        },
+        {
+          "type": "string",
+          "const": "status"
+        },
+        {
+          "type": "string",
+          "const": "is_external"
+        },
+        {
+          "type": "string",
+          "const": "load_bearing"
+        },
+        {
+          "type": "string",
+          "const": "system"
+        },
+        {
+          "type": "string",
+          "const": "profile"
+        },
+        {
+          "type": "string",
+          "const": "nominal_size"
+        },
+        {
+          "type": "string",
+          "const": "tag"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "MeasuredField": {
+      "type": "string",
+      "enum": [
+        "storey_elevation",
+        "length",
+        "width",
+        "height",
+        "thickness",
+        "depth",
+        "diameter",
+        "cross_section_area",
+        "slope",
+        "elevation_base",
+        "elevation_top",
+        "profile_girth",
+        "gross_area",
+        "net_area",
+        "footprint_area",
+        "developed_area",
+        "gross_volume",
+        "net_volume",
+        "perimeter",
+        "mass",
+        "nominal_mass_per_length",
+        "density",
+        "bar_diameter",
+        "bar_count",
+        "bar_length",
+        "insulation_thickness",
+        "connection_count"
+      ],
+      "description": "Numeric fields rules may use as variables in formulas, selectors and bands. Written out explicitly so the JSON Schema (for the Python engine) can list them; the check below fails to compile if this list drifts from MeasuredElement."
+    },
+    "SelectorOp": {
+      "type": "string",
+      "enum": [
+        "eq",
+        "neq",
+        "in",
+        "not_in",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "between",
+        "contains",
+        "starts_with",
+        "matches",
+        "exists",
+        "missing",
+        "under"
+      ]
+    },
+    "Value<unknown>": {
+      "anyOf": [
+        {},
+        {
+          "$ref": "#/definitions/ParamRef"
+        }
+      ],
+      "description": "A literal value, or a slot to be filled from `params`."
+    },
+    "ParamRef": {
+      "type": "object",
+      "properties": {
+        "param": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "param"
+      ],
+      "additionalProperties": false,
+      "description": "Reference to a named parameter in `RuleSet.params`."
+    },
+    "ElementFamily": {
+      "type": "string",
+      "enum": [
+        "linear",
+        "planar",
+        "volumetric",
+        "countable",
+        "reinforcement",
+        "assembly",
+        "space",
+        "void"
+      ]
+    },
+    "Expr": {
+      "type": "string",
+      "description": "A formula in the small, safe expression language.\n\nGrammar (evaluated only by the engine, never by `eval`):   literals      12  0.5  \"text\"  true  false   operators     + - * /  ( )  = != > >= < <=  AND OR NOT   functions     IF(c,a,b)  MIN(a,b,..)  MAX(a,b,..)  ROUND(x,step)  CEIL(x,step)                 FLOOR(x,step)  ABS(x)  SQRT(x)  PI()  COALESCE(a,b,..)                 UNDER(term, \"concrete\")   true if a dictionary term is that term or beneath it   variables     any MeasuredField           e.g. net_area, thickness, length                 props[\"Pset_WallCommon.FireRating\"]                 p.<param>                   e.g. p.opening_threshold                 src.<field> / src.qty       (derived rules only: the source element / line)   aggregates    SUM | COUNT | MIN | MAX | AVG over a collection, with optional WHERE:                   SUM(openings.area WHERE area > p.opening_threshold)                   SUM(layers.volume WHERE material = \"concrete\")                   COUNT(openings WHERE kind = \"door\")                   SUM(faces.net_area WHERE side = \"a\")                 collections: openings, layers, faces, children"
     },
     "Decision": {
       "type": "object",
