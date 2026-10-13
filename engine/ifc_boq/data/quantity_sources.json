@@ -209,5 +209,55 @@
       "BaseQuantities",
       "GrossPerimeter"
     ]
+  ],
+  "building_gross_floor_area": [
+    [
+      "Qto_BuildingBaseQuantities",
+      "GrossFloorArea"
+    ],
+    [
+      "BaseQuantities",
+      "GrossFloorArea"
+    ]
+  ],
+  "building_net_floor_area": [
+    [
+      "Qto_BuildingBaseQuantities",
+      "NetFloorArea"
+    ],
+    [
+      "BaseQuantities",
+      "NetFloorArea"
+    ]
+  ],
+  "building_footprint_area": [
+    [
+      "Qto_BuildingBaseQuantities",
+      "FootprintArea"
+    ],
+    [
+      "BaseQuantities",
+      "FootprintArea"
+    ]
+  ],
+  "building_gross_volume": [
+    [
+      "Qto_BuildingBaseQuantities",
+      "GrossVolume"
+    ],
+    [
+      "BaseQuantities",
+      "GrossVolume"
+    ]
+  ],
+  "building_height": [
+    [
+      "Qto_BuildingBaseQuantities",
+      "Height"
+    ],
+    [
+      "BaseQuantities",
+      "Height"
+    ]
   ]
 }

@@ -50,6 +50,7 @@ without being rewritten.
 | Download | link | `GET /api/runs/{runId}/boq.xlsx` | stored file |
 | Names in a model (Library, dictionaries) | names tab | `POST /api/models/{modelId}/names` | `pipeline.names_in_model` over the cached parse; nothing is stored |
 | Check a draft preset (Library) | Check button, patch parents | `POST /api/presets/{kind}/check` | `presets.check` + `presets.flattened`; nothing is stored |
+| Save / delete a preset (Library) | Save, Save as new, Delete saved | `PUT` / `DELETE /api/presets/{kind}/{id}` | `presets.save` (same checks, then writes to `presets/user/`) / `presets.delete`; dev-build stand-in for the backend's preset storage |
 
 The full result (lines, log, questions) is returned with every run. For the Duplex that is a few
 hundred KB; for large models the platform should page lines and logs instead.

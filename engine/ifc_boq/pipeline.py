@@ -32,7 +32,7 @@ from .classify import classify
 from .expr import Expr, fmt
 from .federation import combine
 from .log import CalcLog
-from .measure import build as measure
+from .measure import build as measure, building_measures
 from .names import Resolver, decision_entries
 from .rules import RuleEngine, enabled_view, flatten, integrity, referenced_fields, unmatched_id
 
@@ -167,7 +167,8 @@ def get_boq(parsed: dict, rules: dict, classifications: list[tuple[dict, dict]],
     for w in warnings:
         log.warn("match", w["message"])
     warnings += fed_warnings                                # federation logged its own
-    eng = RuleEngine(flat, elements, rv.expr, log, answers)
+    building = building_measures(elements, [m["parsed"] for m in models], log)
+    eng = RuleEngine(flat, elements, rv.expr, log, answers, building)
     eng.run_items()
     eng.finalize_lines()
     item_lines = list(eng.lines.values())
@@ -274,6 +275,7 @@ def get_boq(parsed: dict, rules: dict, classifications: list[tuple[dict, dict]],
         "checks": [c if len(models) == 1 else {**c, "id": f"{m['fileName']}:{c['id']}"}
                    for m in models for c in m["parsed"]["verification"]["checks"]],
         "models": model_reports,
+        "building": building,
         "stats": {
             "elements": len(elements), "measuredElements": len(eng.matched), "excludedElements": len(eng.excluded),
             "unmatchedElements": unmatched_n, "lines": len(out_lines), "flaggedLines": flagged,

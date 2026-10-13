@@ -38,6 +38,9 @@ import ifcopenshell.util.unit as uu
 from . import geometry
 
 ENGINE_VERSION = "0.1.0"
+# Bump when the parse output changes; cached parses with a lower number are parsed again (store.py).
+# 2: openings carry objectType (recesses); rooms carry the columns standing in them (intersections).
+PARSE_FORMAT = 2
 TOLERANCE = 0.01                     # 1 % reported vs geometry
 OVERLAP_MIN_M3 = geometry.SHARED_MIN
 OVERLAP_CLASSES = ("IfcWall", "IfcSlab", "IfcFooting", "IfcBeam", "IfcColumn", "IfcMember",
@@ -504,7 +507,7 @@ class Parser:
             "units": {k: v for k, v in dict(length=units.get("LENGTHUNIT", "METRE"), area=units.get("AREAUNIT"),
                                             volume=units.get("VOLUMEUNIT"), angle=units.get("PLANEANGLEUNIT"),
                                             mass=units.get("MASSUNIT"), lengthToMetre=r6(self.L)).items() if v is not None},
-            "parse": {"engineVersion": ENGINE_VERSION, "ifcopenshellVersion": ifcopenshell.version,
+            "parse": {"engineVersion": ENGINE_VERSION, "format": PARSE_FORMAT, "ifcopenshellVersion": ifcopenshell.version,
                       "parsedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"), "durationMs": 0},
         }
         if mvd:
@@ -705,7 +708,8 @@ class Parser:
             for k, v in (("hostId", host.GlobalId if host else None),
                          ("fillingId", filling.GlobalId if filling else None),
                          ("fillingClass", filling.is_a() if filling else None),
-                         ("predefinedType", str(getattr(o, "PredefinedType", "") or "") or None)):
+                         ("predefinedType", str(getattr(o, "PredefinedType", "") or "") or None),
+                         ("objectType", o.ObjectType)):
                 if v:
                     rec[k] = v
             mesh = self.meshes.get(o.GlobalId)
@@ -849,6 +853,15 @@ class Parser:
             m = self.meshes[s["id"]]
             s["geometry"]["room"] = {k: r6(v) for k, v in geometry.room_surfaces(m).items()}
             rooms[s["id"]] = geometry.room_index(m)
+        # columns standing in a room take floor and ceiling area from it (measure.py `embedded`)
+        columns = [e["id"] for e in elements if e["ifcClassBase"] == "IfcColumn" and e["id"] in self.meshes]
+        for s in spatial:
+            if s["id"] not in rooms:
+                continue
+            for c in columns:
+                v = geometry.shared_volume(self.meshes[s["id"]], self.meshes[c])
+                if v and v > geometry.SHARED_MIN:
+                    s["geometry"].setdefault("intersections", []).append({"elementId": c, "volume": r6(v)})
         for e in elements:
             g = e["quantities"]["geometry"]
             if e["ifcClassBase"] not in FACE_CLASSES or e["id"] not in self.meshes or not g.get("obbAxes"):

@@ -48,6 +48,10 @@
           },
           "description": "How the slots are grouped into questions (settings questionnaire), in order."
         },
+        "scope": {
+          "$ref": "#/definitions/RuleScope",
+          "description": "What the BoQ covers (elements left out)."
+        },
         "items": {
           "type": "array",
           "items": {
@@ -265,7 +269,8 @@
               "$ref": "#/definitions/Unit"
             },
             "min": {
-              "type": "number"
+              "type": "number",
+              "description": "Allowed range of the answer; Check reports an answer outside it."
             },
             "max": {
               "type": "number"
@@ -535,6 +540,26 @@
               "type": "string",
               "description": "What the formula can use, e.g. \"src.* = the wall's measured fields\"."
             },
+            "choices": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "$ref": "#/definitions/Expr"
+                  }
+                },
+                "required": [
+                  "label",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Ready-made answers offered as a pick list (\"both faces\", \"one face\"). Picking one copies its formula into `value`; the formula stays visible and editable, and an edited one is \"custom\". Presentation only: the engine reads `value`."
+            },
             "label": {
               "type": "string",
               "description": "Short name, used in tables and next to fields bound to the slot."
@@ -619,7 +644,7 @@
     },
     "Expr": {
       "type": "string",
-      "description": "A formula in the small, safe expression language.\n\nGrammar (evaluated only by the engine, never by `eval`):   literals      12  0.5  \"text\"  true  false   operators     + - * /  ( )  = != > >= < <=  AND OR NOT   functions     IF(c,a,b)  MIN(a,b,..)  MAX(a,b,..)  ROUND(x,step)  CEIL(x,step)                 FLOOR(x,step)  ABS(x)  SQRT(x)  PI()  COALESCE(a,b,..)                 UNDER(term, \"concrete\")   true if a dictionary term is that term or beneath it   variables     any MeasuredField           e.g. net_area, thickness, length                 props[\"Pset_WallCommon.FireRating\"]                 p.<param>                   e.g. p.opening_threshold                 src.<field> / src.qty       (derived rules only: the source element / line)   aggregates    SUM | COUNT | MIN | MAX | AVG over a collection, with optional WHERE:                   SUM(openings.area WHERE area > p.opening_threshold)                   SUM(layers.volume WHERE material = \"concrete\")                   COUNT(openings WHERE kind = \"door\")                   SUM(faces.net_area WHERE side = \"a\")                 collections: openings, layers, faces, children"
+      "description": "A formula in the small, safe expression language.\n\nGrammar (evaluated only by the engine, never by `eval`):   literals      12  0.5  \"text\"  true  false   operators     + - * /  ( )  = != > >= < <=  AND OR NOT   functions     IF(c,a,b)  MIN(a,b,..)  MAX(a,b,..)  ROUND(x,step)  CEIL(x,step)                 FLOOR(x,step)  ABS(x)  SQRT(x)  PI()  COALESCE(a,b,..)                 UNDER(term, \"concrete\")   true if a dictionary term is that term or beneath it   variables     any MeasuredField           e.g. net_area, thickness, length                 props[\"Pset_WallCommon.FireRating\"]                 p.<param>                   e.g. p.opening_threshold                 building.<field>            whole-building values (BuildingMeasures), e.g. building.gross_volume                 src.<field> / src.qty       (derived rules only: the source element / line)   aggregates    SUM | COUNT | MIN | MAX | AVG over a collection, with optional WHERE:                   SUM(openings.area WHERE area > p.opening_threshold)                   SUM(layers.volume WHERE material = \"concrete\")                   COUNT(openings WHERE kind = \"door\")                   SUM(faces.net_area WHERE side = \"a\")                 collections: openings, layers, faces, children"
     },
     "RuleSection": {
       "type": "object",
@@ -641,146 +666,18 @@
       "additionalProperties": false,
       "description": "A group of questions in the settings questionnaire, in display order."
     },
-    "ItemRule": {
+    "RuleScope": {
       "type": "object",
       "properties": {
-        "id": {
-          "type": "string"
-        },
-        "label": {
-          "type": "string"
-        },
-        "family": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/ElementFamily"
-            },
-            {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/ElementFamily"
-              }
-            }
-          ],
-          "description": "Informative; also lets the editor offer only valid quantity kinds."
-        },
-        "match": {
-          "$ref": "#/definitions/Selector",
-          "description": "Which elements (or parts) this rule takes."
-        },
-        "parts": {
-          "type": "string",
-          "enum": [
-            "skip",
-            "include"
-          ],
-          "description": "Elements that are parts of an aggregate (a roof's slab, a stair's flights and railings) are skipped by default when some enabled rule measures the parent, to avoid counting twice. \"include\" measures them anyway (e.g. stair railings)."
-        },
-        "breakdown": {
-          "$ref": "#/definitions/Value%3CBreakdown%3E"
-        },
-        "partFilter": {
-          "$ref": "#/definitions/Expr",
-          "description": "Filter applied after breakdown, e.g. only layers with material = \"plasterboard\"."
-        },
-        "quantity": {
-          "$ref": "#/definitions/QuantitySpec",
-          "description": "How the quantity is measured."
-        },
-        "factor": {
-          "$ref": "#/definitions/Value%3Cnumber%3E",
-          "description": "Multiplier, e.g. allowance or overlap factor. Default 1."
-        },
-        "minimum": {
-          "type": "object",
-          "properties": {
-            "value": {
-              "$ref": "#/definitions/Value%3Cnumber%3E"
-            },
-            "per": {
-              "$ref": "#/definitions/Value%3C(%22element%22%7C%22line%22)%3E"
-            }
-          },
-          "required": [
-            "value",
-            "per"
-          ],
-          "additionalProperties": false,
-          "description": "Minimum chargeable quantity per element or per line."
-        },
-        "rounding": {
-          "$ref": "#/definitions/Rounding"
-        },
-        "lineKey": {
+        "exclude": {
           "type": "array",
           "items": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/SelectorField"
-              },
-              {
-                "$ref": "#/definitions/Expr"
-              }
-            ]
-          },
-          "description": "What splits elements into separate lines (same key = summed together)."
-        },
-        "bands": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Band"
+            "$ref": "#/definitions/Selector"
           }
-        },
-        "description": {
-          "$ref": "#/definitions/Value%3CTemplate%3E",
-          "description": "Line text."
-        },
-        "claims": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Double-counting guard. Each element may be claimed once per claim name (e.g. \"structure\", \"finish_side_a\"). Two rules claiming the same name on the same element is a pre-flight warning."
-        },
-        "onMissing": {
-          "$ref": "#/definitions/OnMissing"
-        },
-        "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Free labels used by classification maps and grouping."
-        },
-        "enabled": {
-          "$ref": "#/definitions/Value%3Cboolean%3E",
-          "description": "Disable without deleting (useful in derived rule sets)."
-        },
-        "notes": {
-          "type": "string"
         }
       },
-      "required": [
-        "id",
-        "label",
-        "match",
-        "quantity",
-        "description"
-      ],
-      "additionalProperties": false
-    },
-    "ElementFamily": {
-      "type": "string",
-      "enum": [
-        "linear",
-        "planar",
-        "volumetric",
-        "countable",
-        "reinforcement",
-        "assembly",
-        "space",
-        "void"
-      ]
+      "additionalProperties": false,
+      "description": "What a BoQ covers. Elements matching any `exclude` condition are left out: not measured, not asked about, counted in the log (e.g. existing and demolished elements in a renovation BoQ). Items with `scope: \"out\"` measure exactly those."
     },
     "Selector": {
       "anyOf": [
@@ -882,9 +779,6 @@
                   }
                 }
               ]
-            },
-            "includeSubtypes": {
-              "type": "boolean"
             }
           },
           "required": [
@@ -1058,6 +952,155 @@
         }
       ],
       "description": "A literal value, or a slot to be filled from `params`."
+    },
+    "ElementFamily": {
+      "type": "string",
+      "enum": [
+        "linear",
+        "planar",
+        "volumetric",
+        "countable",
+        "reinforcement",
+        "assembly",
+        "space",
+        "void"
+      ]
+    },
+    "ItemRule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "family": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ElementFamily"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ElementFamily"
+              }
+            }
+          ],
+          "description": "Informative; also lets the editor offer only valid quantity kinds."
+        },
+        "match": {
+          "$ref": "#/definitions/Selector",
+          "description": "Which elements (or parts) this rule takes."
+        },
+        "parts": {
+          "type": "string",
+          "enum": [
+            "skip",
+            "include"
+          ],
+          "description": "Elements that are parts of an aggregate (a roof's slab, a stair's flights and railings) are skipped by default when some enabled rule measures the parent, to avoid counting twice. \"include\" measures them anyway (e.g. stair railings)."
+        },
+        "breakdown": {
+          "$ref": "#/definitions/Value%3CBreakdown%3E"
+        },
+        "partFilter": {
+          "$ref": "#/definitions/Expr",
+          "description": "Filter applied after breakdown, e.g. only layers with material = \"plasterboard\"."
+        },
+        "quantity": {
+          "$ref": "#/definitions/QuantitySpec",
+          "description": "How the quantity is measured."
+        },
+        "factor": {
+          "$ref": "#/definitions/Value%3Cnumber%3E",
+          "description": "Multiplier, e.g. allowance or overlap factor. Default 1."
+        },
+        "minimum": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "$ref": "#/definitions/Value%3Cnumber%3E"
+            },
+            "per": {
+              "$ref": "#/definitions/Value%3C(%22element%22%7C%22line%22)%3E"
+            }
+          },
+          "required": [
+            "value",
+            "per"
+          ],
+          "additionalProperties": false,
+          "description": "Minimum chargeable quantity per element or per line."
+        },
+        "rounding": {
+          "$ref": "#/definitions/Rounding"
+        },
+        "lineKey": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/SelectorField"
+              },
+              {
+                "$ref": "#/definitions/Expr"
+              }
+            ]
+          },
+          "description": "What splits elements into separate lines (same key = summed together)."
+        },
+        "bands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Band"
+          }
+        },
+        "description": {
+          "$ref": "#/definitions/Value%3CTemplate%3E",
+          "description": "Line text."
+        },
+        "claims": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Double-counting guard. Each element may be claimed once per claim name (e.g. \"structure\", \"finish_side_a\"). Two rules claiming the same name on the same element is a pre-flight warning."
+        },
+        "onMissing": {
+          "$ref": "#/definitions/OnMissing"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Free labels used by classification maps and grouping."
+        },
+        "enabled": {
+          "$ref": "#/definitions/Value%3Cboolean%3E",
+          "description": "Disable without deleting (useful in derived rule sets)."
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "in",
+            "out"
+          ],
+          "description": "\"in\" (default): takes only elements this BoQ covers. \"out\": takes only the elements the rule set's `scope` leaves out, e.g. demolition of elements marked for demolition."
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "match",
+        "quantity",
+        "description"
+      ],
+      "additionalProperties": false
     },
     "Value<Breakdown>": {
       "anyOf": [
@@ -1639,7 +1682,11 @@
         },
         "quantity": {
           "$ref": "#/definitions/Value%3Cnumber%3E",
-          "description": "Empty = flagged line for the user to fill."
+          "description": "Empty (and no formula) = flagged line for the user to fill."
+        },
+        "formula": {
+          "$ref": "#/definitions/Value%3CExpr%3E",
+          "description": "Quantity from a formula over answers (p.*) and whole-building values (building.*), e.g. \"building.gross_volume / 100\" for an item priced per 100 m3 of building. Wins over `quantity`."
         },
         "amount": {
           "$ref": "#/definitions/Value%3Cnumber%3E",
@@ -1749,6 +1796,17 @@
               }
             ]
           }
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RuleSection"
+          },
+          "description": "Sections merge by id (title / intro override, new ones appended), so a patch can group its own questions."
+        },
+        "scope": {
+          "$ref": "#/definitions/RuleScope",
+          "description": "Replaces the parent's scope when present."
         },
         "items": {
           "type": "array",

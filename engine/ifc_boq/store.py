@@ -22,7 +22,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from .geometry import load_meshes, save_meshes
-from .parse import parse_file
+from .parse import PARSE_FORMAT, parse_file
 from .paths import CACHE
 
 
@@ -42,7 +42,9 @@ def put_model(src: Path, file_name: str) -> tuple[str, dict, bool]:
     d = model_dir(mid)
     parsed_path = d / "parsed.json"
     if parsed_path.exists() and (d / "meshes.npz").exists():      # (parsed before the sidecar existed: parse again)
-        return mid, get_parsed(mid), True
+        doc = get_parsed(mid)
+        if doc["header"]["parse"].get("format", 1) >= PARSE_FORMAT:   # older parse output: parse again
+            return mid, doc, True
     d.mkdir(parents=True, exist_ok=True)
     ifc = d / ("model.ifczip" if zipfile.is_zipfile(src) else "model.ifc")   # ifcopenshell reads zips by extension
     shutil.copyfile(src, ifc)

@@ -50,6 +50,7 @@ export type Param =
       type: "number";
       value: number;
       unit?: Unit;
+      /** Allowed range of the answer; Check reports an answer outside it. */
       min?: number;
       max?: number;
     })
@@ -72,6 +73,12 @@ export type Param =
       unit?: Unit;
       /** What the formula can use, e.g. "src.* = the wall's measured fields". */
       variables?: string;
+      /**
+       * Ready-made answers offered as a pick list ("both faces", "one face"). Picking one copies its
+       * formula into `value`; the formula stays visible and editable, and an edited one is "custom".
+       * Presentation only: the engine reads `value`.
+       */
+      choices?: { label: string; value: Expr }[];
     });
 
 /** A group of questions in the settings questionnaire, in display order. */
@@ -101,6 +108,7 @@ export type Value<T> = T | ParamRef;
  *   variables     any MeasuredField           e.g. net_area, thickness, length
  *                 props["Pset_WallCommon.FireRating"]
  *                 p.<param>                   e.g. p.opening_threshold
+ *                 building.<field>            whole-building values (BuildingMeasures), e.g. building.gross_volume
  *                 src.<field> / src.qty       (derived rules only: the source element / line)
  *   aggregates    SUM | COUNT | MIN | MAX | AVG over a collection, with optional WHERE:
  *                   SUM(openings.area WHERE area > p.opening_threshold)
@@ -156,7 +164,7 @@ export type Selector =
   | { not: Selector }
   | { field: SelectorField; op: SelectorOp; value?: Value<unknown> }
   | { family: ElementFamily | ElementFamily[] }
-  | { ifcClass: string | string[]; includeSubtypes?: boolean }
+  | { ifcClass: string | string[] } // classes are normalised by the engine (IfcWallStandardCase -> IfcWall)
   | { expr: Expr }; // escape hatch: any boolean expression
 
 /* ============================================================================
@@ -211,8 +219,8 @@ export interface DeductionRule {
     | "doors"
     | "windows"
     | "voids"         // openings without a filling (shafts, holes)
-    | "embedded"      // elements passing through (columns through slabs, beams in walls)
-    | "recesses";
+    | "embedded"      // elements passing through (columns through slabs, beams in walls, columns in rooms)
+    | "recesses";     // recesses: area of the recess, or area x recess depth for volumes ("openings" never includes them)
   mode: Value<DeductionMode>;
   /** Threshold value, compared using `compareBy`. */
   threshold?: Value<number>;
@@ -351,6 +359,11 @@ export interface ItemRule {
   tags?: string[];
   /** Disable without deleting (useful in derived rule sets). */
   enabled?: Value<boolean>;
+  /**
+   * "in" (default): takes only elements this BoQ covers. "out": takes only the elements the rule
+   * set's `scope` leaves out, e.g. demolition of elements marked for demolition.
+   */
+  scope?: "in" | "out";
   notes?: string;
 }
 
@@ -395,8 +408,11 @@ export interface ManualItem {
   kind: "preliminary" | "provisional_sum" | "lump_sum" | "daywork" | "other";
   description: Value<Template>;
   unit: Unit;
-  /** Empty = flagged line for the user to fill. */
+  /** Empty (and no formula) = flagged line for the user to fill. */
   quantity?: Value<number>;
+  /** Quantity from a formula over answers (p.*) and whole-building values (building.*), e.g.
+   *  "building.gross_volume / 100" for an item priced per 100 m3 of building. Wins over `quantity`. */
+  formula?: Value<Expr>;
   /** Provisional and lump sums may carry an amount instead of a quantity. */
   amount?: Value<number>;
   tags?: string[];
@@ -418,6 +434,15 @@ export interface RuleSetMeta {
   chain?: string;
 }
 
+/**
+ * What a BoQ covers. Elements matching any `exclude` condition are left out: not measured, not
+ * asked about, counted in the log (e.g. existing and demolished elements in a renovation BoQ).
+ * Items with `scope: "out"` measure exactly those.
+ */
+export interface RuleScope {
+  exclude?: Selector[];
+}
+
 export interface RuleSetDefaults {
   rounding?: Rounding;
   onMissing?: OnMissing;
@@ -437,6 +462,8 @@ export interface RuleSet {
   params: Record<string, Param>;
   /** How the slots are grouped into questions (settings questionnaire), in order. */
   sections?: RuleSection[];
+  /** What the BoQ covers (elements left out). */
+  scope?: RuleScope;
 
   items: ItemRule[];
   derived?: DerivedRule[];
@@ -459,6 +486,10 @@ export interface RuleSetPatch {
   meta?: Partial<RuleSetMeta>;
   defaults?: RuleSetDefaults;
   params?: Record<string, Param | { value: Param["value"] }>;
+  /** Sections merge by id (title / intro override, new ones appended), so a patch can group its own questions. */
+  sections?: RuleSection[];
+  /** Replaces the parent's scope when present. */
+  scope?: RuleScope;
   items?: ItemRule[];
   derived?: DerivedRule[];
   manual?: ManualItem[];

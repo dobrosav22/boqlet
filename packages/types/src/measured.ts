@@ -38,7 +38,9 @@ export interface Face {
 export interface Opening {
   /** GlobalId of the IfcOpeningElement. */
   guid?: string;
-  kind: "door" | "window" | "void";
+  /** recess: does not go through the host (IfcOpeningElement RECESS, or ObjectType "Recess"); not part of
+   *  net areas or room openings, deducted only by `what: "recesses"`. */
+  kind: "door" | "window" | "void" | "recess";
   width: number;
   height: number;
   area: number;
@@ -65,6 +67,29 @@ export interface Layer {
   area: number;
   volume: number;
   function?: "structure" | "insulation" | "finish" | "membrane" | "air_gap" | "other";
+}
+
+/**
+ * Values of the whole building, for formulas as `building.<field>` (all models of a run together).
+ * Taken from the IFC building's quantities (Qto_BuildingBaseQuantities) where present, otherwise
+ * derived from the elements; `provenance` says which, `notes` how.
+ */
+export interface BuildingMeasures {
+  /** Sum of floor slab plan areas (derived), or the reported gross floor area. */
+  gross_floor_area?: number;
+  /** Sum of room floor areas (derived), or the reported net floor area. */
+  net_floor_area?: number;
+  /** Largest floor slab plan area of one storey (derived), or the reported footprint. */
+  footprint_area?: number;
+  /** Floor slab plan area x storey height, summed over storeys (derived, approximate), or reported. */
+  gross_volume?: number;
+  /** Sum of room volumes. */
+  space_volume?: number;
+  /** Highest element top less lowest element base (derived), or reported. */
+  height?: number;
+  storeys?: number;
+  provenance: Partial<Record<string, "reported" | "derived">>;
+  notes: string[];
 }
 
 export interface MeasuredElement {
@@ -156,8 +181,9 @@ export interface MeasuredElement {
   openings: Opening[];
   /** Linear elements (columns, beams, members) passing through this planar element: the solid
    *  volume they share with it, and that volume over this element's thickness (the area they take
-   *  out of its face). Used by `embedded` deductions. `model` is set when the element is in another
-   *  model of a federation. */
+   *  out of its face). Rooms: the columns standing in them, area = shared volume / room height.
+   *  Used by `embedded` deductions. `model` is set when the element is in another model of a
+   *  federation. */
   embedded?: Embedded[];
   layers: Layer[];
   host_guid?: string;

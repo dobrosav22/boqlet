@@ -65,6 +65,8 @@ export interface Header {
   disciplineGuess?: "architecture" | "structure" | "mep" | "infrastructure" | "mixed" | "unknown";
   parse: {
     engineVersion: string;
+    /** Output format of the parser; a cached parse with a lower number is parsed again. */
+    format?: number;
     ifcopenshellVersion?: string;
     parsedAt: string;               // ISO timestamp
     durationMs: number;
@@ -272,6 +274,8 @@ export interface ParsedOpening {
   fillingId?: string;
   fillingClass?: string;
   predefinedType?: string;          // OPENING, RECESS
+  /** IFC2x3 has no RECESS type; exporters write "Recess" here instead. */
+  objectType?: string;
   width?: number;
   height?: number;
   depth?: number;

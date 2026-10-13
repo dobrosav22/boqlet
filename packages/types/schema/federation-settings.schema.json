@@ -161,9 +161,6 @@
                   }
                 }
               ]
-            },
-            "includeSubtypes": {
-              "type": "boolean"
             }
           },
           "required": [
@@ -366,7 +363,7 @@
     },
     "Expr": {
       "type": "string",
-      "description": "A formula in the small, safe expression language.\n\nGrammar (evaluated only by the engine, never by `eval`):   literals      12  0.5  \"text\"  true  false   operators     + - * /  ( )  = != > >= < <=  AND OR NOT   functions     IF(c,a,b)  MIN(a,b,..)  MAX(a,b,..)  ROUND(x,step)  CEIL(x,step)                 FLOOR(x,step)  ABS(x)  SQRT(x)  PI()  COALESCE(a,b,..)                 UNDER(term, \"concrete\")   true if a dictionary term is that term or beneath it   variables     any MeasuredField           e.g. net_area, thickness, length                 props[\"Pset_WallCommon.FireRating\"]                 p.<param>                   e.g. p.opening_threshold                 src.<field> / src.qty       (derived rules only: the source element / line)   aggregates    SUM | COUNT | MIN | MAX | AVG over a collection, with optional WHERE:                   SUM(openings.area WHERE area > p.opening_threshold)                   SUM(layers.volume WHERE material = \"concrete\")                   COUNT(openings WHERE kind = \"door\")                   SUM(faces.net_area WHERE side = \"a\")                 collections: openings, layers, faces, children"
+      "description": "A formula in the small, safe expression language.\n\nGrammar (evaluated only by the engine, never by `eval`):   literals      12  0.5  \"text\"  true  false   operators     + - * /  ( )  = != > >= < <=  AND OR NOT   functions     IF(c,a,b)  MIN(a,b,..)  MAX(a,b,..)  ROUND(x,step)  CEIL(x,step)                 FLOOR(x,step)  ABS(x)  SQRT(x)  PI()  COALESCE(a,b,..)                 UNDER(term, \"concrete\")   true if a dictionary term is that term or beneath it   variables     any MeasuredField           e.g. net_area, thickness, length                 props[\"Pset_WallCommon.FireRating\"]                 p.<param>                   e.g. p.opening_threshold                 building.<field>            whole-building values (BuildingMeasures), e.g. building.gross_volume                 src.<field> / src.qty       (derived rules only: the source element / line)   aggregates    SUM | COUNT | MIN | MAX | AVG over a collection, with optional WHERE:                   SUM(openings.area WHERE area > p.opening_threshold)                   SUM(layers.volume WHERE material = \"concrete\")                   COUNT(openings WHERE kind = \"door\")                   SUM(faces.net_area WHERE side = \"a\")                 collections: openings, layers, faces, children"
     }
   }
 }

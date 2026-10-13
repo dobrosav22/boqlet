@@ -545,7 +545,7 @@ def _embedded_across(taken, tk, model_of, log):
     def solid(e):
         m = model_of[e["guid"]]
         return (m.get("meshes") or {}).get(e["guid"]) if m else None
-    hosts = [e for e in taken if e["family"] == "planar" and solid(e) is not None]
+    hosts = [e for e in taken if e["family"] in ("planar", "space") and solid(e) is not None]   # rooms: columns in them
     rods = sorted((e for e in taken if e["family"] == "linear" and solid(e) is not None),
                   key=lambda e: solid(e).bounds[0][0])
     found = 0

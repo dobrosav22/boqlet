@@ -8,18 +8,24 @@ Layout:
   presets/classifications/<id>/map.json         ClassificationMap
   presets/settings/resolution.json              ResolutionSettings
   presets/settings/federation.json              FederationSettings (discipline ownership)
+  presets/user/{rules,dictionaries,classifications}/...
+                                                the same layout, for presets saved from the Library
+                                                (USER_PRESETS, git-ignored). A shipped preset wins
+                                                over a user one with the same id; save() refuses that.
 
 Every file is validated against packages/types/schema/*.schema.json when those
 schemas exist (they are generated from the TypeScript types: npm run codegen).
-Override the folder with IFC_BOQ_PRESETS.
+Override the folders with IFC_BOQ_PRESETS and IFC_BOQ_USER_PRESETS.
 """
 from __future__ import annotations
 
 import json
 import os
+import re
 from functools import lru_cache
 from pathlib import Path
 
+from . import paths
 from .paths import PRESETS, SCHEMAS
 
 SCHEMA_FOR = {"rules": "rule-set", "dictionaries": "dictionary", "codelist": "codelist", "map": "classification-map",
@@ -50,31 +56,110 @@ def _load(p: Path, kind: str) -> dict:
     return doc
 
 
+KINDS = ("rules", "dictionaries", "classifications")
+
+
+def _roots():
+    """(folder, origin), user first so that a shipped preset with the same id replaces it."""
+    return [(paths.USER_PRESETS, "user"), (PRESETS, "shipped")]
+
+
+def _json_docs(kind: str) -> dict[str, tuple[dict, str]]:
+    out = {}
+    for root, origin in _roots():
+        for p in sorted((root / kind).glob("*.json")):
+            d = _load(p, kind)
+            out[d["id"]] = (d, origin)
+    return out
+
+
 def rule_sets() -> dict[str, dict]:
-    return {d["id"]: d for d in (_load(p, "rules") for p in sorted((PRESETS / "rules").glob("*.json")))}
+    return {k: d for k, (d, _) in _json_docs("rules").items()}
 
 
 def dictionaries() -> dict[str, dict]:
-    return {d["id"]: d for d in (_load(p, "dictionaries") for p in sorted((PRESETS / "dictionaries").glob("*.json")))}
+    return {k: d for k, (d, _) in _json_docs("dictionaries").items()}
 
 
 def classifications() -> dict[str, dict]:
-    """id -> {"map": ..., "codeList": ... or None, "available": bool, "reason": str}"""
+    """id -> {"map": ..., "codeList": ... or None, "available": bool, "reason": str, "origin": shipped | user}"""
     out = {}
-    for d in sorted(p for p in (PRESETS / "classifications").iterdir() if p.is_dir()):
-        mp = d / "map.json"
-        if not mp.exists():
+    for root, origin in _roots():
+        folder = root / "classifications"
+        if not folder.is_dir():
             continue
-        m = _load(mp, "map")
-        cl_path = d / "codelist.json"
-        entry = {"id": d.name, "map": m, "codeList": None, "available": cl_path.exists(), "reason": None}
-        if cl_path.exists():
-            entry["codeList"] = _load(cl_path, "codelist")
-        else:
-            entry["reason"] = (f"Code list not installed. Run `npm run import:uniclass`" if "uniclass" in d.name
-                               else "codelist.json missing")
-        out[d.name] = entry
+        for d in sorted(p for p in folder.iterdir() if p.is_dir()):
+            mp = d / "map.json"
+            if not mp.exists():
+                continue
+            m = _load(mp, "map")
+            cl_path = d / "codelist.json"
+            entry = {"id": d.name, "map": m, "codeList": None, "available": cl_path.exists(), "reason": None,
+                     "origin": origin}
+            if cl_path.exists():
+                entry["codeList"] = _load(cl_path, "codelist")
+            else:
+                entry["reason"] = (f"Code list not installed. Run `npm run import:uniclass`" if "uniclass" in d.name
+                                   else "codelist.json missing")
+            out[d.name] = entry
     return out
+
+
+def origins(kind: str) -> dict[str, str]:
+    """id -> "shipped" | "user" for every preset of a kind."""
+    if kind == "classifications":
+        return {k: c["origin"] for k, c in classifications().items()}
+    return {k: o for k, (_, o) in _json_docs(kind).items()}
+
+
+SAFE_ID = re.compile(r"^[a-z0-9][a-z0-9._-]{0,79}$")
+
+
+def _doc_id(kind: str, doc: dict) -> str | None:
+    return (doc.get("codeList") or {}).get("id") if kind == "classifications" else doc.get("id")
+
+
+def save(kind: str, doc: dict) -> list[str]:
+    """Write a draft to the user presets folder if the engine accepts it. Returns the problems; [] = saved.
+
+    Shipped presets are never overwritten: a draft of one must be saved under a new id. A user preset
+    with the same id is replaced.
+    """
+    if kind not in KINDS:
+        raise ValueError(f"unknown preset kind '{kind}'")
+    pid = _doc_id(kind, doc)
+    if not isinstance(pid, str) or not SAFE_ID.match(pid):
+        return [f"id '{pid}' cannot be a file name: use lower-case letters, digits, '.', '-' or '_'"]
+    if origins(kind).get(pid) == "shipped":
+        return [f"'{pid}' is a shipped preset and is not overwritten; save it under a new id"]
+    problems = check(kind, doc)
+    if problems:
+        return problems
+    text = lambda d: json.dumps(d, indent=2, ensure_ascii=False) + "\n"
+    if kind == "classifications":
+        folder = paths.USER_PRESETS / kind / pid
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "codelist.json").write_text(text(doc["codeList"]), encoding="utf-8")
+        (folder / "map.json").write_text(text(doc["map"]), encoding="utf-8")
+    else:
+        folder = paths.USER_PRESETS / kind
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / f"{pid}.json").write_text(text(doc), encoding="utf-8")
+    return []
+
+
+def delete(kind: str, pid: str) -> bool:
+    """Remove a user preset. False when there is no user preset with that id (shipped ones are never removed)."""
+    if kind not in KINDS or origins(kind).get(pid) != "user" or not SAFE_ID.match(pid):
+        return False
+    if kind == "classifications":
+        folder = paths.USER_PRESETS / kind / pid
+        for f in folder.glob("*.json"):
+            f.unlink()
+        folder.rmdir()
+    else:
+        (paths.USER_PRESETS / kind / f"{pid}.json").unlink()
+    return True
 
 
 def resolution() -> dict:
@@ -182,6 +267,14 @@ def check(kind: str, doc: dict, library: list[dict] | None = None) -> list[str]:
                 from .expr import syntax_problem
                 problems += [f"slot {k}: {sp}" for k, p in flat["params"].items()
                              if p.get("type") == "formula" and (sp := syntax_problem(p.get("value") or ""))]
+                problems += [f"slot {k}, choice '{c.get('label')}': {sp}" for k, p in flat["params"].items()
+                             for c in p.get("choices") or [] if (sp := syntax_problem(c.get("value") or ""))]
+                problems += [f"slot {k}: answer {p['value']} is outside the allowed range {p.get('min', '')}..{p.get('max', '')}"
+                             for k, p in flat["params"].items() if p.get("type") == "number" and isinstance(p.get("value"), (int, float))
+                             and ((p.get("min") is not None and p["value"] < p["min"]) or (p.get("max") is not None and p["value"] > p["max"]))]
+                sections = {s["id"] for s in flat.get("sections", [])}
+                problems += [f"slot {k}: section '{p['section']}' is not defined" for k, p in flat["params"].items()
+                             if p.get("section") and sections and p["section"] not in sections]
             except (ValueError, KeyError, RecursionError) as e:
                 problems.append(str(e) if not isinstance(e, RecursionError) else "The extends chain loops back on itself")
         return problems + _expr_problems({k: v for k, v in doc.items() if k != "id"})

@@ -27,6 +27,11 @@ None exist in machine-readable form. They are prose; someone must translate "ded
 over X m2", "masonry over Y cm in m3", "formwork measured separately" into slots. The RICS NRM
 Excel templates are the closest structured starting point.
 
+The table below is the short list from the original conversation. The wider world (Australia and
+New Zealand, Hong Kong, South Africa, Nigeria, China, Japan, India, the Nordics, civil and
+floor-area standards) and **how much of our rule template each standard covers** are in
+[13-measurement-standards.md](13-measurement-standards.md).
+
 | Rulebook | Region | Used for | Access |
 |---|---|---|---|
 | NRM2 (RICS) | UK, Commonwealth, Middle East | Detailed BoQs for building works; the main UK standard | Free PDF and Excel templates on rics.org |
@@ -137,7 +142,7 @@ Ten further parts were identified (priority in brackets), plus later additions. 
 | R4 | IFC version differences (Needed) | IFC2x3, IFC4, IFC4.3 store things differently; normalise into one record | Parser written for all; tested on IFC2x3 only |
 | R5 | Traceability with a 3D viewer (High) | Click a line to highlight its elements and back | Dev viewer beside the BoQ (three.js over the engine's geometry.glb): line -> elements, element -> lines, colour by type / coverage / code group |
 | R6 | Model revisions (High) | Re-run on v2, show changes vs v1, carry decisions over by GlobalId | Ids designed for it; diff not built |
-| R7 | Rule editor (Needed) | QSs maintain rules, not programmers; forms, test run on a sample, versioning | Dev-build editors for rule sets, classifications and dictionaries (Library mode); drafts not persisted, no versioning, no preview against a model |
+| R7 | Rule editor (Needed) | QSs maintain rules, not programmers; forms, test run on a sample, versioning | Dev-build editors for rule sets, classifications and dictionaries (Library mode); drafts saved to `presets/user/` (local files), no versioning, no preview against a model |
 | R8 | Location breakdown (High) | Site, building, storey, room, zone, unit, phase per quantity; elements spanning storeys; room-based finishes via faces bounding spaces | Storey per line; no rooms per face |
 | R9 | Export and integration (Needed) | Excel first, then GAEB, ÖNORM A 2063, IFC cost schedules, CSV; pricing as a separate step | Excel only |
 | R10 | Professional responsibility (Needed) | A qualified person signs; output is a draft; audit trail makes sign-off fast | Design principle (D07) |

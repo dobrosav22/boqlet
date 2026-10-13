@@ -244,6 +244,31 @@ def test_scene_index_maps_aggregates_to_their_parts(duplex_parsed):
     assert scene["elements"][wall["id"]]["parts"] == [wall["id"]] and scene["elements"][wall["id"]]["storey"]
 
 
+FORMULA_CHOICE_RULES = {  # formula slot -> (derived rule that uses it, the answer that switches it on)
+    "excavation_formula": ("excavation-footings", {"excavation": True, "blinding": True}),
+    "formwork_walls_formula": ("formwork-walls", {}),
+    "formwork_slab_edges_formula": ("formwork-slab-edges", {}),
+    "formwork_footings_formula": ("formwork-footings", {}),
+    "paint_walls_formula": ("paint-walls", {}),
+    # skirting_formula: the Duplex has no FLOORING coverings, so its choices are only syntax-checked (check())
+}
+
+
+@pytest.mark.parametrize("slot", sorted(FORMULA_CHOICE_RULES))
+def test_template_formula_choices_run(duplex_parsed, slot):
+    """Every ready-made answer of a formula question gives a quantity on the Duplex, and the default is one of them."""
+    p = presets.rule_sets()["as-modelled"]["params"][slot]
+    assert p["value"] in [c["value"] for c in p["choices"]]
+    rule, switches = FORMULA_CHOICE_RULES[slot]
+    totals = []
+    for c in p["choices"]:
+        r = answers(duplex_parsed, **switches, **{slot: c["value"]})
+        lines = [l for l in r["lines"] if l["ruleId"] == rule]
+        assert lines and all(l["quantity"] is not None for l in lines), (slot, c["label"])
+        totals.append(round(sum(l["quantity"] for l in lines), 3))
+    assert all(t > 0 for t in totals), (slot, totals)
+
+
 def test_template_formula_slot_is_checked():
     lib = presets.rule_sets()
     bad = {"schemaVersion": "1.0", "id": "bad", "name": "bad", "version": "1", "extends": "as-modelled",

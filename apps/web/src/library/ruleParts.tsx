@@ -74,7 +74,7 @@ function SelectorLeaf({ value, onChange, slots }: { value: Selector; onChange: (
       {"family" in value && (
         <ToggleChips<ElementFamily> options={FAMILIES} selected={listOf(value.family) as ElementFamily[]} onChange={(l) => onChange({ family: oneOrMany(l) })} />
       )}
-      {"expr" in value && <ExprInput value={value.expr} onChange={(v) => onChange({ expr: v ?? "" })} placeholder='thickness > 0.2 AND UNDER(element_type, "wall.party")' />}
+      {"expr" in value && <ExprInput slots={slots} value={value.expr} onChange={(v) => onChange({ expr: v ?? "" })} placeholder='thickness > 0.2 AND UNDER(element_type, "wall.party")' />}
       {"field" in value && (
         <>
           <LazyText mono list={ids.fields} value={value.field} placeholder="field or props.Pset.Prop" onCommit={(s) => onChange({ ...value, field: s.trim() as typeof value.field })} />
@@ -183,7 +183,7 @@ export function FormulaValue({ label, value, onChange, slots, placeholder }: {
   return (
     <Field label={label} group wide>
       <ValueField<string> value={value} onChange={(v) => onChange(v ?? "")} slots={slots} slotType="formula">
-        {(lit, set) => <ExprInput value={lit} onChange={(v) => set(v ?? "")} rows={2} placeholder={placeholder} />}
+        {(lit, set) => <ExprInput slots={slots} value={lit} onChange={(v) => set(v ?? "")} rows={2} placeholder={placeholder} />}
       </ValueField>
     </Field>
   );
@@ -261,7 +261,7 @@ export function QuantityEditor({ value, onChange, slots, depth = 0 }: { value: Q
       {q.kind === "when" && (
         <div className="branches">
           <Field label="If" wide>
-            <ExprInput value={q.if} onChange={(v) => onChange({ ...q, if: v ?? "" })} placeholder="thickness >= p.masonry_volume_from" />
+            <ExprInput slots={slots} value={q.if} onChange={(v) => onChange({ ...q, if: v ?? "" })} placeholder="thickness >= p.masonry_volume_from" />
           </Field>
           <div className="branch">
             <span className="branch-label">then</span>
@@ -358,9 +358,10 @@ function Deductions({ value, onChange, slots }: { value: DeductionRule[] | undef
             </button>
           </div>
           <Field label="Only openings where" wide>
-            <ExprInput value={d.where} onChange={(v) => set(replaceAt(list, i, put(d, "where", v)))} placeholder='kind = "window"' />
+            <ExprInput slots={slots} value={d.where} onChange={(v) => set(replaceAt(list, i, put(d, "where", v)))} placeholder='kind = "window"' />
           </Field>
-          {(d.what === "embedded" || d.what === "recesses") && <p className="note small">The engine accepts this but does not deduct it yet (needs embedded-element geometry).</p>}
+          {d.what === "recesses" && <p className="note small">Recesses: openings the model marks as recesses. Deducted as their face area, or area x recess depth for volumes; never part of “openings”.</p>}
+          {d.what === "embedded" && <p className="note small">Columns and beams passing through (rooms: columns standing in them), as the area they take, or that area x thickness for volumes.</p>}
         </div>
       ))}
     </div>

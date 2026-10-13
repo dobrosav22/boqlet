@@ -1,11 +1,17 @@
 /**
  * Rule set editor (input 2). Works on a standalone RuleSet or a RuleSetPatch.
  *
+ * Three tabs, by who needs them (dev build: all shown):
+ *   Settings   the questions a standard answers (QuestionsTab)
+ *   BoQ items  everything that becomes a BoQ line, in one list: measured from the model (item
+ *              rules), calculated from other items (derived rules), entered by hand (manual items)
+ *   Advanced   about and defaults, setting up questions (slots), raw JSON
+ *
  * For a patch, the parent is shown as the engine flattens it (from the Check endpoint),
  * so every slot and rule is marked inherited, changed here, new here or removed here.
  */
 import { useMemo, useState, type ReactNode } from "react";
-import type { Breakdown, DerivedRule, ItemRule, ManualItem, OurRuleType, Param, RuleSet, RuleSetPatch, Value } from "@ifc-boq/types";
+import type { Breakdown, DerivedRule, ItemRule, ManualItem, OurRuleType, Param, RuleSet, RuleSetPatch, Selector, Value } from "@ifc-boq/types";
 import { BREAKDOWNS, MANUAL_KINDS, MEASURED_FIELDS, SELECTOR_FIELDS } from "./vocab";
 import {
   ExprInput,
@@ -19,18 +25,19 @@ import {
   TextArea,
   ToggleChips,
   ValueField,
-  fmtParam,
   isRef,
   matches,
   type RowInfo,
 } from "./fields";
 import { BoolValue, FormulaValue, NumberValue, OnMissingEditor, QuantityEditor, RoundingEditor, SelectorEditor, UnitInput, describeQuantity, describeSelector } from "./ruleParts";
 import { JsonTab } from "./JsonTab";
-import { Answer, QuestionsTab } from "./QuestionsTab";
+import { QuestionsTab, type ScopeEntry } from "./QuestionsTab";
+import { QuestionSetup } from "./QuestionSetup";
 import { isPatch, move, put, removeAt, replaceAt, uniqueId } from "./store";
 
 type Slots = Record<string, Param>;
-type Tab = "questions" | "overview" | "slots" | "items" | "derived" | "manual" | "json";
+type Tab = "settings" | "items" | "advanced";
+type AdvancedTab = "about" | "setup" | "json";
 
 interface Props {
   doc: OurRuleType;
@@ -39,12 +46,15 @@ interface Props {
   parent: RuleSet | null;
   parentNote?: string;
   ruleSetIds: string[];
+  /** An item's id changed; the library offers to update classification maps that use the old id. */
+  onItemRenamed?: (from: string, to: string) => void;
 }
 
-export function RuleSetEditor({ doc, onChange, parent, parentNote, ruleSetIds }: Props) {
+export function RuleSetEditor({ doc, onChange, parent, parentNote, ruleSetIds, onItemRenamed }: Props) {
   const patch = isPatch(doc);
-  const [tab, setTab] = useState<Tab>(patch || (doc as RuleSet).sections?.length ? "questions" : "overview");
-  /** Rule to select when a tab opens (from "Used by" links in the questionnaire). */
+  const [tab, setTab] = useState<Tab>(patch || (doc as RuleSet).sections?.length ? "settings" : "items");
+  const [advanced, setAdvanced] = useState<AdvancedTab>("about");
+  /** Item to select when the items tab opens (from "Used by" links in the questionnaire). */
   const [focus, setFocus] = useState<string | null>(null);
   const slots = useMemo(() => effectiveSlots(doc, parent), [doc, parent]);
   const removed = (patch && doc.remove) || [];
@@ -53,44 +63,102 @@ export function RuleSetEditor({ doc, onChange, parent, parentNote, ruleSetIds }:
   const derived = rowsFor(parent?.derived, doc.derived, removed, patch);
   const manual = rowsFor(parent?.manual, doc.manual, removed, patch);
   const live = <T,>(rows: Row<T>[]) => rows.filter((r) => r.status !== "removed").map((r) => r.entry);
+  const entries = [...live(items), ...live(derived), ...live(manual)] as (ItemRule | DerivedRule | ManualItem)[];
   const usage = useMemo(() => {
-    const u = slotUsage([...live(items), ...live(derived), ...live(manual)] as { id: string }[]);
+    const u = slotUsage(entries);
     // a slot read inside a formula slot (p.working_space in the excavation formula) is used by that formula's rules
     for (const [name, p] of Object.entries(slots))
       if (p.type === "formula")
         for (const m of p.value.matchAll(/\bp\.([A-Za-z_]\w*)/g)) u[m[1]] = [...new Set([...(u[m[1]] ?? []), ...(u[name] ?? [])])];
     return u;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, derived, manual, slots]);
+  const scope = useMemo(() => scopeOf(entries, slots), [entries, slots]);
 
   const setList = (key: "items" | "derived" | "manual", list: unknown[]) =>
     onChange(patch ? put(doc as RuleSetPatch, key, list.length ? (list as never) : undefined) : ({ ...doc, [key]: list } as RuleSet));
   const setRemoved = (ids: string[]) => onChange(put(doc as RuleSetPatch, "remove", ids.length ? ids : undefined));
 
   const openRule = (id: string) => {
-    setFocus(id);
-    setTab(items.some((r) => r.id === id) ? "items" : derived.some((r) => r.id === id) ? "derived" : "manual");
+    setFocus(`${items.some((r) => r.id === id) ? "model" : derived.some((r) => r.id === id) ? "calculated" : "manual"}:${id}`);
+    setTab("items");
   };
   const ruleLabel = (id: string) => {
     const r = [...items, ...derived].find((x) => x.id === id);
     return (r?.entry as { label?: string } | undefined)?.label ?? id;
   };
+  const itemIds = live(items).map((i) => (i as ItemRule).id);
+
+  const groups: Group[] = [
+    group<ItemRule>({
+      key: "model",
+      title: "From the model",
+      noun: "item-rule",
+      hint: "Takes model elements and measures them into BoQ lines.",
+      rows: items,
+      own: doc.items ?? [],
+      setOwn: (l) => setList("items", l),
+      rename: (from, list) => {
+        const to = (list as ItemRule[]).find((x) => !(doc.items ?? []).some((y) => y.id === x.id))?.id;
+        if (!to) return;
+        const follow = (d: DerivedRule) => (d.from.includes(from) ? { ...d, from: d.from.map((f) => (f === from ? to : f)) } : d);
+        let derivedOwn = (doc.derived ?? []).map(follow);
+        let remove = patch ? [...((doc as RuleSetPatch).remove ?? [])] : undefined;
+        if (patch && parent?.items.some((x) => x.id === from)) {
+          // the parent's item goes, the renamed one replaces it; the parent's calculated items follow
+          remove = [...new Set([...(remove ?? []), from])];
+          const ownIds = new Set(derivedOwn.map((d) => d.id));
+          derivedOwn = [...derivedOwn, ...(parent.derived ?? []).filter((d) => !ownIds.has(d.id) && !remove!.includes(d.id) && d.from.includes(from)).map(follow)];
+        }
+        onChange({ ...doc, items: list as ItemRule[], ...(derivedOwn.length ? { derived: derivedOwn } : {}), ...(remove?.length ? { remove } : {}) } as OurRuleType);
+        onItemRenamed?.(from, to);
+      },
+      make: (id) => ({ id, label: "New item", match: { ifcClass: "IfcWall" }, quantity: { kind: "area" }, description: "{type_name}" }),
+      summary: (e) => ({ title: e.label || e.id, sub: `${describeSelector(e.match)} → ${describeQuantity(e.quantity)}` }),
+      form: (e, set) => <ItemForm item={e} onChange={set} slots={slots} />,
+    }),
+    group<DerivedRule>({
+      key: "calculated",
+      title: "Calculated from other items",
+      noun: "derived-rule",
+      hint: "Work that is not modelled (formwork, paint, reinforcement estimates), calculated from the lines or elements of other items.",
+      rows: derived,
+      own: doc.derived ?? [],
+      setOwn: (l) => setList("derived", l),
+      make: (id) => ({ id, label: "New calculated item", from: itemIds.slice(0, 1), scope: "line", quantity: "qty", unit: "m2", description: "Calculated" }),
+      summary: (e) => ({ title: e.label || e.id, sub: `from ${e.from.join(", ") || "—"}: ${isRef(e.quantity) ? slots[e.quantity.param]?.label ?? e.quantity.param : e.quantity}` }),
+      form: (e, set) => <DerivedForm rule={e} onChange={set} slots={slots} itemIds={itemIds} />,
+    }),
+    group<ManualItem>({
+      key: "manual",
+      title: "Entered by hand",
+      noun: "manual-item",
+      hint: "Lines with no model behind them: preliminaries, provisional sums, lump sums, dayworks. No quantity = a flagged line for the user to fill.",
+      rows: manual,
+      own: doc.manual ?? [],
+      setOwn: (l) => setList("manual", l),
+      make: (id) => ({ id, kind: "preliminary", description: "New item", unit: "item" }),
+      summary: (e) => ({ title: typeof e.description === "string" ? e.description : e.id, sub: `${e.kind.replace(/_/g, " ")}, ${e.unit}` }),
+      form: (e, set) => <ManualForm item={e} onChange={set} slots={slots} />,
+    }),
+  ];
 
   const tabs: [Tab, string][] = [
-    ["questions", "Questions"],
-    ["overview", "Overview"],
-    ["slots", `Slots (${Object.keys(slots).length})`],
-    ["items", `Item rules (${live(items).length})`],
-    ["derived", `Derived (${live(derived).length})`],
-    ["manual", `Manual items (${live(manual).length})`],
+    ["settings", "Settings"],
+    ["items", `BoQ items (${entries.length})`],
+    ["advanced", "Advanced"],
+  ];
+  const advancedTabs: [AdvancedTab, string][] = [
+    ["about", "About and defaults"],
+    ["setup", `Questions setup (${Object.keys(slots).length})`],
     ["json", "JSON"],
   ];
-  const itemIds = live(items).map((i) => (i as ItemRule).id);
 
   return (
     <>
       {patch && (
         <p className="note small">
-          This set extends <b>{doc.extends}</b> and only stores its differences. {parentNote ?? (parent ? "" : "Loading the parent…")}
+          Based on <b>{doc.extends}</b>; only the differences are stored. {parentNote ?? (parent ? "" : "Loading the parent…")}
         </p>
       )}
       <nav className="tabs" role="tablist">
@@ -101,63 +169,50 @@ export function RuleSetEditor({ doc, onChange, parent, parentNote, ruleSetIds }:
         ))}
       </nav>
       <div className="panel">
-        {tab === "questions" && (
-          <QuestionsTab doc={doc} onChange={onChange} parent={parent} slots={slots} usage={usage} ruleLabel={ruleLabel} onOpenRule={openRule} onOpenSlots={() => setTab("slots")} />
-        )}
-        {tab === "overview" && <Overview doc={doc} onChange={onChange} slots={slots} ruleSetIds={ruleSetIds} />}
-        {tab === "slots" && <SlotsTab doc={doc} onChange={onChange} parent={parent} slots={slots} usage={usage} />}
-        {tab === "items" && (
-          <Collection<ItemRule>
-            noun="item rule"
-            initial={focus}
-            hint="Each item rule takes model elements and turns them into BoQ lines."
-            rows={items}
-            patch={patch}
-            own={doc.items ?? []}
-            removed={removed}
-            setOwn={(l) => setList("items", l)}
-            setRemoved={setRemoved}
-            make={(id) => ({ id, label: "New rule", match: { ifcClass: "IfcWall" }, quantity: { kind: "area" }, description: "{type_name}" })}
-            summary={(e) => ({ title: e.label || e.id, sub: `${describeSelector(e.match)} → ${describeQuantity(e.quantity)}` })}
-            form={(e, set) => <ItemForm item={e} onChange={set} slots={slots} />}
+        {tab === "settings" && (
+          <QuestionsTab
+            doc={doc}
+            onChange={onChange}
+            parent={parent}
+            slots={slots}
+            usage={usage}
+            scope={scope}
+            ruleLabel={ruleLabel}
+            onOpenRule={openRule}
+            onOpenSetup={() => (setTab("advanced"), setAdvanced("setup"))}
           />
         )}
-        {tab === "derived" && (
-          <Collection<DerivedRule>
-            noun="derived rule"
-            initial={focus}
-            hint="Quantities for work that is not modelled (formwork, paint, reinforcement estimates), computed from item lines or their elements."
-            rows={derived}
-            patch={patch}
-            own={doc.derived ?? []}
-            removed={removed}
-            setOwn={(l) => setList("derived", l)}
-            setRemoved={setRemoved}
-            make={(id) => ({ id, label: "New derived rule", from: itemIds.slice(0, 1), scope: "line", quantity: "src.qty", unit: "m2", description: "Derived" })}
-            summary={(e) => ({ title: e.label || e.id, sub: `from ${e.from.join(", ") || "—"}: ${isRef(e.quantity) ? `formula slot ${e.quantity.param}` : e.quantity}` })}
-            form={(e, set) => <DerivedForm rule={e} onChange={set} slots={slots} itemIds={itemIds} />}
-          />
+        {tab === "items" && <ItemsTab key={focus ?? ""} groups={groups} initial={focus} patch={patch} removed={removed} setRemoved={setRemoved} />}
+        {tab === "advanced" && (
+          <>
+            <div className="seg adv-nav" role="tablist">
+              {advancedTabs.map(([id, label]) => (
+                <button key={id} role="tab" aria-selected={advanced === id} className={advanced === id ? "on" : ""} onClick={() => setAdvanced(id)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {advanced === "about" && <Overview doc={doc} onChange={onChange} slots={slots} ruleSetIds={ruleSetIds} />}
+            {advanced === "setup" && <QuestionSetup doc={doc} onChange={onChange} parent={parent} slots={slots} usage={usage} ruleLabel={ruleLabel} onOpenRule={openRule} />}
+            {advanced === "json" && <JsonTab value={doc} onChange={onChange} />}
+          </>
         )}
-        {tab === "manual" && (
-          <Collection<ManualItem>
-            noun="manual item"
-            initial={focus}
-            hint="Lines with no model behind them: preliminaries, provisional sums, lump sums, dayworks. No quantity = a flagged line for the user to fill."
-            rows={manual}
-            patch={patch}
-            own={doc.manual ?? []}
-            removed={removed}
-            setOwn={(l) => setList("manual", l)}
-            setRemoved={setRemoved}
-            make={(id) => ({ id, kind: "preliminary", description: "New item", unit: "item" })}
-            summary={(e) => ({ title: typeof e.description === "string" ? e.description : e.id, sub: `${e.kind.replace(/_/g, " ")}, ${e.unit}` })}
-            form={(e, set) => <ManualForm item={e} onChange={set} slots={slots} />}
-          />
-        )}
-        {tab === "json" && <JsonTab value={doc} onChange={onChange} />}
       </div>
     </>
   );
+}
+
+/** Items a yes/no answer switches on or off, for the "In this BoQ" summary. */
+function scopeOf(entries: (ItemRule | DerivedRule | ManualItem)[], slots: Slots): ScopeEntry[] {
+  const out = new Map<string, ScopeEntry>();
+  for (const e of entries) {
+    if (!isRef(e.enabled)) continue;
+    const s = slots[e.enabled.param];
+    if (s?.type !== "boolean") continue;
+    const label = "label" in e ? e.label : typeof e.description === "string" ? e.description : e.id;
+    out.set(label, { slot: e.enabled.param, label, on: s.value });
+  }
+  return [...out.values()];
 }
 
 /* ================================================================ inheritance */
@@ -212,68 +267,97 @@ function slotUsage(entries: { id: string }[]): Record<string, string[]> {
   return out;
 }
 
-/* ================================================================ list + detail with inheritance */
+/* ================================================================ BoQ items: one list, three kinds */
 
-function Collection<T extends { id: string }>(p: {
+type Entry = { id: string };
+interface GroupOf<T extends Entry> {
+  key: "model" | "calculated" | "manual";
+  title: string;
+  /** Base for new ids. */
   noun: string;
   hint: string;
   rows: Row<T>[];
-  patch: boolean;
   own: T[];
-  removed: string[];
   setOwn: (l: T[]) => void;
-  setRemoved: (ids: string[]) => void;
+  /** Set the list after an entry's id changed from `from`, updating what refers to it. Default: setOwn. */
+  rename?: (from: string, l: T[]) => void;
   make: (id: string) => T;
   summary: (e: T) => { title: string; sub: string };
   form: (e: T, set: (e: T) => void) => ReactNode;
-  initial?: string | null;
-}) {
-  const [sel, setSel] = useState<string | null>(p.initial && p.rows.some((r) => r.id === p.initial) ? p.initial : p.rows[0]?.id ?? null);
-  const [q, setQ] = useState("");
-  const row = p.rows.find((r) => r.id === sel) ?? null;
-  const ownIndex = row ? p.own.findIndex((e) => e.id === row.id) : -1;
-  const allIds = p.rows.map((r) => r.id);
+}
+type Group = GroupOf<Entry>;
+const group = <T extends Entry>(g: GroupOf<T>) => g as unknown as Group;
 
-  const add = () => {
-    const id = uniqueId(p.noun.split(" ")[0] === "manual" ? "manual-item" : p.noun.replace(/ /g, "-"), allIds);
-    p.setOwn([...p.own, p.make(id)]);
-    setSel(id);
+const ADD_LABEL: Record<Group["key"], string> = { model: "+ From the model", calculated: "+ Calculated", manual: "+ By hand" };
+
+function ItemsTab({ groups, initial, patch, removed, setRemoved }: { groups: Group[]; initial: string | null; patch: boolean; removed: string[]; setRemoved: (ids: string[]) => void }) {
+  const keys = groups.flatMap((g) => g.rows.map((r) => `${g.key}:${r.id}`));
+  const [sel, setSel] = useState<string | null>(initial && keys.includes(initial) ? initial : keys[0] ?? null);
+  const [q, setQ] = useState("");
+  const g = groups.find((x) => sel?.startsWith(`${x.key}:`));
+  const row = g?.rows.find((r) => `${g.key}:${r.id}` === sel) ?? null;
+  const ownIndex = g && row ? g.own.findIndex((e) => e.id === row.id) : -1;
+
+  const add = (to: Group) => {
+    const id = uniqueId(to.noun, to.rows.map((r) => r.id));
+    to.setOwn([...to.own, to.make(id)]);
+    setSel(`${to.key}:${id}`);
   };
-  const update = (e: T) => {
-    p.setOwn(replaceAt(p.own, ownIndex, e));
-    if (e.id !== row?.id) setSel(e.id);
+  const update = (e: Entry) => {
+    if (!g || !row) return;
+    if (e.id === row.id) return g.setOwn(replaceAt(g.own, ownIndex, e));
+    if (!e.id.trim() || g.rows.some((r) => r.id === e.id)) return; // empty or taken: keep the old id
+    (g.rename ?? ((_from: string, l: Entry[]) => g.setOwn(l)))(row.id, replaceAt(g.own, ownIndex, e));
+    setSel(`${g.key}:${e.id}`);
   };
   const editable = row && (row.status === "own" || row.status === "new" || row.status === "changed");
 
-  const rowInfos: RowInfo[] = p.rows
-    .filter((r) => matches(q, r.id, p.summary(r.entry).title, p.summary(r.entry).sub))
-    .map((r) => ({ key: r.id, ...p.summary(r.entry), badge: BADGE[r.status] }));
+  const rowInfos: RowInfo[] = groups.flatMap((x) =>
+    x.rows
+      .filter((r) => matches(q, r.id, x.summary(r.entry).title, x.summary(r.entry).sub))
+      .map((r) => ({ key: `${x.key}:${r.id}`, ...x.summary(r.entry), badge: BADGE[r.status], section: `${x.title} (${x.rows.filter((y) => y.status !== "removed").length})` })),
+  );
+  const tools = (
+    <span className="add-kinds">
+      {groups.map((x) => (
+        <button key={x.key} type="button" className="ghost small-btn" onClick={() => add(x)} title={x.hint}>
+          {ADD_LABEL[x.key]}
+        </button>
+      ))}
+    </span>
+  );
 
   return (
     <>
-      <p className="hint">{p.hint}</p>
+      <p className="hint">
+        Everything that becomes a line in the BoQ: <b>from the model</b> (elements measured), <b>calculated</b> from other items (formwork, paint, reinforcement estimates) and{" "}
+        <b>entered by hand</b> (preliminaries, sums). Settings answers point into these; change an item here only when no answer covers what you need.
+      </p>
       <div className="ld">
-        <RowList rows={rowInfos} selected={sel} onSelect={setSel} onAdd={add} addLabel={`+ New ${p.noun}`} filter={q} onFilter={setQ} />
+        <RowList rows={rowInfos} selected={sel} onSelect={setSel} filter={q} onFilter={setQ} tools={tools} />
         <div className="ld-detail">
-          {!row && <p className="muted">Select a {p.noun} on the left, or add one.</p>}
-          {row && (
+          {(!g || !row) && <p className="muted">Select an item on the left, or add one.</p>}
+          {g && row && (
             <>
+              <p className="muted small">
+                {g.title}. {g.hint}
+              </p>
               <div className="ld-actions">
                 {row.status === "inherited" && (
                   <>
                     <span className="muted small">Inherited unchanged from the parent.</span>
-                    <button type="button" className="ghost small-btn" onClick={() => p.setOwn([...p.own, structuredClone(row.entry)])}>
+                    <button type="button" className="ghost small-btn" onClick={() => g.setOwn([...g.own, structuredClone(row.entry)])}>
                       Change in this set
                     </button>
-                    <button type="button" className="ghost small-btn" onClick={() => p.setRemoved([...p.removed, row.id])}>
+                    <button type="button" className="ghost small-btn" onClick={() => setRemoved([...removed, row.id])}>
                       Leave out of this set
                     </button>
                   </>
                 )}
                 {row.status === "removed" && (
                   <>
-                    <span className="muted small">The parent has this {p.noun}; this set leaves it out.</span>
-                    <button type="button" className="ghost small-btn" onClick={() => p.setRemoved(p.removed.filter((x) => x !== row.id))}>
+                    <span className="muted small">The parent has this item; this set leaves it out.</span>
+                    <button type="button" className="ghost small-btn" onClick={() => setRemoved(removed.filter((x) => x !== row.id))}>
                       Bring back
                     </button>
                   </>
@@ -281,7 +365,7 @@ function Collection<T extends { id: string }>(p: {
                 {row.status === "changed" && (
                   <>
                     <span className="muted small">Changed in this set; replaces the parent's version.</span>
-                    <button type="button" className="ghost small-btn" onClick={() => p.setOwn(removeAt(p.own, ownIndex))}>
+                    <button type="button" className="ghost small-btn" onClick={() => g.setOwn(removeAt(g.own, ownIndex))}>
                       Back to inherited
                     </button>
                   </>
@@ -292,19 +376,19 @@ function Collection<T extends { id: string }>(p: {
                       type="button"
                       className="ghost small-btn"
                       onClick={() => {
-                        const id = uniqueId(`${row.id}-copy`, allIds);
-                        p.setOwn([...p.own, { ...structuredClone(row.entry), id }]);
-                        setSel(id);
+                        const id = uniqueId(`${row.id}-copy`, g.rows.map((r) => r.id));
+                        g.setOwn([...g.own, { ...structuredClone(row.entry), id }]);
+                        setSel(`${g.key}:${id}`);
                       }}
                     >
                       Duplicate
                     </button>
                     {row.status === "own" && (
                       <>
-                        <button type="button" className="ghost small-btn" disabled={ownIndex === 0} onClick={() => p.setOwn(move(p.own, ownIndex, -1))}>
+                        <button type="button" className="ghost small-btn" disabled={ownIndex === 0} onClick={() => g.setOwn(move(g.own, ownIndex, -1))}>
                           Move up
                         </button>
-                        <button type="button" className="ghost small-btn" disabled={ownIndex === p.own.length - 1} onClick={() => p.setOwn(move(p.own, ownIndex, 1))}>
+                        <button type="button" className="ghost small-btn" disabled={ownIndex === g.own.length - 1} onClick={() => g.setOwn(move(g.own, ownIndex, 1))}>
                           Move down
                         </button>
                       </>
@@ -313,7 +397,7 @@ function Collection<T extends { id: string }>(p: {
                       type="button"
                       className="ghost small-btn danger"
                       onClick={() => {
-                        p.setOwn(removeAt(p.own, ownIndex));
+                        g.setOwn(removeAt(g.own, ownIndex));
                         setSel(null);
                       }}
                     >
@@ -323,12 +407,13 @@ function Collection<T extends { id: string }>(p: {
                 )}
               </div>
               <fieldset className="ro" disabled={!editable}>
-                {p.form(row.entry, update)}
+                {g.form(row.entry, update)}
               </fieldset>
             </>
           )}
         </div>
       </div>
+      {patch && removed.length > 0 && <p className="muted small">Left out of this set: {removed.join(", ")}</p>}
     </>
   );
 }
@@ -353,8 +438,8 @@ function ItemForm({ item, onChange, slots }: { item: ItemRule; onChange: (i: Ite
         <Field label="Label">
           <Text value={item.label} onChange={(v) => set("label", v ?? "")} optional={false} />
         </Field>
-        <Field label="Id" hint="Derived rules and classification maps refer to this.">
-          <Text mono value={item.id} onChange={(v) => set("id", v ?? "")} optional={false} />
+        <Field label="Id" hint="Renaming updates the calculated items of this set that use it; classification maps that name it need the new id too.">
+          <LazyText mono value={item.id} onCommit={(v) => set("id", v.trim())} />
         </Field>
         <BoolValue label="Enabled" value={item.enabled} onChange={(v) => set("enabled", v)} slots={slots} dflt />
       </Section>
@@ -363,6 +448,15 @@ function ItemForm({ item, onChange, slots }: { item: ItemRule; onChange: (i: Ite
         <div className="f-wide">
           <SelectorEditor value={item.match} onChange={(m) => set("match", m)} slots={slots} />
         </div>
+        <Field label="Measures" hint="Elements left out of this BoQ (Advanced › About, “Left out of this BoQ”) are only for items that measure them, e.g. demolition.">
+          <Select
+            value={item.scope}
+            options={["in", "out"] as const}
+            labels={{ in: "elements in this BoQ", out: "only elements left out of it" }}
+            empty="elements in this BoQ"
+            onChange={(v) => set("scope", v === "in" ? undefined : v)}
+          />
+        </Field>
         <Field label="Parts of assemblies" hint="Stair flights, roof slabs… are skipped when their parent is measured, unless included.">
           <Select value={item.parts} options={["skip", "include"] as const} empty="skip (default)" onChange={(v) => set("parts", v)} />
         </Field>
@@ -372,7 +466,7 @@ function ItemForm({ item, onChange, slots }: { item: ItemRule; onChange: (i: Ite
           </ValueField>
         </Field>
         <Field label="Keep only parts where" wide>
-          <ExprInput value={item.partFilter} onChange={(v) => set("partFilter", v)} placeholder='NOT UNDER(material, "air_gap")' />
+          <ExprInput slots={slots} value={item.partFilter} onChange={(v) => set("partFilter", v)} placeholder='NOT UNDER(material, "air_gap")' />
         </Field>
       </Section>
 
@@ -473,19 +567,19 @@ function DerivedForm({ rule, onChange, slots, itemIds }: { rule: DerivedRule; on
         <BoolValue label="Enabled" value={rule.enabled} onChange={(v) => set("enabled", v)} slots={slots} dflt />
       </Section>
       <Section title="Derived from">
-        <Field label="Item rules" group wide>
+        <Field label="Items it is calculated from" group wide>
           <ToggleChips options={[...itemIds, ...unknown]} selected={rule.from} onChange={(l) => set("from", l)} />
           {unknown.length > 0 && <span className="error small">Not in this rule set: {unknown.join(", ")}</span>}
         </Field>
         <Field label="Evaluate per">
-          <Select value={rule.scope} options={["line", "element"] as const} labels={{ line: "source line (src.qty)", element: "source element (src.<field>)" }} onChange={(v) => set("scope", v ?? "line")} />
+          <Select value={rule.scope} options={["line", "element"] as const} labels={{ line: "each source line ([Line quantity])", element: "each source element (its measured values)" }} onChange={(v) => set("scope", v ?? "line")} />
         </Field>
         <Field label="Only sources where" wide>
-          <ExprInput value={rule.where} onChange={(v) => set("where", v)} placeholder='UNDER(src.material, "concrete")' />
+          <ExprInput slots={slots} value={rule.where} onChange={(v) => set("where", v)} placeholder='UNDER(material, "concrete")' />
         </Field>
       </Section>
       <Section title="Quantity">
-        <FormulaValue label="Formula" value={rule.quantity} onChange={(v) => set("quantity", v)} slots={slots} placeholder={rule.scope === "line" ? "src.qty * p.rebar_slab_kg_m3" : "SUM(src.faces.gross_area WHERE side = \"a\")"} />
+        <FormulaValue label="Formula" value={rule.quantity} onChange={(v) => set("quantity", v)} slots={slots} placeholder={rule.scope === "line" ? "qty * 1.05" : "SUM(faces.gross_area WHERE side = \"a\")"} />
         <Field label="Unit">
           <UnitInput value={rule.unit} onChange={(u) => set("unit", u ?? "")} required />
         </Field>
@@ -536,6 +630,7 @@ function ManualForm({ item, onChange, slots }: { item: ManualItem; onChange: (i:
           <UnitInput value={item.unit} onChange={(u) => set("unit", u ?? "item")} required />
         </Field>
         <NumberValue label="Quantity" value={item.quantity} onChange={(v) => set("quantity", v)} slots={slots} placeholder="empty = user fills in" />
+        <FormulaValue label="Or a formula (answers and building values)" value={item.formula} onChange={(v) => set("formula", v || undefined)} slots={slots} placeholder="building.gross_volume / 100" />
         <NumberValue label="Amount" value={item.amount} onChange={(v) => set("amount", v)} slots={slots} hint="Money value for provisional and lump sums." />
         <Field label="Tags" group>
           <StringList values={item.tags} onChange={(v) => set("tags", v)} />
@@ -588,6 +683,7 @@ function Overview({ doc, onChange, slots, ruleSetIds }: { doc: OurRuleType; onCh
           <Select value={meta.unitSystem} options={["metric", "imperial"] as const} empty={patch ? "from parent" : undefined} onChange={(v) => setMeta("unitSystem", v)} />
         </Field>
       </Section>
+      <ScopeEditor doc={doc} onChange={onChange} slots={slots} />
       <Section title="Defaults" hint="Apply to every rule that does not set its own.">
         <RoundingEditor value={defaults.rounding} onChange={(v) => setDefaults(put(defaults, "rounding", v))} slots={slots} inherit={patch ? "parent's default" : "engine default (none)"} />
         <OnMissingEditor value={defaults.onMissing} onChange={(v) => setDefaults(put(defaults, "onMissing", v))} slots={slots} empty={patch ? "from parent" : "flag (engine default)"} />
@@ -599,116 +695,51 @@ function Overview({ doc, onChange, slots, ruleSetIds }: { doc: OurRuleType; onCh
   );
 }
 
-/* ================================================================ slots */
+/* ================================================================ scope */
 
-const PARAM_TYPES = ["number", "choice", "boolean", "text", "formula"] as const;
-
-function SlotsTab({ doc, onChange, parent, slots, usage }: { doc: OurRuleType; onChange: (d: OurRuleType) => void; parent: RuleSet | null; slots: Slots; usage: Record<string, string[]> }) {
+/** What the BoQ leaves out (RuleSet.scope): each condition drops the elements it matches. */
+function ScopeEditor({ doc, onChange, slots }: { doc: OurRuleType; onChange: (d: OurRuleType) => void; slots: Slots }) {
   const patch = isPatch(doc);
-  const own = (doc.params ?? {}) as Record<string, Param | { value: Param["value"] }>;
-  const [name, setName] = useState("");
-  const [type, setType] = useState<Param["type"]>("number");
-  const [q, setQ] = useState("");
-  const setOwn = (k: string, v: Param | { value: Param["value"] } | undefined) => onChange({ ...doc, params: put(own, k, v) } as OurRuleType);
-
-  const add = () => {
-    const key = name.trim().replace(/\W+/g, "_");
-    if (!key || slots[key]) return;
-    const blank: Record<Param["type"], Param> = {
-      number: { type: "number", value: 0, label: key.replace(/_/g, " ") },
-      choice: { type: "choice", value: "a", options: ["a", "b"], label: key.replace(/_/g, " ") },
-      boolean: { type: "boolean", value: false, label: key.replace(/_/g, " ") },
-      text: { type: "text", value: "", label: key.replace(/_/g, " ") },
-      formula: { type: "formula", value: "", unit: "m2", label: key.replace(/_/g, " ") },
-    };
-    setOwn(key, blank[type]);
-    setName("");
-  };
-
-  const names = Object.keys(slots).filter((k) => matches(q, k, slots[k].label, slots[k].question));
-  const sectionIds = ((patch ? parent?.sections : (doc as RuleSet).sections) ?? []).map((s) => s.id);
+  const own = doc.scope;
+  const list = own?.exclude ?? [];
+  const set = (l: Selector[] | undefined) => onChange(put(doc, "scope", l === undefined ? undefined : { exclude: l }) as OurRuleType);
   return (
-    <div>
-      <p className="hint">
-        Slots are the values a standard fills in. Rules point at them (the <span className="vf-toggle on static">slot</span> button on a field), so changing a value here never means editing a rule.
-        {patch && " Inherited slots can be given a different value in this set."}
-      </p>
-      <div className="ld-tools">
-        <input type="search" placeholder="Filter" value={q} onChange={(e) => setQ(e.target.value)} />
+    <Section
+      title="Left out of this BoQ"
+      hint="Elements matching any of these are not measured and not asked about (the log counts them). Items set to measure “only elements left out” take exactly these, e.g. demolition."
+    >
+      <div className="f-wide">
+        {patch && own === undefined ? (
+          <p className="muted small">
+            As the parent decides.{" "}
+            <button type="button" className="link small" onClick={() => set([])}>
+              Set it in this set
+            </button>
+          </p>
+        ) : (
+          <>
+            {list.length === 0 && <p className="muted small">Nothing is left out.</p>}
+            {list.map((sel, i) => (
+              <div key={i} className="scope-row">
+                <SelectorEditor value={sel} onChange={(v) => set(replaceAt(list, i, v))} slots={slots} />
+                <button type="button" className="icon" aria-label="Remove condition" onClick={() => set(removeAt(list, i))}>
+                  ×
+                </button>
+              </div>
+            ))}
+            <div className="lt-add">
+              <button type="button" className="link small" onClick={() => set([...list, { field: "status", op: "in", value: ["existing", "demolish"] }])}>
+                + Leave out elements where…
+              </button>
+              {patch && (
+                <button type="button" className="link small" onClick={() => set(undefined)}>
+                  Back to the parent's
+                </button>
+              )}
+            </div>
+          </>
+        )}
       </div>
-      <table className="contrib slots">
-        <thead>
-          <tr>
-            <th>Slot</th>
-            <th>Value</th>
-            <th>Label and settings</th>
-            <th>Used by</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {names.map((k) => {
-            const p = slots[k];
-            const mine = own[k];
-            const defined = !!mine && "type" in mine;
-            const inheritedFrom = parent?.params[k];
-            const status = !patch ? null : defined ? (inheritedFrom ? "redefined here" : "new here") : mine ? "changed here" : "inherited";
-            const setValue = (v: Param["value"]) => {
-              if (defined) setOwn(k, { ...(mine as Param), value: v } as Param);
-              else if (inheritedFrom && inheritedFrom.value === v) setOwn(k, undefined);
-              else setOwn(k, { value: v });
-            };
-            const used = usage[k] ?? [];
-            return (
-              <tr key={k}>
-                <td>
-                  <code>{k}</code>
-                  <div className="muted small">
-                    {p.type}
-                    {status && <span className={`badge badge-${status === "inherited" ? "inherited" : status === "changed here" ? "changed" : "new"}`}>{status}</span>}
-                  </div>
-                  {status === "changed here" && <div className="muted small">parent: {fmtParam(inheritedFrom)}</div>}
-                </td>
-                <td>
-                  <Answer p={p} onChange={setValue} />
-                </td>
-                <td>
-                  {defined ? <ParamSettings p={mine as Param} onChange={(np) => setOwn(k, np)} sections={sectionIds} /> : <span>{p.label}</span>}
-                  {p.help && !defined && <div className="muted small">{p.help}</div>}
-                </td>
-                <td className="small">{used.length ? used.join(", ") : <span className="muted">not used</span>}</td>
-                <td>
-                  {mine && (
-                    <button type="button" className="link small" onClick={() => setOwn(k, undefined)} title={defined && !inheritedFrom ? "Delete this slot" : "Use the parent's value"}>
-                      {defined && !inheritedFrom ? "delete" : "reset"}
-                    </button>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <div className="add-row">
-        <input type="text" className="mono" placeholder="new_slot_name" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} />
-        <Select value={type} options={PARAM_TYPES} onChange={(t) => setType(t ?? "number")} />
-        <button type="button" className="ghost" onClick={add} disabled={!name.trim() || !!slots[name.trim()]}>
-          + Add slot
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ParamSettings({ p, onChange, sections }: { p: Param; onChange: (p: Param) => void; sections: string[] }) {
-  return (
-    <div className="pset">
-      <Text value={p.label} onChange={(v) => onChange({ ...p, label: v ?? "" })} placeholder="label" optional={false} />
-      <Text value={p.question} onChange={(v) => onChange(put(p, "question", v))} placeholder="question, as the rulebook would answer it" />
-      {sections.length > 0 && <Select value={p.section} options={sections} empty="(no section)" onChange={(v) => onChange(put(p, "section", v))} />}
-      {(p.type === "number" || p.type === "formula") && <UnitInput value={p.unit} onChange={(u) => onChange(put(p, "unit", u))} />}
-      {p.type === "choice" && <StringList mono values={[...p.options]} onChange={(o) => onChange({ ...p, options: o ?? [] })} placeholder="add option" />}
-      <Text value={p.help} onChange={(v) => onChange(put(p, "help", v))} placeholder="help text (optional)" />
-    </div>
+    </Section>
   );
 }

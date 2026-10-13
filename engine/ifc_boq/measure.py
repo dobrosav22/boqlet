@@ -65,6 +65,9 @@ THICKNESS_MIN = 0.005    # m
 PLANAR_VERTICAL = ("IfcWall", "IfcCurtainWall", "IfcPlate")
 LINEAR_VERTICAL = ("IfcColumn", "IfcPile")
 PHASE_MAP = {"new construction": "new", "new": "new", "existing": "existing"}
+# IFC Pset_<Element>Common.Status (PEnum_ElementStatus); other values (OTHER, NOTKNOWN, UNSET) count as new
+STATUS_MAP = {"NEW": "new", "EXISTING": "existing", "DEMOLISH": "demolish", "TEMPORARY": "temporary"}
+ROOM_COLUMNS = ("IfcColumn",)   # standing in a room they take floor and ceiling area (beams do not)
 # IFC2x3 distribution occurrences are generic; the specific class is on the type (IfcDuctSegmentType)
 GENERIC_2X3 = {"IfcFlowSegment", "IfcFlowFitting", "IfcFlowTerminal", "IfcFlowController", "IfcFlowMovingDevice",
                "IfcFlowStorageDevice", "IfcFlowTreatmentDevice", "IfcEnergyConversionDevice",
@@ -130,9 +133,19 @@ def contradiction_id(what: str, cls: str, type_name: str | None) -> str:
     return f"contradiction:{what}:{cls}:{type_name or ''}"
 
 
+def opening_kind(o: dict) -> str:
+    """door / window by filling; recess when marked so (IFC4 RECESS, IFC2x3 ObjectType "Recess"); else void."""
+    kind = {"IfcDoor": "door", "IfcWindow": "window"}.get(o.get("fillingClass") or "")
+    if kind:
+        return kind
+    if str(o.get("predefinedType") or "").upper() == "RECESS" or "recess" in str(o.get("objectType") or "").lower():
+        return "recess"
+    return "void"
+
+
 def opening_record(o: dict, depth: float | None = None) -> dict:
     """Parsed opening -> MeasuredElement opening."""
-    kind = {"IfcDoor": "door", "IfcWindow": "window"}.get(o.get("fillingClass") or "", "void")
+    kind = opening_kind(o)
     w, h = o.get("width"), o.get("height")
     return {"guid": o["id"], "kind": kind, "width": w, "height": h, "area": o.get("area"),
             "depth": o.get("depth") or depth, "perimeter": 2 * ((w or 0) + (h or 0)),
@@ -318,22 +331,27 @@ def build(parsed: dict, rv: Resolver, log: CalcLog, model_id: str | None = None,
 
         # openings hosted by this element
         ops = [opening_record(o, thickness) for o in openings_by_host.get(el["id"], [])]
-        open_area = sum(o["area"] or 0 for o in ops)
+        # recesses do not go through: not in the net area; the volume they take is added back
+        # when an area is derived from the volume
+        open_area = sum(o["area"] or 0 for o in ops if o["kind"] != "recess")
+        recess_vol = sum((o["area"] or 0) * (o["depth"] or 0) for o in ops if o["kind"] == "recess")
 
         # areas
         net_area = gross_area = None
         a_note = None
         if fam in ("planar", "assembly") or cls in ("IfcRoof",):
             if cls in PLANAR_VERTICAL and net_volume and thickness:
-                net_area, prov["net_area"] = net_volume / thickness, "derived"
-                a_note = f"net area = volume / thickness = {fmt(round(net_volume, 4))} / {fmt(thickness)} = {fmt(round(net_area, 3))} m2"
+                net_area, prov["net_area"] = (net_volume + recess_vol) / thickness, "derived"
+                a_note = f"net area = volume / thickness = {fmt(round(net_volume + recess_vol, 4))} / {fmt(thickness)} = {fmt(round(net_area, 3))} m2"
+                if recess_vol:
+                    a_note += f" (recess volume {fmt(round(recess_vol, 4))} m3 added back)"
                 if rep["area"][0] and abs(rep["area"][0] - net_area) / net_area > TOLERANCE:
                     a_note += f" (reported {rep['area'][1]} = {fmt(round(rep['area'][0], 3))} ignored: inconsistent with volume)"
             elif rep["area"][0]:
                 net_area, prov["net_area"] = rep["area"][0], "reported"
                 a_note = f"net area {fmt(round(net_area, 3))} m2 from {rep['area'][1]}"
             elif net_volume and thickness:
-                net_area, prov["net_area"] = net_volume / thickness, "derived"
+                net_area, prov["net_area"] = (net_volume + recess_vol) / thickness, "derived"
                 a_note = f"net area = volume / thickness = {fmt(round(net_area, 3))} m2"
             elif closed is False and "SurfaceModel" in g.get("representationTypes", []) and g.get("surfaceArea"):
                 net_area, prov["net_area"] = g["surfaceArea"], "geometry"
@@ -343,7 +361,7 @@ def build(parsed: dict, rv: Resolver, log: CalcLog, model_id: str | None = None,
                 prov["gross_area"] = "derived"
         gross_volume = None
         if net_volume is not None:
-            gross_volume = net_volume + sum((o["area"] or 0) * (thickness or 0) for o in ops)
+            gross_volume = net_volume + sum((o["area"] or 0) * (thickness or 0) for o in ops if o["kind"] != "recess") + recess_vol
 
         # linear dimensions
         length = rep["length"][0]
@@ -405,7 +423,12 @@ def build(parsed: dict, rv: Resolver, log: CalcLog, model_id: str | None = None,
         # status
         phase = (el["psets"].get("PSet_Revit_Phasing", {}) or {}).get("Phase Created")
         demolished = (el["psets"].get("PSet_Revit_Phasing", {}) or {}).get("Phase Demolished")
-        status = "demolish" if demolished and str(demolished).lower() not in ("none", "") else PHASE_MAP.get(str(phase or "new").lower(), "new")
+        if demolished and str(demolished).lower() not in ("none", ""):
+            status = "demolish"
+        elif phase:
+            status = PHASE_MAP.get(str(phase).lower(), "new")
+        else:
+            status = STATUS_MAP.get(str(common_pset(el).get("Status") or "").upper(), "new")
 
         common = common_pset(el)
         storey = spatial.get(el.get("storeyId"), {})
@@ -509,12 +532,21 @@ def public_question(q: dict) -> dict:
 
 
 def add_embedded(host: dict, other: dict, volume: float, model: str | None = None) -> bool:
-    """A linear element sharing solid volume with a planar one passes through it."""
-    if host["family"] != "planar" or other["family"] != "linear" or volume <= 0:
+    """A linear element sharing solid volume with a planar one passes through it; a column sharing
+    volume with a room stands in it. The area it takes = shared volume / host thickness (rooms: height)."""
+    if other["family"] != "linear" or volume <= 0:
+        return False
+    if host["family"] == "planar":
+        size = host.get("thickness")
+    elif host["family"] == "space" and other["ifc_class"] in ROOM_COLUMNS:
+        size = host.get("height")
+    else:
+        return False
+    if any(x["guid"] == other["guid"] for x in host.get("embedded", [])):
         return False
     rec = {"guid": other["guid"], "ifc_class": other["ifc_class"], "volume": round(volume, 6)}
-    if host.get("thickness"):
-        rec["area"] = round(volume / host["thickness"], 6)
+    if size:
+        rec["area"] = round(volume / size, 6)
     if model:
         rec["model"] = model
     host.setdefault("embedded", []).append(rec)
@@ -555,6 +587,7 @@ def measure_rooms(parsed: dict, rooms: dict, elements: list[dict], model_id: str
     centre, core or finish) and disagreed with the room solid by about 9% on the Duplex; it is
     logged. Openings counted for a room: those in an element the room lies on, near the room."""
     spatial = {s["id"]: s for s in parsed["spatial"]}
+    by_guid = {e["guid"]: e for e in elements}
     bounding = defaultdict(set)
     for e in elements:
         for f in e.get("faces", []):
@@ -615,6 +648,12 @@ def measure_rooms(parsed: dict, rooms: dict, elements: list[dict], model_id: str
             "provenance": prov, "warnings": [],
         }
         bits += set_room_openings(m, facing_openings(g, [o for h in m["bounded_by"] for o in openings_by_host.get(h, [])]))
+        for x in g.get("intersections", []):
+            if x["elementId"] in by_guid:
+                add_embedded(m, by_guid[x["elementId"]], x["volume"])
+        if m.get("embedded"):
+            bits.append(f"{len(m['embedded'])} column(s) stand in it, "
+                        f"{fmt(round(sum(x.get('area') or 0 for x in m['embedded']), 3))} m2 of floor")
         out.append(m)
         label = f"{s.get('name') or sid} (room" + (f", {raw}" if raw and raw != s.get("name") else "") + (f" -> {term}" if term else "") + ")"
         log.detail("measure", label + ": " + "; ".join(bits) + f"; bounded by {len(m['bounded_by'])} element(s)", guid=sid)
@@ -632,7 +671,7 @@ def facing_openings(room_geo: dict, openings: list[dict]) -> list[dict]:
         if o["id"] in seen or not o.get("bboxMin"):
             continue
         near = all(o["bboxMin"][i] <= hi[i] + CONTACT_TOL and o["bboxMax"][i] >= lo[i] - CONTACT_TOL for i in range(3))
-        if near and (o.get("height") or 0) >= (o.get("depth") or 0):
+        if near and (o.get("height") or 0) >= (o.get("depth") or 0) and opening_kind(o) != "recess":
             seen.add(o["id"])
             out.append(opening_record(o))
     return out
@@ -689,3 +728,92 @@ def roll_up_parts(out: list[dict], has_body: set[str], log: CalcLog, only: set[s
                         f"{' + '.join(fmt(round(p['net_area'], 3)) for p in planar)} = {fmt(round(m['net_area'], 3))} m2")
         if bits:
             log.detail("measure", f"{m.get('name') or m['guid']}: no body of its own; " + "; ".join(bits), guid=m["guid"])
+
+
+# ------------------------------------------------------------------------ building values
+BUILDING_FIELDS = ("gross_floor_area", "net_floor_area", "footprint_area", "gross_volume", "height")
+FLOOR_SLAB_EXCLUDE = ("ROOF", "LANDING")
+
+
+def building_measures(elements: list[dict], parsed_models: list[dict], log: CalcLog) -> dict:
+    """BuildingMeasures for building.<field> in formulas: the IFC building's own quantities
+    (Qto_BuildingBaseQuantities) where a model has them, else derived from the measured elements
+    of all models. Derived values are approximations and say so in `notes`."""
+    out = {"provenance": {}, "notes": []}
+    for parsed in parsed_models:                          # first model that reports a value wins
+        for s in parsed.get("spatial", []):
+            if s["kind"] != "building":
+                continue
+            rec = {"quantities": {"reported": s.get("quantities", {})}, "psets": s.get("psets", {})}
+            for f in BUILDING_FIELDS:
+                if f in out:
+                    continue
+                v, src = find_reported(rec, f"building_{f}")
+                if v is not None:
+                    out[f], out["provenance"][f] = v, "reported"
+                    out["notes"].append(f"{f} {fmt(round(v, 3))} from {src} ({s.get('name') or s['id']})")
+
+    rooms = [e for e in elements if e["family"] == "space"]
+    if rooms:
+        out["space_volume"] = sum(e.get("net_volume") or 0 for e in rooms)
+        out["provenance"]["space_volume"] = "derived"
+        if "net_floor_area" not in out:
+            out["net_floor_area"] = sum(e.get("floor_area") or 0 for e in rooms)
+            out["provenance"]["net_floor_area"] = "derived"
+            out["notes"].append(f"net_floor_area = sum of {len(rooms)} room floor areas")
+    storeys = {}
+    for e in elements:
+        if e.get("storey") is not None:
+            storeys.setdefault(e["storey"], e.get("storey_elevation"))
+    if storeys:
+        out["storeys"] = len(storeys)
+        out["provenance"]["storeys"] = "derived"
+    tops = [e["elevation_top"] for e in elements if e.get("elevation_top") is not None]
+    bases = [e["elevation_base"] for e in elements if e.get("elevation_base") is not None]
+    if not tops or not bases:                             # most exporters: from the element solids
+        kept = {e["guid"] for e in elements}
+        boxes = [e["quantities"]["geometry"] for p in parsed_models for e in p.get("elements", [])
+                 if e["id"] in kept and e["quantities"]["geometry"].get("bboxMin")]
+        tops = [g["bboxMax"][2] for g in boxes]
+        bases = [g["bboxMin"][2] for g in boxes]
+    if "height" not in out and tops and bases:
+        out["height"] = max(tops) - min(bases)
+        out["provenance"]["height"] = "derived"
+        out["notes"].append("height = highest element top - lowest element base")
+
+    plan = defaultdict(float)                             # floor slab plan area per storey
+    for e in elements:
+        if e["ifc_class"] == "IfcSlab" and (e.get("predefined_type") or "").upper() not in FLOOR_SLAB_EXCLUDE:
+            a = e.get("footprint_area") or e.get("net_area")
+            if a and e.get("storey") is not None:
+                plan[e["storey"]] += a
+    if plan:
+        if "gross_floor_area" not in out:
+            out["gross_floor_area"] = sum(plan.values())
+            out["provenance"]["gross_floor_area"] = "derived"
+            out["notes"].append(f"gross_floor_area = plan area of floor slabs on {len(plan)} storey(s) (approximate)")
+        if "footprint_area" not in out:
+            out["footprint_area"] = max(plan.values())
+            out["provenance"]["footprint_area"] = "derived"
+            out["notes"].append("footprint_area = largest floor slab plan area of one storey (approximate)")
+        if "gross_volume" not in out:
+            levels = sorted((elev, name) for name, elev in storeys.items() if elev is not None)
+            top = max(tops) if tops else None
+            vol, used = 0.0, 0
+            for i, (elev, name) in enumerate(levels):
+                nxt = levels[i + 1][0] if i + 1 < len(levels) else top
+                if name in plan and nxt is not None and nxt > elev:
+                    vol += plan[name] * (nxt - elev)
+                    used += 1
+            if used:
+                out["gross_volume"] = vol
+                out["provenance"]["gross_volume"] = "derived"
+                out["notes"].append(f"gross_volume = floor slab plan area x storey height over {used} storey(s) (approximate)")
+    for k in list(out):
+        if isinstance(out[k], float):
+            out[k] = round(out[k], 6)
+    shown = ", ".join(f"{k} {fmt(round(out[k], 2))} ({out['provenance'][k]})" for k in out if k not in ("provenance", "notes"))
+    log.info("measure", f"building values for formulas: {shown or 'none'}")
+    for n in out["notes"]:
+        log.detail("measure", f"building: {n}")
+    return out

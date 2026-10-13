@@ -23,6 +23,8 @@ export interface PresetInfo {
   extends?: string;
   /** Dictionaries: layer. */
   layer?: "global" | "company" | "project";
+  /** "shipped" = in the repo's presets/ (never overwritten); "user" = saved from the Library to presets/user. */
+  origin: "shipped" | "user";
 }
 
 export interface ClassificationPresetInfo extends PresetInfo {
@@ -58,6 +60,20 @@ export interface CheckPresetResponse {
   problems: string[];
   /** Rule sets only: the draft with its extends chain resolved (what the engine would run), or null. */
   flattened?: RuleSet | null;
+}
+
+/**
+ * PUT /api/presets/{kind}/{id}: save a draft to presets/user (dev build). Same checks as /check; nothing is
+ * written when there are problems. A shipped preset's id is refused (save the draft under a new id).
+ * DELETE /api/presets/{kind}/{id} removes a saved one.
+ */
+export interface SavePresetRequest {
+  doc: unknown;
+}
+
+export interface SavePresetResponse {
+  saved: boolean;
+  problems: string[];
 }
 
 /**

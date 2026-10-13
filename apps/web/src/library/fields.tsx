@@ -1,9 +1,11 @@
 /**
  * Small form controls shared by the three editors. They hold no domain logic:
- * expressions are plain text here and are only ever parsed by the engine ("Check").
+ * expressions are text here (shown with readable names) and only ever parsed by the engine ("Check").
  */
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Param, ParamRef, Value } from "@ifc-boq/types";
+import { fromReadable, lexicon, sameFormula, toReadable, type Lexicon } from "./readable";
+import { BUILDING_FIELDS, NAMES, NAME_GROUP_LABEL, type NameGroup } from "./vocab";
 
 /* ---------------------------------------------------------------- layout */
 
@@ -259,34 +261,158 @@ export function parseLiteral(s: string): unknown {
 /* ---------------------------------------------------------------- expressions */
 
 const EXPR_HELP = (
-  <div className="expr-help">
-    <p>
-      Formulas are checked and evaluated only by the engine. Press <b>Check</b> at the top to have it parse them.
-    </p>
-    <dl className="params">
-      <dt>operators</dt>
-      <dd>+ - * / ( ) = != &gt; &gt;= &lt; &lt;= AND OR NOT</dd>
-      <dt>functions</dt>
-      <dd>IF(c,a,b) MIN MAX ROUND(x,step) CEIL FLOOR ABS SQRT PI() COALESCE UNDER(term,"root") CONTAINS(text,"x") LOWER</dd>
-      <dt>variables</dt>
-      <dd>net_area, thickness, length… · p.&lt;slot&gt; · props["Pset.Prop"] · src.* in derived rules</dd>
-      <dt>aggregates</dt>
-      <dd>SUM(openings.area WHERE area &gt; p.min) · COUNT(openings WHERE kind = "door") · over openings, layers, faces, children</dd>
-    </dl>
-  </div>
+  <dl className="params">
+    <dt>operators</dt>
+    <dd>+ - * / ( ) = != &gt; &gt;= &lt; &lt;= AND OR NOT</dd>
+    <dt>functions</dt>
+    <dd>IF(condition, then, else) MIN MAX ROUND(x, step) CEIL FLOOR ABS SQRT PI() COALESCE UNDER(term, "root") CONTAINS(text, "x") LOWER</dd>
+    <dt>lists</dt>
+    <dd>SUM([Openings › Area] WHERE [Area] &gt; 0.5) · COUNT([Openings] WHERE [Opening kind] = "door") · also AVG, MIN, MAX</dd>
+    <dt>names</dt>
+    <dd>In square brackets, as listed under Names. Text in quotes is taken as written. Checked and calculated only by the engine (Check, Generate).</dd>
+  </dl>
 );
 
-export function ExprInput({ value, onChange, placeholder, rows = 1 }: { value: string | undefined; onChange: (v: string | undefined) => void; placeholder?: string; rows?: number }) {
-  const [help, setHelp] = useState(false);
+/**
+ * A formula, shown and edited with readable names (`[Length] * [Height]`, see readable.ts). "code"
+ * shows the stored text exactly. The engine is the only thing that parses or evaluates it.
+ */
+export function ExprInput({ value, onChange, placeholder, rows = 1, slots }: {
+  value: string | undefined;
+  onChange: (v: string | undefined) => void;
+  placeholder?: string;
+  rows?: number;
+  /** The rule set's slots, so `p.<slot>` reads as the slot's label. */
+  slots?: Record<string, Param>;
+}) {
+  const lex = useMemo(() => lexicon(slots ?? {}), [slots]);
+  const [panel, setPanel] = useState<"names" | "help" | null>(null);
+  const [code, setCode] = useState(false);
+  const [draft, setDraft] = useState(() => toReadable(value ?? "", lex));
+  const [error, setError] = useState<string | null>(null);
+  const area = useRef<HTMLTextAreaElement>(null);
+
+  // Follow changes made elsewhere (a picked choice, the JSON tab), but keep the user's own wording.
+  useEffect(() => {
+    const r = fromReadable(draft, lex);
+    if (!("raw" in r) || r.raw !== (value ?? "")) {
+      setDraft(toReadable(value ?? "", lex));
+      setError(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, lex]);
+
+  const edit = (text: string) => {
+    setDraft(text);
+    const r = fromReadable(text, lex);
+    if ("error" in r) return setError(r.error);
+    setError(null);
+    onChange(r.raw || undefined);
+  };
+  const insert = (readable: string, raw: string) => {
+    const el = area.current;
+    const cur = code ? value ?? "" : draft;
+    const [a, b] = el ? [el.selectionStart, el.selectionEnd] : [cur.length, cur.length];
+    const piece = code ? raw : readable;
+    const next = cur.slice(0, a) + piece + cur.slice(b);
+    if (code) onChange(next || undefined);
+    else edit(next);
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(a + piece.length, a + piece.length);
+    });
+  };
+  const toggle = (p: "names" | "help") => setPanel(panel === p ? null : p);
+  const ph = placeholder ? `e.g. ${code ? placeholder : toReadable(placeholder, lex)}` : "formula";
+
   return (
     <div className="expr">
       <div className="expr-row">
-        <textarea className="mono" rows={rows} value={value ?? ""} placeholder={placeholder ? `e.g. ${placeholder}` : "expression"} spellCheck={false} onChange={(e) => onChange(e.target.value || undefined)} />
-        <button type="button" className="icon fx" aria-expanded={help} title="Expression syntax" onClick={() => setHelp(!help)}>
-          fx
-        </button>
+        {code ? (
+          <textarea ref={area} className="mono" rows={rows} value={value ?? ""} placeholder={ph} spellCheck={false} onChange={(e) => onChange(e.target.value || undefined)} />
+        ) : (
+          <textarea ref={area} className={`readable ${error ? "bad" : ""}`} rows={rows} value={draft} placeholder={ph} spellCheck={false} onChange={(e) => edit(e.target.value)} />
+        )}
+        <div className="expr-btns">
+          <button type="button" className="icon names-btn" aria-expanded={panel === "names"} title="Names a formula can use" onClick={() => toggle("names")}>
+            Names
+          </button>
+          <button type="button" className="icon fx" aria-expanded={panel === "help"} title="Formula syntax" onClick={() => toggle("help")}>
+            fx
+          </button>
+          <button type="button" className={`vf-toggle ${code ? "on" : ""}`} aria-pressed={code} title="Show the formula exactly as stored" onClick={() => setCode(!code)}>
+            code
+          </button>
+        </div>
       </div>
-      {help && EXPR_HELP}
+      {error && !code && <span className="error small">{error}</span>}
+      {panel === "help" && <div className="expr-help">{EXPR_HELP}</div>}
+      {panel === "names" && <NamesList lex={lex} slots={slots ?? {}} onPick={insert} />}
+    </div>
+  );
+}
+
+/** Everything a formula can read, grouped, with what it means. A click inserts it at the cursor. */
+function NamesList({ lex, slots, onPick }: { lex: Lexicon; slots: Record<string, Param>; onPick: (readable: string, raw: string) => void }) {
+  const [q, setQ] = useState("");
+  const settings = [...lex.slotLabels].filter(([k, l]) => matches(q, k, l));
+  const groups = (Object.keys(NAME_GROUP_LABEL) as NameGroup[])
+    .filter((g) => g !== "building")
+    .map((g) => [g, NAMES.filter((n) => n.group === g && matches(q, n.name, n.label, n.help))] as const);
+  const label = (name: string) => NAMES.find((n) => n.name === name)!;
+  const building = BUILDING_FIELDS.map((f) => ({ raw: `building.${f}`, text: `Building › ${label(f).label}`, info: label(f) })).filter((b) => matches(q, b.raw, b.text, b.info.help));
+  return (
+    <div className="expr-help names-list">
+      <input type="search" placeholder="Find a name" value={q} onChange={(e) => setQ(e.target.value)} />
+      {settings.length > 0 && (
+        <section>
+          <h4>Answers in this rule set</h4>
+          <ul>
+            {settings.map(([k, label]) => (
+              <li key={k}>
+                <button type="button" className="link" onClick={() => onPick(`[${label}]`, `p.${k}`)} title={`p.${k}`}>
+                  {label}
+                </button>
+                <span className="muted"> now {fmtParam(slots[k])}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {groups.map(([g, list]) =>
+        list.length === 0 ? null : (
+          <section key={g}>
+            <h4>{NAME_GROUP_LABEL[g]}</h4>
+            <ul>
+              {list.map((n) => (
+                <li key={n.name}>
+                  <button type="button" className="link" onClick={() => onPick(`[${n.label}]`, n.name)} title={n.name}>
+                    {n.label}
+                  </button>
+                  {n.unit && <span className="muted"> {n.unit}</span>}
+                  {n.help && <span className="muted"> · {n.help}</span>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ),
+      )}
+      {building.length > 0 && (
+        <section>
+          <h4>{NAME_GROUP_LABEL.building}</h4>
+          <ul>
+            {building.map((b) => (
+              <li key={b.raw}>
+                <button type="button" className="link" onClick={() => onPick(`[${b.text}]`, b.raw)} title={b.raw}>
+                  {b.text}
+                </button>
+                {b.info.unit && <span className="muted"> {b.info.unit}</span>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <p className="muted small">Property sets: props["Pset_WallCommon.FireRating"]. A value the element does not have counts as empty.</p>
     </div>
   );
 }
@@ -299,7 +425,7 @@ export function fmtParam(p: Param | undefined): string {
   if (!p) return "not defined";
   if (p.type === "boolean") return p.value ? "yes" : "no";
   if (p.type === "choice") return p.optionLabels?.[p.value] ?? p.value.replace(/_/g, " ");
-  if (p.type === "formula") return p.value || "(empty formula)";
+  if (p.type === "formula") return p.choices?.find((c) => sameFormula(c.value, p.value))?.label ?? (p.value ? "custom formula" : "(empty formula)");
   const v = String(p.value);
   return "unit" in p && p.unit ? `${v} ${p.unit}` : v;
 }
@@ -444,10 +570,12 @@ export interface RowInfo {
   title: string;
   sub?: string;
   badge?: { text: string; tone?: "new" | "changed" | "removed" | "inherited" };
+  /** Heading shown above the first row of each section (rows arrive grouped). */
+  section?: string;
 }
 
 /** The left-hand list of a list/detail editor. */
-export function RowList({ rows, selected, onSelect, onAdd, addLabel, filter, onFilter, empty }: {
+export function RowList({ rows, selected, onSelect, onAdd, addLabel, filter, onFilter, empty, tools }: {
   rows: RowInfo[];
   selected: string | null;
   onSelect: (key: string) => void;
@@ -456,6 +584,8 @@ export function RowList({ rows, selected, onSelect, onAdd, addLabel, filter, onF
   filter?: string;
   onFilter?: (q: string) => void;
   empty?: string;
+  /** More controls next to the filter, e.g. several add buttons. */
+  tools?: ReactNode;
 }) {
   return (
     <div className="ld-list">
@@ -466,10 +596,16 @@ export function RowList({ rows, selected, onSelect, onAdd, addLabel, filter, onF
             {addLabel ?? "+ Add"}
           </button>
         )}
+        {tools}
       </div>
       <ul>
         {rows.length === 0 && <li className="muted small ld-empty">{empty ?? "Nothing here yet."}</li>}
-        {rows.map((r) => (
+        {rows.map((r, i) => [
+          r.section !== undefined && r.section !== rows[i - 1]?.section && (
+            <li key={`section-${r.section}`} className="ld-section">
+              {r.section}
+            </li>
+          ),
           <li key={r.key}>
             <button type="button" className={`ld-row ${selected === r.key ? "on" : ""} ${r.badge?.tone === "removed" ? "removed" : ""}`} onClick={() => onSelect(r.key)}>
               <span className="ld-title">
@@ -478,8 +614,8 @@ export function RowList({ rows, selected, onSelect, onAdd, addLabel, filter, onF
               </span>
               {r.sub && <span className="ld-sub">{r.sub}</span>}
             </button>
-          </li>
-        ))}
+          </li>,
+        ])}
       </ul>
     </div>
   );

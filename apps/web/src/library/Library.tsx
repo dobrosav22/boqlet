@@ -1,7 +1,8 @@
 /**
- * The preset library: browse, create, import and edit rule sets, classifications and
- * dictionaries. Drafts live in browser memory (see store.ts); the engine is asked only
- * to check a draft and to flatten a patch's parent, never to save anything.
+ * The preset library: browse, create, import, edit and save rule sets, classifications and
+ * dictionaries. Drafts live in browser memory (see store.ts) until saved; the engine checks a
+ * draft, flattens a patch's parent, and saves a draft to presets/user (dev build). Saved presets
+ * appear in the BoQ choices like the shipped ones.
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Dictionary, ModelSummary, OurRuleType, PresetsResponse, RuleSet } from "@ifc-boq/types";
@@ -19,6 +20,7 @@ import {
   isEdited,
   isPatch,
   presetKey,
+  renameRuleInMap,
   slug,
   uniqueId,
   type AnyDoc,
@@ -40,6 +42,8 @@ interface Props {
   presets: PresetsResponse | null;
   presetsError: string | null;
   onRetryPresets: () => void;
+  /** Reload the preset lists after a save or delete. */
+  onPresetsChanged: () => void;
   lib: LibState;
   setLib: (f: (s: LibState) => LibState) => void;
   sel: string | null;
@@ -55,7 +59,7 @@ const SECTION: Record<LibKind, { title: string; hint: string }> = {
 
 let counter = 0;
 
-export function Library({ head, model, onOpenBoq, presets, presetsError, onRetryPresets, lib, setLib, sel, setSel }: Props) {
+export function Library({ head, model, onOpenBoq, presets, presetsError, onRetryPresets, onPresetsChanged, lib, setLib, sel, setSel }: Props) {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const file = useRef<HTMLInputElement>(null);
@@ -118,6 +122,76 @@ export function Library({ head, model, onOpenBoq, presets, presetsError, onRetry
     [dictDraftsJson],
   );
 
+  /** Where a preset is stored: shipped (read-only) or saved by a user; null for an unsaved new draft. */
+  const storedAs = (e: LibDoc): "shipped" | "user" | null =>
+    e.origin === "new" ? null : ((presetList(e.kind) as { id: string; origin?: "shipped" | "user" }[]).find((p) => p.id === e.presetId)?.origin ?? "shipped");
+
+  /** Save a draft (under a new name when asNew is given). Returns the engine's problems, or null when saved. */
+  async function save(entry: LibDoc, asNew?: string): Promise<string[] | null> {
+    const doc = asNew ? withId(entry.kind, structuredClone(entry.doc), uniqueId(slug(asNew), idsOf(entry.kind)), asNew) : entry.doc;
+    const id = docId(entry.kind, doc);
+    const r = await api.savePreset(entry.kind, id, doc);
+    if (!r.saved) return r.problems;
+    const key = presetKey(entry.kind, id);
+    setLib((s) => {
+      const { [entry.key]: old, ...rest } = s;
+      const next: LibState = { ...rest, [key]: { key, kind: entry.kind, origin: "preset", presetId: id, doc, original: JSON.stringify(doc) } };
+      // a shipped preset saved as a new one goes back to its shipped content; the changes now live in the new one
+      if (asNew && old && key !== entry.key) next[entry.key] = { ...old, doc: JSON.parse(old.original) as AnyDoc };
+      return next;
+    });
+    setSel(key);
+    onPresetsChanged();
+    return null;
+  }
+
+  async function removeSaved(entry: LibDoc) {
+    setError(null);
+    try {
+      await api.deletePreset(entry.kind, entry.presetId!);
+      setLib((s) => {
+        const { [entry.key]: _gone, ...rest } = s;
+        void _gone;
+        return rest;
+      });
+      setSel(null);
+      onPresetsChanged();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  /** After an item id changed in a rule set: classification maps that still use the old id. */
+  const [renamed, setRenamed] = useState<{ from: string; to: string; maps: { key: string; name: string; doc: ClassificationDoc; original: string; presetId: string }[] } | null>(null);
+  async function itemRenamed(from: string, to: string) {
+    const found: NonNullable<typeof renamed>["maps"] = [];
+    const inLib = drafts.filter((d) => d.kind === "classifications");
+    const seen = new Set(inLib.map((d) => docId("classifications", d.doc)));
+    const shipped = (presets?.classifications ?? []).filter((c) => c.available && !seen.has(c.id));
+    const docs = [
+      ...inLib.map((d) => ({ key: d.key, presetId: d.presetId ?? docId("classifications", d.doc), doc: d.doc as ClassificationDoc, original: d.original })),
+      ...(await Promise.all(shipped.map(async (c) => {
+        const doc = (await api.preset("classifications", c.id)) as ClassificationDoc;
+        return { key: presetKey("classifications", c.id), presetId: c.id, doc, original: JSON.stringify(doc) };
+      }))),
+    ];
+    for (const d of docs) {
+      const r = renameRuleInMap(d.doc.map, from, to);
+      if (r.changes) found.push({ ...d, name: docName("classifications", d.doc), doc: { ...d.doc, map: r.map } });
+    }
+    setRenamed(found.length ? { from, to, maps: found } : null);
+  }
+  function applyRename() {
+    if (!renamed) return;
+    setLib((s) => {
+      const next = { ...s };
+      for (const m of renamed.maps)
+        next[m.key] = next[m.key] ? { ...next[m.key], doc: m.doc } : { key: m.key, kind: "classifications", origin: "preset", presetId: m.presetId, doc: m.doc, original: m.original };
+      return next;
+    });
+    setRenamed(null);
+  }
+
   const current = sel ? lib[sel] : undefined;
   const creating = sel?.startsWith("create:") ? (sel.slice(7) as LibKind) : null;
 
@@ -151,6 +225,7 @@ export function Library({ head, model, onOpenBoq, presets, presetsError, onRetry
                         {d && isEdited(d) && <span className="dot" aria-label="edited" title="Edited in this tab" />}
                         {"extends" in p && p.extends && <span className="muted small block">extends {p.extends}</span>}
                         {"layer" in p && p.layer && <span className="muted small block">{p.layer} layer</span>}
+                        {p.origin === "user" && <span className="badge badge-new">saved</span>}
                         {unavailable && <span className="muted small block">not installed</span>}
                       </button>
                     </li>
@@ -179,11 +254,29 @@ export function Library({ head, model, onOpenBoq, presets, presetsError, onRetry
           </button>
           <input ref={file} type="file" accept=".json,application/json" hidden onChange={(e) => (void importFile(e.target.files?.[0]), (e.target.value = ""))} />
         </fieldset>
-        <p className="small muted lib-note">Drafts stay in this browser tab and are lost on reload. BoQ runs still use the files in <code>presets/</code>; download a draft to keep it.</p>
+        <p className="small muted lib-note">
+          Unsaved drafts stay in this browser tab and are lost on reload. <b>Save</b> writes a draft to <code>presets/user/</code>, and it then appears in the BoQ choices. Shipped presets are never
+          overwritten: save a changed one under a new name.
+        </p>
       </aside>
 
       <main className="main">
         {error && <p className="error">{error}</p>}
+        {renamed && (
+          <div className="check bad">
+            <span>
+              Item “{renamed.from}” is now “{renamed.to}”. {renamed.maps.length} classification{renamed.maps.length === 1 ? "" : "s"} still use the old id:{" "}
+              {renamed.maps.map((m) => m.name).join(", ")}.
+            </span>{" "}
+            <button className="link small" onClick={applyRename}>
+              Update {renamed.maps.length === 1 ? "it" : "them"}
+            </button>{" "}
+            <span className="muted small">(as edited drafts; save them afterwards)</span>{" "}
+            <button className="link small" onClick={() => setRenamed(null)}>
+              leave them
+            </button>
+          </div>
+        )}
         {!current && !creating && (
           <div className="empty">
             <h1>Rules, codes and names</h1>
@@ -217,6 +310,10 @@ export function Library({ head, model, onOpenBoq, presets, presetsError, onRetry
             loadDictionary={loadDictionary}
             onOpenBoq={onOpenBoq}
             ruleSetIds={[...idsOf("rules")]}
+            storedAs={storedAs(current)}
+            onItemRenamed={(from, to) => void itemRenamed(from, to)}
+            onSave={(asNew) => save(current, asNew)}
+            onDeleteSaved={() => void removeSaved(current)}
             onChange={(doc) => setLib((s) => ({ ...s, [current.key]: { ...s[current.key], doc } }))}
             onReset={() => setLib((s) => ({ ...s, [current.key]: { ...s[current.key], doc: JSON.parse(current.original) as AnyDoc } }))}
             onDelete={() => {
@@ -338,8 +435,12 @@ function CreatePanel({ kind, presets, draftsOf, taken, getDoc, onCreate, onCance
 
 /* ================================================================ editor host */
 
-function Editor({ entry, drafts, presets, model, loadDictionary, onOpenBoq, ruleSetIds, onChange, onReset, onDelete, onDuplicate }: {
+function Editor({ entry, drafts, presets, model, loadDictionary, onOpenBoq, ruleSetIds, storedAs, onItemRenamed, onSave, onDeleteSaved, onChange, onReset, onDelete, onDuplicate }: {
   entry: LibDoc;
+  onItemRenamed: (from: string, to: string) => void;
+  storedAs: "shipped" | "user" | null;
+  onSave: (asNew?: string) => Promise<string[] | null>;
+  onDeleteSaved: () => void;
   drafts: LibDoc[];
   presets: PresetsResponse | null;
   model: ModelSummary | null;
@@ -352,10 +453,26 @@ function Editor({ entry, drafts, presets, model, loadDictionary, onOpenBoq, rule
   onDuplicate: () => void;
 }) {
   const { kind, doc } = entry;
-  const [check, setCheck] = useState<{ json: string; problems: string[] } | null>(null);
+  const [check, setCheck] = useState<{ json: string; problems: string[]; saving?: boolean } | null>(null);
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [asNew, setAsNew] = useState<string | null>(null);
   const json = JSON.stringify(doc);
+
+  const runSave = async (name?: string) => {
+    setSaving(true);
+    setCheckError(null);
+    try {
+      const problems = await onSave(name);
+      setCheck(problems ? { json, problems, saving: true } : null);
+      if (!problems) setAsNew(null);
+    } catch (e) {
+      setCheckError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
   const othersOfKind = drafts.filter((d) => d.kind === kind && d.key !== entry.key).map((d) => d.doc);
 
   const runCheck = async () => {
@@ -408,13 +525,39 @@ function Editor({ entry, drafts, presets, model, loadDictionary, onOpenBoq, rule
             {entry.origin === "new" ? <span className="badge badge-new">new draft</span> : edited ? <span className="badge badge-changed">edited</span> : null}
           </h1>
           <p className="muted small">
-            <code>{docId(kind, doc)}</code> · {entry.origin === "preset" ? `shipped preset (${where})` : `not saved; download and place at ${where}`}
+            <code>{docId(kind, doc)}</code> ·{" "}
+            {storedAs === "shipped"
+              ? `shipped preset (${where}), never overwritten: save changes under a new name`
+              : storedAs === "user"
+                ? `saved preset (${where.replace("presets/", "presets/user/")})${edited ? ", changed since saved" : ""}`
+                : "not saved yet"}
           </p>
         </div>
         <div className="head-actions">
           <button className="ghost" onClick={() => void runCheck()} disabled={checking} title="Ask the engine whether it would accept this draft">
             {checking ? "Checking" : "Check"}
           </button>
+          {storedAs === "shipped" ? (
+            asNew === null ? (
+              <button className="primary" onClick={() => setAsNew(`${docName(kind, doc)} (mine)`)} disabled={saving}>
+                Save as new…
+              </button>
+            ) : (
+              <span className="save-as">
+                <input type="text" value={asNew} onChange={(e) => setAsNew(e.target.value)} onKeyDown={(e) => e.key === "Enter" && asNew.trim() && void runSave(asNew.trim())} aria-label="Name" autoFocus />
+                <button className="primary" disabled={saving || !asNew.trim()} onClick={() => void runSave(asNew.trim())}>
+                  {saving ? "Saving" : "Save"}
+                </button>
+                <button className="ghost" onClick={() => setAsNew(null)}>
+                  Cancel
+                </button>
+              </span>
+            )
+          ) : (
+            <button className="primary" onClick={() => void runSave()} disabled={saving || (storedAs === "user" && !edited)} title="Write to presets/user; the BoQ can then use it">
+              {saving ? "Saving" : "Save"}
+            </button>
+          )}
           <button className="ghost" onClick={download}>
             Download JSON
           </button>
@@ -422,9 +565,16 @@ function Editor({ entry, drafts, presets, model, loadDictionary, onOpenBoq, rule
             Duplicate
           </button>
           {entry.origin === "preset" ? (
-            <button className="ghost" onClick={onReset} disabled={!edited}>
-              Reset changes
-            </button>
+            <>
+              <button className="ghost" onClick={onReset} disabled={!edited}>
+                Reset changes
+              </button>
+              {storedAs === "user" && (
+                <button className="ghost danger" onClick={() => window.confirm(`Delete the saved preset “${docName(kind, doc)}” from presets/user?`) && onDeleteSaved()}>
+                  Delete saved
+                </button>
+              )}
+            </>
           ) : (
             <button className="ghost danger" onClick={onDelete}>
               Delete draft
@@ -440,7 +590,7 @@ function Editor({ entry, drafts, presets, model, loadDictionary, onOpenBoq, rule
           ) : (
             <>
               <span>
-                The engine found {check.problems.length} problem{check.problems.length === 1 ? "" : "s"}:
+                {check.saving ? "Not saved. " : ""}The engine found {check.problems.length} problem{check.problems.length === 1 ? "" : "s"}:
               </span>
               <ul>
                 {check.problems.map((p, i) => (
@@ -458,7 +608,7 @@ function Editor({ entry, drafts, presets, model, loadDictionary, onOpenBoq, rule
         </div>
       )}
       {kind === "rules" && (
-        <RuleSetEditor doc={doc as OurRuleType} onChange={onChange} parent={parent.flat} parentNote={parent.note} ruleSetIds={ruleSetIds} />
+        <RuleSetEditor doc={doc as OurRuleType} onChange={onChange} parent={parent.flat} parentNote={parent.note} ruleSetIds={ruleSetIds} onItemRenamed={onItemRenamed} />
       )}
       {kind === "dictionaries" && (
         <DictionaryEditor doc={doc as Dictionary} onChange={onChange} presets={presets} model={model} loadDictionary={loadDictionary} onOpenBoq={onOpenBoq} />

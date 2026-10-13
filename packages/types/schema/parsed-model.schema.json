@@ -278,6 +278,10 @@
             "engineVersion": {
               "type": "string"
             },
+            "format": {
+              "type": "number",
+              "description": "Output format of the parser; a cached parse with a lower number is parsed again."
+            },
             "ifcopenshellVersion": {
               "type": "string"
             },
@@ -1173,6 +1177,10 @@
         },
         "predefinedType": {
           "type": "string"
+        },
+        "objectType": {
+          "type": "string",
+          "description": "IFC2x3 has no RECESS type; exporters write \"Recess\" here instead."
         },
         "width": {
           "type": "number"

@@ -74,6 +74,57 @@ def test_check_reports_draft_problems():
     assert any("no.such.term" in p for p in problems) and any("regex" in p for p in problems)
 
 
+def test_patch_sections_merge_and_slots_are_checked():
+    lib = presets.rule_sets()
+    patch = {"schemaVersion": "1.0", "id": "ours", "name": "ours", "version": "1", "extends": "as-modelled",
+             "sections": [{"id": "walls", "title": "Masonry and walls"}, {"id": "site", "title": "Site works"}],
+             "params": {"fence": {"type": "boolean", "value": True, "label": "Fence", "section": "site"}}}
+    flat = flatten(patch, {**lib, "ours": patch})
+    titles = {s["id"]: s["title"] for s in flat["sections"]}
+    assert titles["walls"] == "Masonry and walls" and titles["site"] == "Site works"
+    assert [s["id"] for s in flat["sections"]][-1] == "site"            # new sections go last
+    assert presets.check("rules", patch) == []
+
+    bad = {**patch, "sections": None, "params": {"fence": {**patch["params"]["fence"], "section": "nowhere"},
+                                                 "working_space": {"value": -1}}}
+    bad.pop("sections")
+    lib["as-modelled"]["params"]["working_space"]["min"] = 0             # not on disk, only in this test's copy
+    problems = presets.check("rules", bad, [lib["as-modelled"]])
+    assert any("section 'nowhere'" in p for p in problems)
+    assert any("working_space" in p and "range" in p for p in problems)
+
+
+def test_save_writes_user_presets_and_never_shipped_ones(tmp_path, monkeypatch):
+    import copy
+    from ifc_boq import paths
+    monkeypatch.setattr(paths, "USER_PRESETS", tmp_path)
+    lib = presets.rule_sets()
+
+    assert "shipped preset" in presets.save("rules", copy.deepcopy(lib["as-modelled"]))[0]
+    assert not (tmp_path / "rules").exists()
+
+    mine = {"schemaVersion": "1.0", "id": "our-rules", "name": "Our rules", "version": "1",
+            "extends": "as-modelled", "params": {"wall_opening_threshold": {"value": 0.5}}}
+    assert presets.save("rules", mine) == []
+    assert presets.rule_sets()["our-rules"]["params"] == mine["params"]
+    assert presets.origins("rules")["our-rules"] == "user" and presets.origins("rules")["as-modelled"] == "shipped"
+    assert presets.save("rules", {**mine, "params": {"wall_opening_threshold": {"value": 1}}}) == []  # replaces
+    assert presets.rule_sets()["our-rules"]["params"]["wall_opening_threshold"]["value"] == 1
+
+    assert presets.save("rules", {**mine, "id": "x2", "extends": "nope"})        # problems: not written
+    assert "x2" not in presets.rule_sets()
+    assert "file name" in presets.save("rules", {**mine, "id": "../evil"})[0]
+
+    c = presets.classifications()["demo-trades"]
+    cl = {**c["codeList"], "id": "our-codes"}
+    assert presets.save("classifications", {"codeList": cl, "map": {**c["map"], "codeList": "our-codes"}}) == []
+    assert presets.classifications()["our-codes"]["origin"] == "user"
+
+    assert presets.delete("rules", "our-rules") and "our-rules" not in presets.rule_sets()
+    assert presets.delete("classifications", "our-codes") and "our-codes" not in presets.classifications()
+    assert not presets.delete("rules", "as-modelled")
+
+
 def test_dictionary_entries_point_to_defined_terms():
     terms = {t["id"] for d in presets.dictionaries().values() for t in d.get("terms", [])}
     for d in presets.dictionaries().values():

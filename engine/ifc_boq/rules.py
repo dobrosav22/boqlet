@@ -30,7 +30,7 @@ MIXABLE = ("material", "element_type", "storey", "storey_elevation", "predefined
 
 # ============================================================================ rule sets
 def flatten(target: dict, library: dict[str, dict]) -> dict:
-    """params merge by name; items / derived / manual override by id; `remove` drops ids."""
+    """params merge by name; sections merge by id; items / derived / manual override by id; `remove` drops ids."""
     if "extends" not in target:
         out = json.loads(json.dumps(target))
         out.setdefault("derived", [])
@@ -42,6 +42,13 @@ def flatten(target: dict, library: dict[str, dict]) -> dict:
     base = flatten(library[target["extends"]], library)
     for name, p in (target.get("params") or {}).items():
         base["params"][name] = {**base["params"].get(name, {}), **p}
+    if "scope" in target:
+        base["scope"] = target["scope"]
+    if target.get("sections"):
+        sections = {s["id"]: s for s in base.get("sections", [])}
+        for s in target["sections"]:
+            sections[s["id"]] = {**sections.get(s["id"], {}), **s}
+        base["sections"] = list(sections.values())
     removed = set(target.get("remove", []))
     for key in ("items", "derived", "manual"):
         cur = {x["id"]: x for x in base.get(key, [])}
@@ -151,7 +158,7 @@ def select(sel: dict, el: dict, expr: Expr, val=lambda v: v, ctx=None) -> bool:
 
 class RuleEngine:
     def __init__(self, rules: dict, elements: list[dict], expr: Expr, log: CalcLog,
-                 decisions: dict[str, object] | None = None):
+                 decisions: dict[str, object] | None = None, building: dict | None = None):
         self.rules = rules
         self.params = {k: v.get("value") for k, v in rules["params"].items()}
         self.el = elements
@@ -159,6 +166,7 @@ class RuleEngine:
         self.x = expr
         self.log = log
         self.decisions = decisions or {}
+        self.building = {k: v for k, v in (building or {}).items() if k not in ("provenance", "notes")}
         self.defaults = rules.get("defaults", {})
         self.questions: list[dict] = []
         self.warnings: list[dict] = []
@@ -166,6 +174,7 @@ class RuleEngine:
         self.lines_by_rule: dict[str, list[dict]] = defaultdict(list)
         self.matched: set[str] = set()
         self.excluded: set[str] = set()
+        self.out_of_scope: set[str] = set()           # left out by the rule set's scope
         self.skipped_parts: set[str] = set()
         self.through_parts: set[str] = set()          # parents no rule can measure: their parts are measured
         self.claims: dict[tuple, list[str]] = defaultdict(list)
@@ -194,7 +203,7 @@ class RuleEngine:
         return self.val(x.get("enabled", True)) is not False
 
     def ctx(self, part: dict) -> dict:
-        return {**part, "p": self.params}
+        return {**part, "p": self.params, "building": self.building}
 
     def select(self, sel: dict, el: dict) -> bool:
         return select(sel, el, self.x, self.val, self.ctx(el))
@@ -209,9 +218,13 @@ class RuleEngine:
             if mode == "none":
                 continue
             if what == "recesses":
-                notes.append("deduction of recesses not supported yet (ignored)")
-                continue
-            if what == "embedded":
+                ops = [o for o in part.get("openings", []) if o["kind"] == "recess"]
+
+                def amount(o):
+                    if per == "length":
+                        return o["width"] or 0
+                    return (o["area"] or 0) * ((o.get("depth") or thickness) if per == "volume" else 1)
+            elif what == "embedded":
                 # columns / beams through this element (measure.py `embedded`): the area they take
                 # out of the face, or that area x this part's thickness (a layer gets its share)
                 ops = list(part.get("embedded") or [])
@@ -227,7 +240,7 @@ class RuleEngine:
                     return a or 0
             else:
                 kinds = {"openings": None, "doors": "door", "windows": "window", "voids": "void"}[what]
-                ops = [o for o in part.get("openings", []) if kinds is None or o["kind"] == kinds]
+                ops = [o for o in part.get("openings", []) if o["kind"] != "recess" and (kinds is None or o["kind"] == kinds)]
 
                 def amount(o):
                     if per == "length":
@@ -459,10 +472,17 @@ class RuleEngine:
                 self.excluded.add(e["guid"])
             elif ans:
                 forced[e["guid"]] = ans
+        # scope: elements the rule set leaves out are only for items with scope "out"
+        for sel in (self.rules.get("scope") or {}).get("exclude", []):
+            self.out_of_scope |= {e["guid"] for e in self.el if self.select(sel, e)}
+        if self.out_of_scope:
+            self.log.info("match", f"{len(self.out_of_scope)} element(s) left out of this BoQ by the rule set's scope",
+                          data={"guids": sorted(self.out_of_scope)})
         # pass 1: plain matches
         matches = {}
         for i in items:
-            matches[i["id"]] = [e for e in self.el if self.select(i["match"], e)]
+            out = (i.get("scope") or "in") == "out"
+            matches[i["id"]] = [e for e in self.el if (e["guid"] in self.out_of_scope) == out and self.select(i["match"], e)]
         # A parent is measured when an enabled rule takes it (partFilter included) and gets a value.
         # A parent no rule can measure (a roof with no body of its own and no planar parts) is
         # measured through its parts instead of becoming a flagged line that hides them.
@@ -529,6 +549,7 @@ class RuleEngine:
                 if matches[i["id"]]:
                     self.log.info("match", f"rule '{i['id']}' is disabled: {len(matches[i['id']])} element(s) excluded",
                                   ruleId=i["id"])
+        self.excluded |= self.out_of_scope
         self.excluded -= self.matched
         if decided_out:
             self.log.info("decision", f"{len(decided_out)} element(s) excluded by user answers")
@@ -704,7 +725,7 @@ class RuleEngine:
                     else:
                         sources = [(p, p.get("guid"), src) for p in src["_parts"]]
                     for sctx, guid, srcline in sources:
-                        ctx = {**sctx, "src": sctx, "p": self.params}
+                        ctx = {**sctx, "src": sctx, "p": self.params, "building": self.building}
                         if d.get("where") and not self.x.evaluate(d["where"], ctx):
                             continue
                         v, txt = self.x.explain(self.val(d["quantity"]) or "", ctx)
@@ -771,10 +792,15 @@ class RuleEngine:
                 continue
             q = self.val(m.get("quantity"))
             amount = self.val(m.get("amount"))
+            formula = "manual item"
+            if m.get("formula"):
+                v, txt = self.x.explain(self.val(m["formula"]) or "", self.ctx({}))
+                q = float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+                formula = self.formula_text(m["formula"]) + f"   ->   {txt}"
             line = {"key": m["id"], "ruleId": m["id"], "ruleKind": "manual", "description": self.render(m["description"], {}),
                     "unit": m["unit"], "quantity": float(q) if q is not None else None,
                     "source": "manual" if q is not None else "flagged", "keys": {},
-                    "trace": {"formula": "manual item", "params": {}, "elements": []},
+                    "trace": {"formula": formula, "params": self.params_used(m) if m.get("formula") else {}, "elements": []},
                     "tags": m.get("tags", []), "notes": [f"amount {fmt(amount)}"] if amount is not None else
                     ([] if q is not None else ["no model behind this line: quantity to be entered"]),
                     "_fields": {"manual_kind": m["kind"]}, "_mixed": [], "_manual_kind": m["kind"], "location": {}}

@@ -5,6 +5,8 @@ api.py - local HTTP service for the web app (contract: packages/types/src/api.ts
     GET  /api/presets                     -> PresetsResponse
     GET  /api/presets/{kind}/{id}         -> raw preset JSON (kind: rules | dictionaries | classifications)
     POST /api/presets/{kind}/check        -> CheckPresetResponse (problems in a draft preset; nothing is saved)
+    PUT  /api/presets/{kind}/{id}         -> SavePresetResponse (save a draft to presets/user if the engine accepts it)
+    DELETE /api/presets/{kind}/{id}       -> {ok} (remove a user preset; shipped ones cannot be removed)
     POST /api/models/{modelId}/names      -> NamesResponse (every name in the model and what it resolves to)
     GET  /api/models/{modelId}/geometry.glb -> meshes, one node per GlobalId (elements, openings, spaces)
     GET  /api/models/{modelId}/scene      -> SceneIndex (element -> mesh nodes, names, storeys) for the viewer
@@ -88,14 +90,17 @@ def list_presets():
         rs = presets.rule_sets()
         ds = presets.dictionaries()
         cs = presets.classifications()
+        ro, do = presets.origins("rules"), presets.origins("dictionaries")
     except ValueError as e:
         raise HTTPException(500, str(e))
     return {
         "ruleSets": [{"id": r["id"], "name": r["name"], "description": (r.get("meta") or {}).get("description"),
-                      "extends": r.get("extends")} for r in rs.values()],
-        "dictionaries": [{"id": d["id"], "name": d["name"], "layer": d["layer"]} for d in ds.values()],
+                      "extends": r.get("extends"), "origin": ro[r["id"]]} for r in rs.values()],
+        "dictionaries": [{"id": d["id"], "name": d["name"], "layer": d["layer"], "origin": do[d["id"]]}
+                         for d in ds.values()],
         "classifications": [{"id": c["id"], "name": (c["codeList"] or {}).get("name") or c["map"]["name"],
-                             "available": c["available"], "reason": c["reason"]} for c in cs.values()],
+                             "available": c["available"], "reason": c["reason"], "origin": c["origin"]}
+                            for c in cs.values()],
         "terms": presets.terms(),
     }
 
@@ -128,6 +133,31 @@ def check_preset(kind: str, req: CheckPresetRequest):
     except ValueError as e:  # the bundled presets on disk are broken
         raise HTTPException(500, str(e))
     return {"ok": not problems, "problems": problems, "flattened": flat}
+
+
+class SavePresetRequest(BaseModel):
+    doc: dict
+
+
+@app.put("/api/presets/{kind}/{preset_id}")
+def save_preset(kind: str, preset_id: str, req: SavePresetRequest):
+    if kind not in presets.KINDS:
+        raise HTTPException(404, "unknown kind")
+    doc_id = (req.doc.get("codeList") or {}).get("id") if kind == "classifications" else req.doc.get("id")
+    if doc_id != preset_id:
+        raise HTTPException(400, f"the document's id '{doc_id}' does not match '{preset_id}'")
+    try:
+        problems = presets.save(kind, req.doc)
+    except ValueError as e:  # the presets on disk are broken
+        raise HTTPException(500, str(e))
+    return {"saved": not problems, "problems": problems}
+
+
+@app.delete("/api/presets/{kind}/{preset_id}")
+def delete_preset(kind: str, preset_id: str):
+    if not presets.delete(kind, preset_id):
+        raise HTTPException(404, f"no saved {kind} preset '{preset_id}' (shipped presets cannot be deleted)")
+    return {"ok": True}
 
 
 @app.post("/api/models")

@@ -43,7 +43,7 @@ npm run dev          # engine on 127.0.0.1:8787 + web on http://localhost:5173
 | `npm run import:uniclass` | Download Uniclass 2015 EF into `presets/classifications/uniclass2015-ef/codelist.json`. |
 
 Environment: `IFC_BOQ_PYTHON` (python to use), `IFC_BOQ_SKIP_ENGINE_SETUP=1`,
-`IFC_BOQ_ENGINE_PORT` (default 8787).
+`IFC_BOQ_ENGINE_PORT` (default 8787), `IFC_BOQ_USER_PRESETS` (where the Library saves, default `presets/user`).
 
 ## Repo map
 
@@ -53,7 +53,7 @@ Environment: `IFC_BOQ_PYTHON` (python to use), `IFC_BOQ_SKIP_ENGINE_SETUP=1`,
 | `packages/types/schema` | JSON Schemas generated from the types (`npm run codegen`). The Python engine validates presets and its own output against them. Do not edit by hand. |
 | `engine/ifc_boq` | The Python engine: parse, names, measure, rules, classify, pipeline, export, API, CLI. |
 | `engine/tests` | pytest. `test_duplex.py` is the acceptance test against the hand-made BoQ. |
-| `presets/` | Rule sets, dictionaries, classifications, resolution settings, as JSON. Loaded from disk on every run, so edits apply without restarting. |
+| `presets/` | Rule sets, dictionaries, classifications, resolution settings, as JSON. Loaded from disk on every run, so edits apply without restarting. `presets/user/` (git-ignored) holds what the Library saves; shipped presets are never written. |
 | `apps/web` | React 18 + Vite dev UI: drop IFC, choose presets, generate, inspect lines, log, questions, compare, download Excel. |
 | `fixtures/` | The NIBS Duplex IFC and the hand-made reference BoQ; buildingSMART certification samples (CC BY 4.0) in `ifc/buildingsmart/`. |
 | `scripts/` | Node helpers that set up and run the Python engine from npm. |
@@ -87,9 +87,11 @@ Environment: `IFC_BOQ_PYTHON` (python to use), `IFC_BOQ_SKIP_ENGINE_SETUP=1`,
 |---|---|
 | Understand the domain (BoQ, IFC, measurement, classification) | `docs/01-domain-primer.md` |
 | Which IFC files exist and which were tested | `docs/12-ifc-corpus-catalogue.md` |
+| Which measurement standards exist and what each covers | `docs/13-measurement-standards.md` |
 | Why something is the way it is | `docs/02-decisions.md` |
 | Add or change an engine stage | `docs/05-engine.md` |
 | Write or change a rule set | `docs/06-rules-authoring.md` |
+| Use the Library to manage rule sets (user guide) | `docs/14-rules-guide.md` |
 | Dictionaries and code lists | `docs/07-dictionaries-and-classification.md` |
 | What is not built yet, open questions | `docs/11-roadmap-and-open-questions.md` |
 | Everything from the original conversation, verbatim | `docs/reference/` |

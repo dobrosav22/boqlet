@@ -55,16 +55,26 @@ export function App() {
   const [lib, setLib] = useState<LibState>({});
   const [libSel, setLibSel] = useState<string | null>(null);
 
-  const loadPresets = () => {
+  /** keep: after saving or deleting a preset, keep the BoQ choices that still exist instead of resetting them. */
+  const loadPresets = (keep?: unknown) => {
     setPresetsError(null);
     api
       .presets()
       .then((p) => {
         setPresets(p);
-        setSettings({
-          ruleSet: p.ruleSets.find((r) => r.id === "as-modelled")?.id ?? p.ruleSets[0]?.id ?? "",
-          dictionaries: p.dictionaries.filter((d) => d.id === "global-seed").map((d) => d.id),
-          classifications: p.classifications.filter((c) => c.id === "acme-cost-codes" && c.available).map((c) => c.id),
+        setSettings((s) => {
+          const ruleSet = p.ruleSets.find((r) => r.id === "as-modelled")?.id ?? p.ruleSets[0]?.id ?? "";
+          if (keep !== true)
+            return {
+              ruleSet,
+              dictionaries: p.dictionaries.filter((d) => d.id === "global-seed").map((d) => d.id),
+              classifications: p.classifications.filter((c) => c.id === "acme-cost-codes" && c.available).map((c) => c.id),
+            };
+          return {
+            ruleSet: p.ruleSets.some((r) => r.id === s.ruleSet) ? s.ruleSet : ruleSet,
+            dictionaries: s.dictionaries.filter((id) => p.dictionaries.some((d) => d.id === id)),
+            classifications: s.classifications.filter((id) => p.classifications.some((c) => c.id === id && c.available)),
+          };
         });
       })
       .catch((e: Error) => setPresetsError(e.message));
@@ -138,6 +148,7 @@ export function App() {
           presets={presets}
           presetsError={presetsError}
           onRetryPresets={loadPresets}
+          onPresetsChanged={() => loadPresets(true)}
           lib={lib}
           setLib={setLib}
           sel={libSel}

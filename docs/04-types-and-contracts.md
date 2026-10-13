@@ -125,6 +125,7 @@ interface by a compile-time check) so it can appear in the JSON Schema.
 | `warnings[]` | code, message, guids, ruleId (e.g. double claims, mixed fields under a map rule, integrity problems) |
 | `checks[]` | verification checks from parsing |
 | `log[]` | ordered `LogEntry`: seq, stage, level (info/detail/warning), message, ruleId, lineKey, guid, data |
+| `building` | `BuildingMeasures`: whole-building values formulas read as `building.*`, with provenance (reported / derived) and notes |
 | `models[]` | `ModelReport` per model combined (one for a single model): file name, discipline, elements, taken, left to others, excluded by scope, duplicate GlobalIds, taken without owner |
 | `stats` | elements, measured, excluded, unmatched, lines, flagged lines, decisions applied, duration |
 
@@ -154,6 +155,8 @@ Trace elements carry `model` (the model id) so a line can be followed back to it
 | `POST /api/codelists/read` | multipart `file` (.xlsx, .csv, .tsv, .txt) | `TableReadResponse`: sheets of text rows, each with a guess of header row, columns and code separator |
 | `POST /api/codelists/build` | `CodeListBuildRequest` (rows, header row, column mapping, hierarchy, separator) | `CodeListBuildResponse`: codes with parents and levels, problems, stats |
 | `POST /api/presets/{kind}/check` | `CheckPresetRequest` (doc = a draft preset; classification = `{ codeList, map }`; library = other unsaved drafts) | `CheckPresetResponse` (ok, problems, and for rule sets the flattened set). Schema, extends chain and integrity, expression syntax, unknown terms and codes. Saves nothing. |
+| `PUT /api/presets/{kind}/{id}` | `SavePresetRequest` (doc; its id must match) | `SavePresetResponse` (saved, problems). The same checks as above; when there are none, writes the draft to `presets/user/` (`IFC_BOQ_USER_PRESETS`, git-ignored). A shipped preset's id is refused. Dev build only; the backend will own preset storage. |
+| `DELETE /api/presets/{kind}/{id}` | | `{ ok }`; 404 for a shipped preset or an unknown id |
 
 Errors return `ApiError` `{ detail }` with a 4xx/5xx status. The contract is deliberately
 job-shaped (see 03-architecture.md) so it can move behind the Java backend and a queue.

@@ -77,6 +77,13 @@
       "title": "What is included"
     }
   ],
+  "scope": {
+    "exclude": [
+      {
+        "expr": "p.renovation_scope = \"new_work\" AND (status = \"existing\" OR status = \"demolish\")"
+      }
+    ]
+  },
   "params": {
     "lines_by_storey": {
       "type": "boolean",
@@ -114,8 +121,22 @@
       "label": "Formula: excavation",
       "section": "earthworks",
       "value": "(src.length + 2 * p.working_space) * (src.width + 2 * p.working_space) * src.height",
+      "choices": [
+        {
+          "label": "Footing plan plus the working space on every side, times the footing height",
+          "value": "(src.length + 2 * p.working_space) * (src.width + 2 * p.working_space) * src.height"
+        },
+        {
+          "label": "As above, down to the underside of the blinding (when blinding is measured)",
+          "value": "(length + 2 * p.working_space) * (width + 2 * p.working_space) * (height + IF(p.blinding, p.blinding_thickness, 0))"
+        },
+        {
+          "label": "The footing's own volume, no working space",
+          "value": "net_volume"
+        }
+      ],
       "question": "How do you calculate excavation for a footing?",
-      "variables": "src.* = the footing: length, width, height, net_volume; p.working_space",
+      "variables": "The footing: length, width, height, net volume; the working space and blinding answers",
       "help": "Default: footing plan enlarged by the working space on every side, times the footing depth.",
       "dependsOn": {
         "param": "excavation",
@@ -190,11 +211,25 @@
     "formwork_walls_formula": {
       "type": "formula",
       "value": "SUM(src.faces.gross_area WHERE side = \"a\" OR side = \"b\")",
+      "choices": [
+        {
+          "label": "Both faces, openings not deducted",
+          "value": "SUM(src.faces.gross_area WHERE side = \"a\" OR side = \"b\")"
+        },
+        {
+          "label": "Both faces, openings deducted",
+          "value": "SUM(faces.net_area WHERE side = \"a\" OR side = \"b\")"
+        },
+        {
+          "label": "One face only, openings not deducted",
+          "value": "SUM(faces.gross_area WHERE side = \"a\")"
+        }
+      ],
       "unit": "m2",
       "label": "Formula: wall formwork",
       "section": "concrete",
       "question": "How do you calculate formwork to concrete walls?",
-      "variables": "src.* = the concrete wall: faces, length, height, thickness, net_area, openings",
+      "variables": "The concrete wall: its two faces (side a, side b) with gross and net area, length, height, thickness, openings",
       "help": "Default: both faces of the wall, openings not deducted (gross).",
       "dependsOn": {
         "param": "formwork_separate",
@@ -206,11 +241,21 @@
     "formwork_slab_edges_formula": {
       "type": "formula",
       "value": "src.perimeter * src.thickness",
+      "choices": [
+        {
+          "label": "Outer edge: perimeter times thickness",
+          "value": "src.perimeter * src.thickness"
+        },
+        {
+          "label": "Outer edge and the edges of openings",
+          "value": "(perimeter + SUM(openings.perimeter)) * thickness"
+        }
+      ],
       "unit": "m2",
       "label": "Formula: slab edge formwork",
       "section": "concrete",
       "question": "How do you calculate edge formwork to concrete slabs?",
-      "variables": "src.* = the concrete slab: perimeter, thickness, net_area, openings",
+      "variables": "The concrete slab: perimeter, thickness, net area, openings (each with width, height, perimeter)",
       "dependsOn": {
         "param": "formwork_separate",
         "values": [
@@ -221,11 +266,21 @@
     "formwork_footings_formula": {
       "type": "formula",
       "value": "2 * src.length * src.height",
+      "choices": [
+        {
+          "label": "The two long sides",
+          "value": "2 * src.length * src.height"
+        },
+        {
+          "label": "All four sides",
+          "value": "2 * (length + width) * height"
+        }
+      ],
       "unit": "m2",
       "label": "Formula: footing formwork",
       "section": "concrete",
       "question": "How do you calculate formwork to the sides of footings?",
-      "variables": "src.* = the footing: length, width, height, perimeter",
+      "variables": "The footing: length, width, height, perimeter",
       "dependsOn": {
         "param": "formwork_separate",
         "values": [
@@ -487,6 +542,39 @@
         ]
       }
     },
+    "wall_recess_mode": {
+      "type": "choice",
+      "value": "none",
+      "options": [
+        "none",
+        "all",
+        "over_threshold"
+      ],
+      "optionLabels": {
+        "none": "Not deducted",
+        "all": "All recesses deducted",
+        "over_threshold": "Recesses larger than a size limit deducted"
+      },
+      "label": "Wall recess deduction",
+      "section": "openings",
+      "question": "Are recesses (niches, chases that do not go through the wall) deducted from walls measured in m3?",
+      "help": "Only walls measured by volume lose recesses; wall areas never do. A recess is an opening the model marks as one (IFC RECESS)."
+    },
+    "wall_recess_threshold": {
+      "type": "number",
+      "value": 0,
+      "unit": "m2",
+      "min": 0,
+      "label": "Recess size limit",
+      "section": "openings",
+      "question": "Above which face area are recesses deducted?",
+      "dependsOn": {
+        "param": "wall_recess_mode",
+        "values": [
+          "over_threshold"
+        ]
+      }
+    },
     "window_measure": {
       "type": "choice",
       "value": "count",
@@ -638,8 +726,18 @@
       "label": "Formula: wall paint",
       "section": "finishes",
       "value": "SUM(src.layers.area WHERE UNDER(material, \"board.plasterboard\"))",
+      "choices": [
+        {
+          "label": "Area of every plasterboard layer of the wall",
+          "value": "SUM(src.layers.area WHERE UNDER(material, \"board.plasterboard\"))"
+        },
+        {
+          "label": "Wall faces that bound a room, openings deducted (needs rooms in the model)",
+          "value": "SUM(faces.net_area WHERE space != null)"
+        }
+      ],
       "question": "How do you calculate the painted wall area?",
-      "variables": "src.* = the wall: layers (with material, area, thickness), faces, openings, net_area",
+      "variables": "The wall: its layers (material, area, thickness), its faces (with the room on each), openings, net area",
       "help": "Default: the area of every plasterboard layer of the wall.",
       "dependsOn": {
         "param": "paint_walls",
@@ -669,8 +767,18 @@
       "label": "Formula: skirting",
       "section": "finishes",
       "value": "src.perimeter - SUM(src.openings.width WHERE kind = \"door\")",
+      "choices": [
+        {
+          "label": "Perimeter less door openings",
+          "value": "src.perimeter - SUM(src.openings.width WHERE kind = \"door\")"
+        },
+        {
+          "label": "Full perimeter, doors not deducted",
+          "value": "perimeter"
+        }
+      ],
       "question": "How do you calculate skirting length?",
-      "variables": "src.* = the floor covering: perimeter, openings, net_area",
+      "variables": "The floor covering: perimeter, openings (doors with their width), net area",
       "help": "Default: the perimeter of the floor finish less door openings.",
       "dependsOn": {
         "param": "skirting",
@@ -826,6 +934,36 @@
       "question": "Are objects with a non-physical material (origin and georeference markers, zone volumes) counted?",
       "help": "No: they are left out and listed as excluded. Authoring tools add them for placement and display only."
     },
+    "renovation_scope": {
+      "type": "choice",
+      "value": "all",
+      "options": [
+        "all",
+        "new_work"
+      ],
+      "optionLabels": {
+        "all": "Everything in the model, whatever its status",
+        "new_work": "New work only: existing and demolished elements are left out"
+      },
+      "label": "Renovation scope",
+      "section": "scope",
+      "question": "Does this BoQ cover everything in the model, or only new work (renovation)?",
+      "help": "Uses each element's status in the model (the IFC Status property, or Revit phases). Elements left out are not measured and not asked about; the log counts them."
+    },
+    "measure_demolition": {
+      "type": "boolean",
+      "value": false,
+      "label": "Measure demolition",
+      "section": "scope",
+      "question": "Are elements marked for demolition measured as demolition items?",
+      "help": "One line per element type: m3 where the element has a volume, otherwise a count.",
+      "dependsOn": {
+        "param": "renovation_scope",
+        "values": [
+          "new_work"
+        ]
+      }
+    },
     "room_finishes": {
       "type": "boolean",
       "value": false,
@@ -833,6 +971,44 @@
       "section": "finishes",
       "question": "Do you measure floor, ceiling and wall finishes and skirting room by room, from the rooms (IFC spaces)?",
       "help": "Floor and ceiling area, wall area less the doors and windows in its walls, perimeter less door widths. Uses the IFC space quantities if the file has them, else the room solid. Usually instead of finishes from modelled coverings, not as well."
+    },
+    "room_column_mode": {
+      "type": "choice",
+      "value": "none",
+      "options": [
+        "none",
+        "all",
+        "over_threshold"
+      ],
+      "optionLabels": {
+        "none": "Not deducted",
+        "all": "All columns deducted",
+        "over_threshold": "Columns larger than a size limit deducted"
+      },
+      "label": "Columns in rooms",
+      "section": "finishes",
+      "question": "When finishes are measured room by room, is the plan area of columns standing in a room deducted from its floor and ceiling?",
+      "dependsOn": {
+        "param": "room_finishes",
+        "values": [
+          true
+        ]
+      }
+    },
+    "room_column_threshold": {
+      "type": "number",
+      "value": 0,
+      "unit": "m2",
+      "min": 0,
+      "label": "Column size limit",
+      "section": "finishes",
+      "question": "Above which plan area are columns deducted?",
+      "dependsOn": {
+        "param": "room_column_mode",
+        "values": [
+          "over_threshold"
+        ]
+      }
     }
   },
   "items": [
@@ -888,6 +1064,16 @@
                 "compareBy": {
                   "param": "opening_compare_by"
                 }
+              },
+              {
+                "what": "recesses",
+                "mode": {
+                  "param": "wall_recess_mode"
+                },
+                "threshold": {
+                  "param": "wall_recess_threshold"
+                },
+                "compareBy": "area"
               }
             ]
           },
@@ -909,6 +1095,16 @@
                   "compareBy": {
                     "param": "opening_compare_by"
                   }
+                },
+                {
+                  "what": "recesses",
+                  "mode": {
+                    "param": "wall_recess_mode"
+                  },
+                  "threshold": {
+                    "param": "wall_recess_threshold"
+                  },
+                  "compareBy": "area"
                 }
               ]
             },
@@ -1743,9 +1939,22 @@
         "ifcClass": "IfcSpace"
       },
       "quantity": {
-        "kind": "formula",
-        "expr": "floor_area",
-        "unit": "m2"
+        "kind": "area",
+        "surface": "main",
+        "start": "gross",
+        "unit": "m2",
+        "deductions": [
+          {
+            "what": "embedded",
+            "mode": {
+              "param": "room_column_mode"
+            },
+            "threshold": {
+              "param": "room_column_threshold"
+            },
+            "compareBy": "area"
+          }
+        ]
       },
       "lineKey": [
         "space_type",
@@ -1773,8 +1982,8 @@
       },
       "quantity": {
         "kind": "formula",
-        "expr": "ceiling_area",
-        "unit": "m2"
+        "unit": "m2",
+        "expr": "ceiling_area - COALESCE(SUM(embedded.area WHERE p.room_column_mode = \"all\" OR (p.room_column_mode = \"over_threshold\" AND area > p.room_column_threshold)), 0)"
       },
       "lineKey": [
         "space_type",
@@ -1849,6 +2058,39 @@
       ],
       "enabled": {
         "param": "room_finishes"
+      }
+    },
+    {
+      "id": "demolition",
+      "label": "Demolition",
+      "scope": "out",
+      "match": {
+        "field": "status",
+        "op": "eq",
+        "value": "demolish"
+      },
+      "quantity": {
+        "kind": "when",
+        "if": "net_volume > 0",
+        "then": {
+          "kind": "volume",
+          "start": "net"
+        },
+        "else": {
+          "kind": "count"
+        }
+      },
+      "lineKey": [
+        "ifc_class",
+        "type_name",
+        "IF(p.lines_by_storey, storey, \"\")"
+      ],
+      "description": "Demolition, {type_name}{expr: IF(p.lines_by_storey, \", \" + storey, \"\")}",
+      "tags": [
+        "demolition"
+      ],
+      "enabled": {
+        "param": "measure_demolition"
       }
     },
     {

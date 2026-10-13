@@ -33,7 +33,7 @@ Nobody is expected to write a rule set from scratch. `as-modelled` is the **mast
 holds the rules (already written and wired to slots) and asks, through its slots, the questions a
 measurement standard answers, each with a neutral "as modelled" default. A company standard is a
 **patch on the template that stores only the answers that differ**. Someone with the rulebook open
-answers the questions in the Library's **Questions** tab; nothing else is needed for a typical
+answers the questions in the Library's **Settings** tab; nothing else is needed for a typical
 standard, and the defaults keep the Duplex acceptance numbers.
 
 ```json
@@ -57,21 +57,44 @@ Control is never lost; each level goes one step deeper:
 How a slot becomes a question (all optional; `rules.ts`, `SlotPrompt`): `section` (one of the rule
 set's `sections`, which give titles and order), `question` (worded as the rulebook would answer it),
 `help`, `example`, `optionLabels` for choices, and `dependsOn` (`{ param, values }`: the question
-only applies when another slot has one of these values; the UI dims it otherwise, without evaluating
-any expression). A formula slot (`type: "formula"`) holds an expression plus `unit` and `variables`
-(what the formula can read); a `formula` quantity's `expr` and a derived rule's `quantity` accept
-`{ "param": "<formula slot>" }`, and traces say which slot the formula came from.
+only applies when another slot has one of these values; the UI shows it under that question and
+hides it otherwise, without evaluating any expression). A formula slot (`type: "formula"`) holds an
+expression plus `unit`, `variables` (what the formula can read, in words) and `choices` (ready-made
+answers, `{ label, value }`, offered as a pick list; the formula stays visible and editable, and an
+edited one is "custom"; the engine reads only `value`). A `formula` quantity's `expr` and a derived
+rule's `quantity` accept `{ "param": "<formula slot>" }`, and traces say which slot the formula came
+from. Every template formula slot's default is one of its choices (`test_template_formula_choices_run`
+runs each choice on the Duplex). A number slot's `min` / `max` are checked: Check (and Save) report
+an answer outside them, and a slot's `section` must be one of the rule set's sections.
 
-Template v1 has 13 sections and 53 questions: general (lines per storey), earthworks and
+**Everything about questions has a form** (Library › rule set › Advanced › Questions setup): sections
+(title, introduction, order, add, remove; a patch can retitle the parent's and add its own), and per
+question its wording, short name, section, kind of answer (changing it resets the answer), stored
+name (renaming updates every `{ "param" }` and `p.name` in the set), help, example, unit, allowed
+range, the possible answers with their texts, ready-made formulas, and "only ask when" (`dependsOn`).
+Renaming an item's id updates the calculated items of the same set that read from it. The JSON tab
+stays for everything else, but nothing in the rule type needs it.
+
+**Formulas in the editor** are shown with readable names: `(src.length + 2 * p.working_space) *
+src.height` reads `([Length] + 2 * [Working space]) * [Height]`. Brackets hold a label from the
+"Names" list (measured values, element descriptions, lists such as `[Openings › Area]`, line values,
+and the rule set's own answers by their label); text in quotes is taken as written; "code" shows the
+stored text. The editor only renames (`apps/web/src/library/readable.ts`, labels in `vocab.ts`
+`NAMES`); the engine still parses and evaluates everything. `src.` is optional in calculated
+(derived) items, because their context holds the source's fields under their own names too, so
+edited formulas are stored without it.
+
+Template v1 has 13 sections and 62 questions: general (lines per storey), earthworks and
 substructure, concrete with formwork and reinforcement, walls, openings and deductions, floors and
 slabs, roofs, stairs and railings, finishes, steel and other members, services (MEP), preliminaries
 and sums, and what is included. Work that is rarely modelled (excavation, blinding, hardcore,
 formwork, reinforcement, ceiling paint, skirting) is derived and **off by default**, so the defaults
 still reproduce the Duplex acceptance numbers; `test_template_*` in `test_duplex.py` switch each
-answer on and check the effect (ceiling paint matches the hand-made BoQ's 243.46 m2). Not expressible
-yet: excluding existing or demolished elements for renovation work (needs a scope filter in the engine,
-since filtering in a rule would turn them into unmatched questions) and deducting elements passing
-through slabs. Room finishes are an answer now (`room_finishes`, off by default). Growing it: when standards
+answer on and check the effect (ceiling paint matches the hand-made BoQ's 243.46 m2). Renovation
+work is an answer too (`renovation_scope`: everything, or new work only, with `measure_demolition` as a
+follow-up), as are recesses in walls measured in m3 (`wall_recess_mode`), columns standing in rooms
+(`room_column_mode`, with room finishes) and elements passing through slabs (`deduct_embedded`), all
+neutral by default (`test_scope_recess_building.py`). Growing it: when standards
 keep needing a question the template lacks, add a slot with a neutral default, point the rule at
 it, and keep the acceptance test green. Patches built on the template pick up new questions with
 their defaults automatically. The questions still need review by someone who knows the standards
@@ -158,9 +181,33 @@ Units are converted from SI at output (mm, km, ft, ft2, yd2, ft3, yd3, t, lb sup
 the element (`embedded[]` on the measured element, from the solids, also across federated models):
 an area measure deducts the area they take out of the face (shared volume / thickness), a volume
 measure that area x the part's thickness (so a layer gets its share); `compareBy` defaults to
-volume for them, and `where` sees `guid`, `ifc_class`, `volume`, `area`, `model`. `recesses` is
-accepted by the type but **ignored by the engine** with a note. `compareBy`: area, width, height,
-length, volume. On `surface: "both"`, openings are deducted from each face.
+volume for them, and `where` sees `guid`, `ifc_class`, `volume`, `area`, `model`. Rooms carry the
+columns standing in them as `embedded` too (area = shared volume / room height), so a room's floor area
+can lose them. `recesses`: openings the model marks as recesses (IFC4 `IfcOpeningElement` RECESS, or
+ObjectType "Recess" in IFC2x3); deducted as their face area, or area x recess depth for volumes. They
+are never part of `openings` / `voids`, of an element's gross and net area, or of a room's openings.
+`compareBy`: area, width, height, length, volume. On `surface: "both"`, openings are deducted from each face.
+
+### Scope: what the BoQ leaves out
+
+`RuleSet.scope.exclude` is a list of selectors; elements matching any of them are left out of the BoQ:
+not measured, not asked about as unmatched, counted in the log ("left out of this BoQ by the rule
+set's scope"). Items with `scope: "out"` measure exactly those elements and nothing else, e.g. as-modelled's
+`demolition` item (elements with status `demolish`, m3 where they have a volume, else counted). A
+patch's `scope` replaces its parent's. as-modelled's scope is one condition bound to an answer:
+`p.renovation_scope = "new_work" AND (status = "existing" OR status = "demolish")`. An element's
+`status` comes from Revit phasing properties or, in any other tool, the IFC `Status` property of its
+common property set (NEW, EXISTING, DEMOLISH, TEMPORARY).
+
+### Whole-building values
+
+Every formula can read `building.<field>` (`BuildingMeasures` in `measured.ts`): `gross_floor_area`,
+`net_floor_area`, `footprint_area`, `gross_volume`, `space_volume`, `height`, `storeys`. They come from
+the IFC building's own quantities (`Qto_BuildingBaseQuantities`) where present, else are derived from
+all models of the run (floor slab plan areas, room areas and volumes, storey heights; marked
+approximate). `BoqResult.building` holds them with their provenance, and the log says how each was
+found. A manual item may take its quantity from a `formula` over answers and building values, e.g.
+`building.gross_volume / 100` for an item priced per 100 m3 of building.
 
 ### Breakdown, splitting and labels
 
@@ -220,7 +267,9 @@ A firm's rules usually extend a base and state only the differences:
 }
 ```
 
-Merge rules: params merge by name; items, derived and manual override by `id`, new ids are added;
+Merge rules: params merge by name; `sections` merge by id (a new title or intro replaces the parent's,
+new sections come after the parent's, so a patch can group its own questions); items, derived and
+manual override by `id`, new ids are added;
 `remove: ["walls"]` drops ids from the parent. The engine flattens the chain at run time and
 stores the flattened snapshot with the result (`ruleSet.meta.chain`, e.g.
 `as-modelled -> standard-style-example -> acme-house-rules`). `integrity()` catches a removed
@@ -231,7 +280,7 @@ item that derived rules still read from; it found exactly that bug in an early v
 
 | Preset | Extends | What it demonstrates |
 |---|---|---|
-| `as-modelled` | | The master template (see above): 13 sections, 53 questions, 6 formula slots. Defaults give net quantities as modelled, all openings deducted, walls in m2 (m3 switch off by default), windows and doors counted, steel in t by nominal kg/m, roofs by developed area, 17 item rules covering every measurement family, 12 derived (formwork walls / slab edges / footings; rebar estimates for slabs / walls / footings; paint to walls and ceilings; skirting; excavation, blinding, hardcore), 3 manual. Every standard-sensitive value is a slot. Reproduces the hand-made Duplex BoQ. |
+| `as-modelled` | | The master template (see above): 13 sections, 62 questions, 6 formula slots (each with ready-made choices), a scope for renovation work. Defaults give net quantities as modelled, all openings deducted, walls in m2 (m3 switch off by default), windows and doors counted, steel in t by nominal kg/m, roofs by developed area, 30 item rules covering every measurement family (including demolition, off by default), 12 derived (formwork walls / slab edges / footings; rebar estimates for slabs / walls / footings; paint to walls and ceilings; skirting; excavation, blinding, hardcore), 3 manual. Every standard-sensitive value is a slot. Reproduces the hand-made Duplex BoQ. |
 | `standard-style-example` | as-modelled | What encoding a detailed standard looks like: openings over 0.5 m2 deducted with reveals added back, walls of 120 mm and more in m3, windows by area, rebar estimates on, walls replaced by `wall-layers` (one line per element type, material and thickness, air gaps skipped), derived formwork and paint re-pointed at `wall-layers`, a height band slot. Values are placeholders. |
 | `acme-house-rules` | standard-style-example | A firm's tweaks on top of a standard: three slot values, a skirting derived rule, a lump sum. |
 | `demo-tweaked` | as-modelled | The smallest possible custom rules: only three slot values changed (openings up to 1.0 m2 kept, windows by area). Compare it with as-modelled in the app. |
@@ -246,9 +295,11 @@ unmatched-element questions, and the status stays complete because those are not
 ## Writing a new rule set
 
 1. Decide whether it is a patch (most cases) or standalone. Patches are shorter and inherit fixes.
-2. Copy `presets/rules/demo-tweaked.json` (patch) or `demo-custom.json` (standalone), give it a
-   new `id` matching the file name.
-3. Set slot values. Override or add items only where the method differs.
+2. In the Library: "+ New rule set", extend `as-modelled` (or copy `demo-custom` for a standalone
+   set), answer the Settings questions, and **Save**: it is written to `presets/user/<id>.json` and
+   appears in the BoQ's rule-set choices. By hand: copy `presets/rules/demo-tweaked.json` (patch)
+   or `demo-custom.json` (standalone) and give it a new `id` matching the file name.
+3. Set slot values. Override or add items (BoQ items tab) only where the method differs.
 4. Generate in the app, open lines to check formulas and contributions, read the log for
    `match` (what each rule took) and `warning` entries, and answer or inspect questions.
 5. `npm run test:engine` validates every preset against the schema and checks integrity.
@@ -277,5 +328,6 @@ Faces and rooms: wall `side_a` / `side_b` / `larger` / `smaller` / `mean` / `bot
 `openings` (in their walls) and `bounded_by`; as-modelled's `room-floors`, `room-ceilings`, `room-walls`
 and `room-skirting` measure them when `room_finishes` is on.
 
-Known gaps in what rules can express today (see 11): recesses; where exactly an opening sits on a
-face (openings are shared over a side in proportion).
+Known gaps in what rules can express today (see 11): where exactly an opening sits on a face
+(openings are shared over a side in proportion); standard item wording and client templates (the
+item library, 08 gap 4).

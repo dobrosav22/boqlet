@@ -21,7 +21,7 @@
  */
 
 import type { ElementFamily } from "./families";
-import type { Unit } from "./measured";
+import type { BuildingMeasures, Unit } from "./measured";
 import type { OurRuleType, RuleSet, Selector } from "./rules";
 import type { ClassificationInput, LineCode } from "./classification";
 import type { DictionaryInput } from "./dictionary";
@@ -219,6 +219,8 @@ export interface BoqResult {
   checks: Check[];
   /** The models combined into this BoQ (one entry for a single model). */
   models: ModelReport[];
+  /** Whole-building values formulas can use as building.<field>. */
+  building?: BuildingMeasures;
   stats: {
     elements: number;
     measuredElements: number;

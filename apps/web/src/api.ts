@@ -14,6 +14,7 @@ import type {
   PresetsResponse,
   RunRequest,
   RunResponse,
+  SavePresetResponse,
   SceneIndex,
   TableReadResponse,
 } from "@ifc-boq/types";
@@ -49,6 +50,15 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(req),
     }),
+  /** Save a draft to presets/user (dev build); refused with problems, never for a shipped preset's id. */
+  savePreset: (kind: "rules" | "dictionaries" | "classifications", id: string, doc: unknown) =>
+    call<SavePresetResponse>(`/api/presets/${kind}/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ doc }),
+    }),
+  deletePreset: (kind: "rules" | "dictionaries" | "classifications", id: string) =>
+    call<{ ok: boolean }>(`/api/presets/${kind}/${encodeURIComponent(id)}`, { method: "DELETE" }),
   names: (modelId: string, req: NamesRequest) =>
     call<NamesResponse>(`/api/models/${encodeURIComponent(modelId)}/names`, {
       method: "POST",

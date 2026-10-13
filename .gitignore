@@ -13,6 +13,9 @@ __pycache__/
 # Downloaded by `npm run import:uniclass` (NBS terms apply; not redistributed here)
 presets/classifications/uniclass2015-ef/codelist.json
 
+# Presets saved from the Library (dev build); see engine/ifc_boq/presets.py
+presets/user/
+
 # Local
 .env
 .DS_Store

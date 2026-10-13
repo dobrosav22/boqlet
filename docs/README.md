@@ -21,6 +21,8 @@ what is built, what is not, and the open questions.
 | 10 | [10-platform.md](10-platform.md) | Building the product around the engine: data model, federation, roles, jobs, pricing. |
 | 11 | [11-roadmap-and-open-questions.md](11-roadmap-and-open-questions.md) | Deciding what to do next. Known limitations, gaps, open questions. |
 | 12 | [12-ifc-corpus-catalogue.md](12-ifc-corpus-catalogue.md) | Which public IFC files exist, what each is (schema, tool, version, discipline), which ones the engine was run on, and what is still uncovered. Generated from `fixtures/corpus/catalogue.json`. |
+| 13 | [13-measurement-standards.md](13-measurement-standards.md) | You need to know which measurement standards exist worldwide and how much of our rule template each one covers (whole building, per trade, civil, areas only). |
+| 14 | [14-rules-guide.md](14-rules-guide.md) | You use the app and want to make or change a rule set: the tabs, step by step, formulas, common tasks, what to do when something looks wrong. |
 
 ## Reference material (`reference/`)
 
