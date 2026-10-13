@@ -20,10 +20,10 @@ are conveniences for the dev API and CLI.
 
 | # | Stage (log name) | Module | In | Out |
 |---|---|---|---|---|
-| 1 | parse | `parse.py` | IFC file | `ParsedModel` + `geometry.glb`, verification checks. Slow; cached by file hash. |
+| 1 | parse | `parse.py` (+ `geometry.py`) | IFC file | `ParsedModel` + `geometry.glb` + `meshes.npz` (mesh sidecar), verification checks. Slow; cached by file hash. |
 | 2 | names | `names.py` | raw names + dictionaries + name decisions | term per (field, raw text); extracted values |
 | 3 | measure | `measure.py` | ParsedModel + resolver, per model | `MeasuredElement[]` with one adopted number per quantity and its provenance |
-| 3b | match (federation) | `federation.py` | every model's measured elements + boxes, FederationSettings, scopes | one combined `MeasuredElement[]`, `ModelReport[]`, `overlap` questions, warnings |
+| 3b | match (federation) | `federation.py` | every model's measured elements + boxes (+ meshes), FederationSettings, scopes | one combined `MeasuredElement[]` linked across models, `ModelReport[]`, `overlap` questions, warnings |
 | 4 | match / quantity | `rules.py` `run_items` | elements + flattened rule set + decisions | item lines with traces |
 | 5 | derived | `rules.py` `run_derived` | item lines | derived lines |
 | 6 | manual | `rules.py` `run_manual` | rule set | manual lines |
@@ -50,9 +50,10 @@ vertical extent and the principal axes) is taken on the largest disjoint body (`
 so measuring does not depend on world axes. Classification references on a type are inherited
 by its occurrences. Pairwise solid intersections
 (trimesh booleans on the manifold3d engine, for walls, slabs, footings, beams, columns,
-members, coverings, plates, piles, roofs; pairs skipped when bounding boxes do not overlap;
-minimum 0.001 m3) catch double counting. The pair loop is O(n²): fine for the Duplex, needs a
-spatial index before large models. Material,
+members, coverings, plates, piles, roofs; a sweep along x so only pairs whose boxes overlap are
+intersected; minimum 0.001 m3) catch double counting, and each element keeps what it shares with
+others (`intersections`), which measure turns into `embedded`. The sweep is one-dimensional: a
+tall, narrow model still compares many pairs; a full spatial index is for large models. Material,
 type, profile, layer set, property and quantity set extraction keeps everything raw. Checks are
 grouped and summarised (`CheckCode`, see 04). The parser makes no decisions.
 
@@ -61,6 +62,12 @@ direction along the oriented box's thin axis into side a (along the axis; up for
 for each room solid whose surface lies on a side within 0.1 m and faces it, the contact area is the
 room's triangles clipped to the element's extent (`contacts`). Room solids get floor, ceiling and wall
 areas, floor outline perimeter and height (`room`). Geometry only; decisions are in measure.
+
+The mesh measurements live in `geometry.py` (room surfaces, element sides, side contacts, shared
+volume), so federation can run the same code across files. Every mesh is also saved, in world
+coordinates and float64, as the **mesh sidecar** `meshes.npz` beside `parsed.json` (`save_meshes` /
+`load_meshes`); the ParsedModel carries measurements, not meshes. `get_boq` takes the sidecar per
+model (`meshes`); without it, work that needs two models' meshes together is skipped and logged.
 
 Run standalone: `python -m ifc_boq.parse model.ifc out_dir [--schema ...] [--no-overlaps]`.
 
@@ -86,8 +93,8 @@ still need checking against a real ArchiCAD export).
 
 | Quantity | Policy (v0) | Why |
 |---|---|---|
-| volume | reported if present, else geometry, but only from a **closed** mesh (watertight, or closed with T-junctions). If both exist and differ by more than 1%, the reported value is still used and a warning is logged | Reported values are join-aware; geometry double counts at junctions (Duplex party wall stub: geometry +42%). Tessellated exports leave T-junctions; their volume is exact |
-| thickness | material layer set total, else reported, else smallest extent of the **oriented** bounding box (of the largest body) | World-axis extents gave a rotated bridge wall a thickness of 10.39 m |
+| volume | reported if present, else geometry, but only from a **closed** mesh (watertight, or closed with T-junctions). If both exist and differ by more than 1%, the reported value is still used and a warning is logged; beyond 10% (`CONTRADICTION`) a `contradiction` question asks per class and type whether to use the geometry | Reported values are join-aware; geometry double counts at junctions (Duplex party wall stub: geometry +42%). Tessellated exports leave T-junctions; their volume is exact |
+| thickness | material layer set total, else reported, else smallest extent of the **oriented** bounding box (of the largest body). A stated thickness more than 10% (and 5 mm) away from the geometry's (volume / mean side area) raises a `contradiction` question | World-axis extents gave a rotated bridge wall a thickness of 10.39 m. Duplex party wall: layers 0.55 m, geometry 0.46-0.50 m |
 | wall area | net volume / thickness, else reported area | Keeps area, volume and layers consistent; Revit's Area disagreed with Volume on 7 Duplex walls |
 | other areas | reported, else net volume / thickness, else for an open surface model (road markings) the one-sided mesh area | |
 | gross area / volume | net + the openings hosted by the element | Gives rules both starting points |
@@ -101,6 +108,7 @@ still need checking against a real ArchiCAD export).
 | faces | walls, slabs, coverings, plates: from geometry (parse `sides`, `contacts`): per side, one face per room lying on it (the room's contact area; openings shared in proportion) plus the part no room covers. Walls: sides a / b; slabs: top / bottom. Without geometry: each side = main area | `side_a`, `side_b`, `larger`, `smaller`, `mean`, `both` use the real wall sides; slab `top` / `bottom` stay the adopted main area (a slab mesh's top includes the area under walls) |
 | rooms (IfcSpace) | measured elements of family `space`: floor, ceiling and wall area, perimeter, height from `Qto_SpaceBaseQuantities`, else the room solid; net wall area = wall area less the openings in bounding elements near the room; skirting = perimeter less door widths; room type from the dictionary (`space_name`) | Revit's room `Area` is not used: it follows a Revit setting and was ~9% above the room solids on the Duplex (whose solids match Revit's own volumes) |
 | layers | one per material layer: area = main net area, volume = area x thickness, material resolved to a term | |
+| embedded | a planar element sharing solid volume with a linear one (column through a slab, beam in a wall; parse `intersections`, or across models in federation): `embedded[]` with the shared volume and volume / thickness as area. Elements the modeller cut out share nothing | `embedded` deductions; Duplex: beams through six exterior walls |
 | steel mass per metre | parsed from metric W-shape names (W310X60 -> 60 kg/m). Other section families (IPE, HEA...) need a section table, not bundled; rules fall back to volume x density | Geometry was 3.5-4.7% over Revit on Duplex beams |
 | main material | thickest non-air layer, resolved to a term | |
 | status | from phase properties (new / existing) | Renovation filtering |
@@ -111,7 +119,7 @@ measure stage logs one detail line per element explaining the choice.
 
 ### 3b. Federation (`federation.py`)
 
-`get_boq` takes one ParsedModel or a list `[{id, parsed, discipline?, scope?}]`; one model is a
+`get_boq` takes one ParsedModel or a list `[{id, parsed, meshes?, discipline?, scope?}]`; one model is a
 federation of one (D43, D44, design in 10). Each model is measured on its own (cached parse,
 model id and discipline on every element), then `combine()` builds one element set before rules:
 
@@ -120,8 +128,16 @@ model id and discipline on every element), then `combine()` builds one element s
 | storeys | levels within `storeyTolerance` across models are one level; an architecture model's name wins, else the most common; a name used at two levels is a warning |
 | coordinates | models whose element boxes do not overlap at all: a warning (shared coordinates assumed) |
 | same GlobalId | kept once: the copy with a measurable body, then the one its model owns, then the first; parts of a dropped copy are measured on their own (the structural roof's girders under the architectural roof's GlobalId) |
-| ownership | taken if the model's discipline owns it (`presets/settings/federation.json`: `owns` selectors, or `rest`) or `scope.include` selects it; `scope.exclude` always drops it. Not owned: left to the owning model if it has an element of the same IFC class whose box overlaps by `duplicateOverlap`, else taken here with a `federation_hole` warning. A discipline not in the settings owns everything |
-| overlaps | taken elements of one IFC class from different models with overlapping boxes: one `overlap` question per model pair and class, id `overlap:{a}\|{b}:{IfcClass}` with model keys = discipline (or discipline/file name). Answer: the model to keep, or `both`. Unanswered: both kept, `federation_overlap` warning |
+| ownership | taken if the model's discipline owns it (`presets/settings/federation.json`: `owns` selectors, or `rest`) or `scope.include` selects it; `scope.exclude` always drops it. Not owned: left to the owning model if it has an element of the same IFC class that overlaps it by `duplicateOverlap`, else taken here with a `federation_hole` warning (none for a part of an aggregate its own model owns: a curtain wall's mullions, a stair's stringers). A discipline not in the settings owns everything |
+| overlaps | taken elements of one IFC class from different models that overlap: one `overlap` question per model pair and class, id `overlap:{a}\|{b}:{IfcClass}` with model keys = discipline (or discipline/file name). Answer: the model to keep, or `both`. Unanswered: both kept, `federation_overlap` warning |
+| aggregates | an aggregate whose parts were left to another model, excluded or dropped loses them, and its rolled-up volume and area are summed again from the parts kept; with no part left it is left to the other models |
+| fillings | a door or window whose host is not taken (left to the structural model, or never hosted) fills the unfilled opening of another model's taken element whose box holds it (half of the smaller box); the opening becomes a door / window opening. No opening in its place: `federation_unhosted` warning |
+| rooms | rooms of one model lying on walls and slabs of another (same contact test as parse): those elements get faces with the room; every room's `bounded_by`, openings, net wall area and skirting are recomputed from the elements actually taken. Needs meshes |
+| embedded | columns and beams of one model sharing solid volume with walls and slabs of another become `embedded` there (with `model`); embedded elements not taken are removed. Needs meshes |
+
+"Overlap" is the share of the smaller solid inside the other, from the meshes when both models have
+the sidecar and both solids are closed (crossing diagonal braces are not duplicates), else the share
+of the smaller bounding box. The log says how many pairs each test decided.
 
 The result lists every model in `BoqResult.models` (taken, left to others, duplicates, excluded,
 taken without owner); trace elements carry their model id. The selector evaluator is shared with
@@ -153,8 +169,9 @@ maps read (used to decide which unknown names matter).
    `missing:{rule}:{guid}` supplies the value), applies `factor`, element `minimum`, unit
    conversion from SI, element rounding, computes line keys and bands, and appends to the line
    with a trace entry and a log detail.
-5. Elements matched by a disabled rule are counted as excluded. Two rules claiming the same
-   claim name on one element produce a `double_claim` warning.
+5. Elements matched by a disabled rule are counted as excluded. Two or more rules claiming the
+   same claim name on elements raise one `double_claim` question per claim and set of rules
+   (before any line is made); the answer names the rule that keeps them, or "both".
 
 `finalize_lines()` flags lines where no element had a value, applies line minimum and line
 rounding, records the most common value of mixable fields (material, element_type, storey,
@@ -212,7 +229,9 @@ comment in `packages/types/src/rules.ts` and here, add a case to `tests/test_exp
 | `unmatched` | pipeline coverage | `unmatched:{ifc_class}:{type_name}` | no | rule id or `exclude` | elements forced into that rule, or excluded |
 | `unclassified` | classify, `onUnmapped: "ask"` | `unclassified:{system}:{lineKey}` | no | code from that list | code applied with source `decision` |
 | `classification_conflict` | classify, `onConflict: "ask"` | `classconflict:{system}:{lineKey}` | no | code | (answer currently informative; first rule still wins) |
-| `double_claim`, `contradiction`, `overlap` | defined in the type | | | | **not raised yet**: double claims are warnings; contradictions and overlaps appear as parse checks |
+| `double_claim` | rules, two or more rules claim the same thing (`claims`) on elements | `double_claim:{claim}:{rule ids sorted, \|-joined}` | no | choice: a rule id, or `both` | only that rule measures those elements; `both` keeps all (unanswered: all kept, `double_claim` warning) |
+| `contradiction` | measure, reported volume or stated thickness vs geometry beyond 10% | `contradiction:{volume\|thickness}:{ifc_class}:{type_name}` | no | choice: `reported` or `geometry` | the geometry's value is adopted (provenance `geometry`) for those elements, or the stated one confirmed |
+| `overlap` | federation, same IFC class from two models in one place | `overlap:{model a}\|{model b}:{ifc_class}` | no | choice: a model key, or `both` | elements of the other model dropped |
 
 Ids are built from content so the same situation produces the same id on every run and every
 new model version; that is what lets stored decisions re-apply (D19). A decision with

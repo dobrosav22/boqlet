@@ -3,7 +3,8 @@ store.py - file-based cache for parsed models and runs (engine/.cache).
 
   models/<sha256>/model.ifc      the uploaded file (model.ifczip when zipped)
   models/<sha256>/parsed.json    ParsedModel   (parse once per file version)
-  models/<sha256>/geometry.glb   meshes for a future 3D viewer
+  models/<sha256>/geometry.glb   meshes for the 3D viewer
+  models/<sha256>/meshes.npz     the same meshes in float64 for the engine (geometry.py, mesh sidecar)
   runs/<runId>.json              RunRequest + BoqResult (immutable)
   runs/<runId>.xlsx              Excel export
 
@@ -20,6 +21,7 @@ import zipfile
 from functools import lru_cache
 from pathlib import Path
 
+from .geometry import load_meshes, save_meshes
 from .parse import parse_file
 from .paths import CACHE
 
@@ -39,7 +41,7 @@ def put_model(src: Path, file_name: str) -> tuple[str, dict, bool]:
     mid = h.hexdigest()
     d = model_dir(mid)
     parsed_path = d / "parsed.json"
-    if parsed_path.exists():
+    if parsed_path.exists() and (d / "meshes.npz").exists():      # (parsed before the sidecar existed: parse again)
         return mid, get_parsed(mid), True
     d.mkdir(parents=True, exist_ok=True)
     ifc = d / ("model.ifczip" if zipfile.is_zipfile(src) else "model.ifc")   # ifcopenshell reads zips by extension
@@ -51,7 +53,9 @@ def put_model(src: Path, file_name: str) -> tuple[str, dict, bool]:
         parser.export_glb(str(d / "geometry.glb"))
     except Exception:
         pass
+    save_meshes(parser.meshes, d / "meshes.npz")
     get_parsed.cache_clear()
+    get_meshes.cache_clear()
     return mid, doc, False
 
 
@@ -61,6 +65,13 @@ def get_parsed(model_id: str) -> dict:
     if not p.exists():
         raise KeyError(model_id)
     return json.loads(p.read_text(encoding="utf-8"))
+
+
+@lru_cache(maxsize=4)
+def get_meshes(model_id: str) -> dict | None:
+    """The model's mesh sidecar, or None (the engine then skips work that needs meshes)."""
+    p = model_dir(model_id) / "meshes.npz"
+    return load_meshes(p) if p.exists() else None
 
 
 def save_run(request: dict, result: dict) -> str:

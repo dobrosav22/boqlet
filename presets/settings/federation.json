@@ -13,8 +13,16 @@
           { "ifcClass": ["IfcWall", "IfcSlab", "IfcPlate"] },
           { "any": [
             { "field": "load_bearing", "op": "eq", "value": true },
-            { "field": "material", "op": "under", "value": "concrete" },
-            { "field": "material", "op": "under", "value": "metal.steel" }
+            { "all": [
+              { "field": "load_bearing", "op": "neq", "value": false },
+              { "any": [
+                { "field": "material", "op": "under", "value": "concrete" },
+                { "all": [
+                  { "field": "material", "op": "under", "value": "metal.steel" },
+                  { "not": { "field": "material", "op": "under", "value": "metal.steel.stud" } }
+                ] }
+              ] }
+            ] }
           ] }
         ] }
       ]

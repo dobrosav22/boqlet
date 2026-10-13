@@ -215,6 +215,9 @@ export interface GeometryInfo {
   sides?: { axis: Vec3; a: number; b: number };
   /** Where a room's surface lies on a side of this element: contact area per space (m2). */
   contacts?: { spaceId: string; side: "a" | "b"; area: number }[];
+  /** Solids this element shares volume with (m3), from the overlap check (columns through slabs,
+   *  beams in walls, clashes). Only between overlap-checked classes; absent when the check is off. */
+  intersections?: { elementId: string; volume: number }[];
   /** Spaces: the surfaces of the room solid (m2, m). */
   room?: { floorArea: number; ceilingArea: number; wallArea: number; perimeter: number; height: number };
   /** Face winding was inconsistent and repaired before measuring. */

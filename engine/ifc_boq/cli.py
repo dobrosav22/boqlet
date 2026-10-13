@@ -21,6 +21,7 @@ from pathlib import Path
 
 from . import presets
 from .export_xlsx import export
+from .geometry import load_meshes, save_meshes
 from .parse import parse_file
 from .pipeline import get_boq
 
@@ -36,22 +37,30 @@ def main(argv=None) -> int:
     ap.add_argument("--decisions", help="JSON file: list of Decision")
     ap.add_argument("--out", help="write Excel here")
     ap.add_argument("--json", help="write BoqResult JSON here")
-    ap.add_argument("--save-parsed", help="also write the ParsedModel JSON here (reuse it as input next time)")
+    ap.add_argument("--save-parsed", help="also write the ParsedModel JSON here (reuse it as input next time; "
+                                          "meshes.npz is written beside it)")
     ap.add_argument("--quiet", action="store_true")
     a = ap.parse_args(argv)
 
     models = []
     for n, f in enumerate(a.ifc):
         src = Path(f)
+        meshes = None
         if src.suffix.lower() == ".json":
             parsed = json.loads(src.read_text(encoding="utf-8"))
+            side = src.with_name("meshes.npz")
+            meshes = load_meshes(side) if side.exists() else None
         else:
-            parsed, _ = parse_file(str(src))
+            parsed, parser = parse_file(str(src))
+            meshes = parser.meshes
             if a.save_parsed and len(a.ifc) == 1:
                 Path(a.save_parsed).write_text(json.dumps(parsed), encoding="utf-8")
-        models.append({"id": src.stem, "parsed": parsed,
+                save_meshes(meshes, Path(a.save_parsed).with_name("meshes.npz"))
+        models.append({"id": src.stem, "parsed": parsed, "meshes": meshes,
                        **({"discipline": a.disciplines[n]} if n < len(a.disciplines) else {})})
-    parsed = models[0]["parsed"] if len(models) == 1 and not a.disciplines else models
+    if len(models) == 1 and not a.disciplines:
+        models[0].pop("id")                      # one model: its id is the file hash, as in the dev server
+    parsed = models
     rule_set, lib = presets.load_rule_set(a.rules)
     dicts = [presets.load_dictionary(d) for d in a.dict]
     systems = [presets.load_classification(c) for c in a.classes]

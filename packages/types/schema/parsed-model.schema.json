@@ -522,6 +522,26 @@
           },
           "description": "Where a room's surface lies on a side of this element: contact area per space (m2)."
         },
+        "intersections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "elementId": {
+                "type": "string"
+              },
+              "volume": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "elementId",
+              "volume"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Solids this element shares volume with (m3), from the overlap check (columns through slabs, beams in walls, clashes). Only between overlap-checked classes; absent when the check is off."
+        },
         "room": {
           "type": "object",
           "properties": {

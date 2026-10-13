@@ -208,19 +208,38 @@ class RuleEngine:
             what, mode = d["what"], self.val(d["mode"])
             if mode == "none":
                 continue
-            if what in ("embedded", "recesses"):
-                notes.append(f"deduction of {what} not supported yet (ignored)")
+            if what == "recesses":
+                notes.append("deduction of recesses not supported yet (ignored)")
                 continue
-            kinds = {"openings": None, "doors": "door", "windows": "window", "voids": "void"}[what]
-            ops = [o for o in part.get("openings", []) if kinds is None or o["kind"] == kinds]
+            if what == "embedded":
+                # columns / beams through this element (measure.py `embedded`): the area they take
+                # out of the face, or that area x this part's thickness (a layer gets its share)
+                ops = list(part.get("embedded") or [])
+                if per == "length":
+                    if ops:
+                        notes.append("embedded elements are not deducted from lengths")
+                    continue
+
+                def amount(o):
+                    a = o.get("area")
+                    if per == "volume":
+                        return a * thickness if a is not None and thickness else o["volume"]
+                    return a or 0
+            else:
+                kinds = {"openings": None, "doors": "door", "windows": "window", "voids": "void"}[what]
+                ops = [o for o in part.get("openings", []) if kinds is None or o["kind"] == kinds]
+
+                def amount(o):
+                    if per == "length":
+                        return o["width"] or 0
+                    return (o["area"] or 0) * (thickness if per == "volume" else 1)
             if d.get("where"):
                 ops = [o for o in ops if self.x.evaluate(d["where"], {**self.ctx(part), **o})]
             if not ops:
                 continue
             t = self.val(d.get("threshold")) or 0
-            by = self.val(d.get("compareBy")) or "area"
+            by = self.val(d.get("compareBy")) or ("volume" if what == "embedded" else "area")
             size = lambda o: o.get(by) or 0
-            amount = lambda o: (o["area"] or 0) * (thickness if per == "volume" else 1) if per != "length" else (o["width"] or 0)
             if mode == "all":
                 chosen = ops
                 ded = sum(amount(o) for o in ops)
@@ -242,7 +261,7 @@ class RuleEngine:
                 msg += f", threshold {fmt(t)} by {by}"
             msg += f"{'; ' + str(kept) + ' kept' if kept else ''})"
             notes.append(msg)
-            if self.val(d.get("addReveals")) and per == "area" and chosen:
+            if self.val(d.get("addReveals")) and per == "area" and chosen and what != "embedded":
                 rev = sum((2 * (o["height"] or 0) + (o["width"] or 0)) * (o.get("depth") or thickness) for o in chosen)
                 total -= rev
                 notes.append(f"+ {fmt(round(rev, 4))} reveals")
@@ -468,6 +487,7 @@ class RuleEngine:
             self.log.info("match", f"{p.get('name') or g} ({p['ifc_class']}): no rule gets a quantity for the whole; "
                                    f"measured through its {len(p.get('child_guids', []))} part(s)", guid=g)
         # pass 2: per enabled rule, skip aggregate parts whose parent is measured
+        takes = {}
         for i in enabled:
             take = []
             for e in matches[i["id"]]:
@@ -483,14 +503,19 @@ class RuleEngine:
                 take.append(e)
             take += [self.by_guid[g] for g, rid in forced.items() if rid == i["id"] and g in self.by_guid
                      and self.by_guid[g] not in take]
+            takes[i["id"]] = take
+            for e in take:
+                for c in i.get("claims", []):
+                    self.claims[(e["guid"], c)].append(i["id"])
+        dropped = self.double_claims()
+        for i in enabled:
+            take = [e for e in takes[i["id"]] if (i["id"], e["guid"]) not in dropped]
             self.log.info("match", f"rule '{i['id']}' ({i.get('label', '')}) takes {len(take)} element(s)"
                           + (f"; {len([e for e in matches[i['id']] if e['guid'] in self.skipped_parts])} aggregate part(s) skipped (parent measured)"
                              if any(e['guid'] in self.skipped_parts for e in matches[i['id']]) else ""),
                           ruleId=i["id"], data={"guids": [e["guid"] for e in take]})
             for e in take:
                 self.matched.add(e["guid"])
-                for c in i.get("claims", []):
-                    self.claims[(e["guid"], c)].append(i["id"])
                 for part in self.parts_of(i, e):
                     if i.get("partFilter") and part is not e and not self.x.evaluate(i["partFilter"], self.ctx(part)):
                         continue
@@ -507,11 +532,40 @@ class RuleEngine:
         self.excluded -= self.matched
         if decided_out:
             self.log.info("decision", f"{len(decided_out)} element(s) excluded by user answers")
+
+    def double_claims(self) -> set[tuple[str, str]]:
+        """Elements two or more rules claim for the same purpose ("body", "finish"...): one
+        `double_claim` question per claim and set of rules. The answer names the rule that keeps
+        them, or "both". Returns the (rule id, guid) pairs an answer takes away."""
+        groups = defaultdict(list)
         for (guid, claim), rids in self.claims.items():
-            if len(rids) > 1:
-                e = self.by_guid[guid]
-                self.warnings.append({"code": "double_claim", "guids": [guid],
-                                      "message": f"{e.get('name')}: rules {', '.join(rids)} both claim '{claim}' (possible double count)"})
+            if len(set(rids)) > 1:
+                groups[(claim, tuple(sorted(set(rids))))].append(guid)
+        labels = {i["id"]: i.get("label") or i["id"] for i in self.rules["items"]}
+        dropped = set()
+        for (claim, rids), guids in sorted(groups.items()):
+            qid = f"double_claim:{claim}:{'|'.join(rids)}"
+            ans = self.decisions.get(qid)
+            if ans in rids:
+                dropped |= {(r, g) for r in rids if r != ans for g in guids}
+                self.log.info("decision", f"{len(guids)} element(s) claimed for '{claim}' by {', '.join(rids)}: "
+                                          f"measured by '{ans}' only (answer)")
+                continue
+            if ans == "both":
+                self.log.info("decision", f"{len(guids)} element(s) claimed for '{claim}' by {', '.join(rids)}: all kept (answer)")
+                continue
+            e0 = self.by_guid[guids[0]]
+            msg = (f"{len(guids)} element(s) (e.g. {e0['ifc_class']} '{e0.get('type_name') or e0.get('name') or ''}') are "
+                   f"claimed for '{claim}' by {len(rids)} rules ({', '.join(labels[r] for r in rids)}): they are counted "
+                   f"{len(rids)} times. Which rule should measure them?")
+            self.questions.append({
+                "id": qid, "kind": "double_claim", "blocking": False, "guids": guids, "occurrences": len(guids),
+                "message": msg, "suggestion": "both",
+                "answer": {"kind": "choice", "options": [{"value": r, "label": f"Only '{labels[r]}'"} for r in rids]
+                           + [{"value": "both", "label": "All of them (they measure different things)"}]}})
+            self.warnings.append({"code": "double_claim", "guids": guids,
+                                  "message": f"{len(guids)} element(s): rules {', '.join(rids)} all claim '{claim}' (possible double count)"})
+        return dropped
 
     def add_part(self, item: dict, el: dict, part: dict):
         rid = item["id"]

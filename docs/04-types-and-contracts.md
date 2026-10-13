@@ -77,7 +77,9 @@ One JSON per IFC version. Conventions: ids are IFC GlobalIds wherever the file h
 one get deterministic ids (`mat:<step id>`, `mls:...`, `prf:...`, `cls:...`); all lengths,
 areas and volumes converted to SI with the original unit kept in `header.units`; world
 coordinates as in the file (federation alignment is a separate, later step); meshes are not in
-the JSON but in a separate `geometry.glb` with one node per GlobalId.
+the JSON but in `geometry.glb` (one node per GlobalId, for viewers) and the mesh sidecar `meshes.npz`
+(float64, for the engine's work across models; `engine/ifc_boq/geometry.py`). The sidecar is an
+engine file, not part of the TypeScript contract.
 
 | Part | Holds |
 |---|---|

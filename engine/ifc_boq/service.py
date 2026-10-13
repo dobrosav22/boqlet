@@ -50,7 +50,7 @@ def model_summary(model_id: str, parsed: dict, cached: bool) -> dict:
 
 
 def run(models, request: dict) -> tuple[dict, dict]:
-    """models: one ParsedModel, or [{"id", "parsed", "discipline"?, "scope"?}] (federation).
+    """models: one ParsedModel, or [{"id", "parsed", "meshes"?, "discipline"?, "scope"?}] (federation).
     request = RunRequest (preset ids). Returns (BoqResult, export meta)."""
     rule_set, lib = presets.load_rule_set(request.get("ruleSet") or presets.DEFAULTS["ruleSet"])
     dicts = [presets.load_dictionary(d) for d in (request.get("dictionaries") or presets.DEFAULTS["dictionaries"])]
@@ -74,7 +74,7 @@ def run_and_store(request: dict) -> tuple[str, dict]:
     wanted = request.get("models") or ([{"modelId": request["modelId"]}] if request.get("modelId") else [])
     if not wanted:
         raise ValueError("No model in the request: give modelId or models.")
-    models = [{"id": m["modelId"], "parsed": store.get_parsed(m["modelId"]),
+    models = [{"id": m["modelId"], "parsed": store.get_parsed(m["modelId"]), "meshes": store.get_meshes(m["modelId"]),
                **({"discipline": m["discipline"]} if m.get("discipline") else {}),
                **({"scope": m["scope"]} if m.get("scope") else {})} for m in wanted]
     result, meta = run(models, request)

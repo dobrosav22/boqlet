@@ -86,13 +86,13 @@ Engine data: uploaded models and runs are stored in `engine/.cache/` (safe to de
 | Parse + verify IFC2x3 (Revit) | Working, tested on one file |
 | IFC4 / other authoring tools | Written to be general; untested |
 | Dictionaries (layers, extractors, term hierarchy) | Working; AI suggestions not built |
-| Measuring (adoption policy) | Working; per-face areas approximated |
-| Rule language (items, derived, manual, slots, patches, expressions) | Working; `embedded`/`recesses` deductions ignored |
+| Measuring (adoption policy) | Working; real wall faces with the rooms on them, rooms measured, elements passing through others |
+| Rule language (items, derived, manual, slots, patches, expressions) | Working; `recesses` deductions ignored |
 | Classification (multiple systems, maps, lookups, fromSource) | Working |
-| Questions and decisions | unknown_name, missing_data, unmatched, unclassified, classification_conflict. Overlap and contradiction questions not yet raised (they appear as checks). |
+| Questions and decisions | unknown_name, missing_data, unmatched, unclassified, classification_conflict, double_claim, contradiction, overlap |
 | Calculation log + line traces | Working |
 | Excel export | Working |
-| Multiple models per BoQ (federation, scope rules) | Not built |
+| Multiple models per BoQ (federation, scope rules) | Working: ownership, scopes, duplicates, overlaps, links across models (05, 10) |
 | Model revisions, carrying decisions over | Decisions are keyed to be stable; revision diff not built |
 | Users, projects, jobs, Java backend | Not built (designed, see 10-platform.md) |
 

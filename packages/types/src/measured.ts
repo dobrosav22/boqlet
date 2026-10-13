@@ -36,6 +36,8 @@ export interface Face {
 }
 
 export interface Opening {
+  /** GlobalId of the IfcOpeningElement. */
+  guid?: string;
   kind: "door" | "window" | "void";
   width: number;
   height: number;
@@ -45,6 +47,14 @@ export interface Opening {
   perimeter: number;
   filling_guid?: string;
   filling_class?: string;
+}
+
+export interface Embedded {
+  guid: string;
+  ifc_class: string;
+  volume: number;
+  area?: number;
+  model?: string;
 }
 
 export interface Layer {
@@ -144,6 +154,11 @@ export interface MeasuredElement {
 
   /* ---- parts & relationships --------------------------------------- */
   openings: Opening[];
+  /** Linear elements (columns, beams, members) passing through this planar element: the solid
+   *  volume they share with it, and that volume over this element's thickness (the area they take
+   *  out of its face). Used by `embedded` deductions. `model` is set when the element is in another
+   *  model of a federation. */
+  embedded?: Embedded[];
   layers: Layer[];
   host_guid?: string;
   parent_guid?: string;

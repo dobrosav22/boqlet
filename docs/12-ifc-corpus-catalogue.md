@@ -104,7 +104,7 @@ Each cell is *tested / readable*: files the engine ran on, out of files with a h
 - **Recent versions.** Nothing from Revit 2022+, Archicad 24+, Tekla 2022+, Vectorworks 2019+, Allplan after 2008 or MagiCAD after 2015.
 - **Large models.** 30 files over 60 MB (up to 288 MB) were not run; time and memory at that size are unknown. The largest file run is 60 MB, the most elements 11 451. The overlap check was off for the whole corpus.
 - **Quantities.** None of these files has a professional BoQ; only the Duplex and the buildingSMART samples have checked numbers (09). Reinforcement, MEP and infrastructure quantities are run, not verified.
-- **Federation.** Several multi-model sets are available (NBU Office Building and Medical Clinic, LTU A-House, Schependomlaan, the certification scene) but each file was run alone; federation is not built.
+- **Federation.** Built, and run on two real architecture + structure pairs from Revit 2011 (NBU Office Building, NBU Medical Clinic): ownership, rooms on the other model's walls, columns and beams through the other model's walls and slabs, contradictions. Checked by inspection, not against a BoQ. Not federated yet: MEP models (the clinic's MEP file is 207 MB), the Schependomlaan subcontractor models, LTU A-House; no set from a tool other than Revit, and none whose models use different coordinate systems (shared coordinates are assumed).
 - **Old schemas.** 47 files are IFC2x2, IFC2x or IFC2.0, which ifcopenshell cannot read. Out of scope unless a client sends one.
 - **Other formats.** No ifcXML or IFC-JSON samples.
 
@@ -120,6 +120,9 @@ Each cell is *tested / readable*: files the engine ran on, out of files with a h
 - **Inputs**: `.ifczip` is accepted by the corpus runner, the API and the UI (Schependomlaan ships 27); IFC2x2 and older are skipped with a reason instead of a traceback.
 - **Data quality**: four COBie variants of the NBU Duplex and one Auckland sample are not valid STEP; Schependomlaan's `V_L_Constructief.ifc` is a Git LFS pointer unless fetched from the media host; the Lakeside file named RVT is Vectorworks and the one named VW is Revit; placeholder materials (`Default`, `Undefined/Undefined`, `Leer`, `Lege arcering`, `NO PRODUCT MATCHES CRITERIA`) block as unknown names; Tekla exported 447 empty `Steel Assembly` groups in one file (one grouped `unmatched` question).
 - **Run time**: up to 409 s for a 25 MB Vectorworks file and 308 s for an 11 MB file with 10 743 elements, without the overlap check. Fine for a dev build; a worker with progress reporting is needed for real projects.
+- **Steel-stud partitions given to structure** (NBU Office and Medical Clinic federated): the ownership preset gave walls with a steel main material to structure, and stud layers resolve to `metal.steel.stud`; 1,544 partitions marked `LoadBearing = false` became federation holes. Fixed in `presets/settings/federation.json`: an explicit non-load-bearing flag wins, studs are not structural steel.
+- **Curtain-wall mullions and stair stringers as holes** (NBU Medical Clinic): `IfcMember` parts of architectural aggregates were reported as structure's missing elements (534). Fixed: a part of an aggregate its own model owns is taken with it, without a warning.
+- **False thickness contradiction on wall stubs** (NBU Medical Clinic): a partition shorter than it is thick has its oriented box's thin axis along its length (+439%). Fixed: thickness contradictions only for clear plates (thin axis at most half the width, both sides alike).
 
 ## Files
 

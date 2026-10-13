@@ -10,7 +10,8 @@ Usage (CLI):      python -m ifc_boq.parse model.ifc out_dir [--schema parsed-mod
 
 Outputs:
     out_dir/parsed.json      the ParsedModel document
-    out_dir/geometry.glb     one mesh node per GlobalId (world coordinates)
+    out_dir/geometry.glb     one mesh node per GlobalId (world coordinates), for viewers
+    out_dir/meshes.npz       the same meshes in float64, for the engine (geometry.py, mesh sidecar)
 """
 from __future__ import annotations
 
@@ -34,9 +35,11 @@ import ifcopenshell.util.element as ue
 import ifcopenshell.util.placement as up
 import ifcopenshell.util.unit as uu
 
+from . import geometry
+
 ENGINE_VERSION = "0.1.0"
 TOLERANCE = 0.01                     # 1 % reported vs geometry
-OVERLAP_MIN_M3 = 1e-3
+OVERLAP_MIN_M3 = geometry.SHARED_MIN
 OVERLAP_CLASSES = ("IfcWall", "IfcSlab", "IfcFooting", "IfcBeam", "IfcColumn", "IfcMember",
                    "IfcCovering", "IfcPlate", "IfcPile", "IfcRoof")
 NEEDS_MATERIAL = ("IfcWall", "IfcSlab", "IfcFooting", "IfcBeam", "IfcColumn", "IfcMember",
@@ -46,7 +49,6 @@ STRUCT_CLASSES = ("IfcBeam", "IfcColumn", "IfcFooting", "IfcPile", "IfcReinforci
 ARCH_CLASSES = ("IfcDoor", "IfcWindow", "IfcCovering", "IfcFurnishingElement", "IfcRailing", "IfcStair")
 INFRA_FACILITIES = ("IfcBridge", "IfcRoad", "IfcRailway", "IfcMarineFacility")
 FACE_CLASSES = ("IfcWall", "IfcSlab", "IfcCovering", "IfcPlate")   # elements whose two sides are measured
-CONTACT_TOL = 0.1    # m: a room surface this close to an element face, and facing it, lies on it
 SPATIAL_KIND = {"IfcProject": "project", "IfcSite": "site", "IfcBuilding": "building",
                 "IfcBuildingStorey": "storey", "IfcSpace": "space", "IfcZone": "zone",
                 "IfcFacility": "facility", "IfcFacilityPart": "facility_part"}
@@ -94,28 +96,6 @@ def class_base(cls: str) -> str:
 
 def is_any(e, classes):
     return any(e.is_a(c) for c in classes)
-
-
-def _clip_area(poly: list, ur: tuple, vr: tuple) -> float:
-    """Area of a 2D polygon inside the rectangle ur x vr (Sutherland-Hodgman clipping)."""
-    def clip(pts, axis, val, keep_ge):
-        out = []
-        for i in range(len(pts)):
-            p, q = pts[i], pts[(i + 1) % len(pts)]
-            pin = p[axis] >= val if keep_ge else p[axis] <= val
-            qin = q[axis] >= val if keep_ge else q[axis] <= val
-            if pin:
-                out.append(p)
-            if pin != qin:
-                t = (val - p[axis]) / (q[axis] - p[axis])
-                out.append((p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])))
-        return out
-    pts = poly
-    for axis, val, ge in ((0, ur[0], True), (0, ur[1], False), (1, vr[0], True), (1, vr[1], False)):
-        pts = clip(pts, axis, val, ge)
-        if len(pts) < 3:
-            return 0.0
-    return abs(sum(pts[i][0] * pts[i - 1][1] - pts[i - 1][0] * pts[i][1] for i in range(len(pts)))) / 2
 
 
 def _hull2d(p: np.ndarray) -> np.ndarray:
@@ -858,7 +838,7 @@ class Parser:
 
     # ----- faces and rooms -----
     def faces_and_rooms(self, elements, spatial):
-        """Geometry only (decisions are in measure.py):
+        """Geometry only (decisions are in measure.py; the measuring is in geometry.py):
         - spaces: floor, ceiling and wall surface of the room solid, floor perimeter, height
         - planar elements: area of the faces on each side of the thin axis (openings already cut),
           and the area of every room surface lying on a side (clipped to the element's extent)."""
@@ -867,50 +847,16 @@ class Parser:
             if s["kind"] != "space" or s["id"] not in self.meshes:
                 continue
             m = self.meshes[s["id"]]
-            nz, area = m.face_normals[:, 2], m.area_faces
-            floor, ceil, wall = nz < -0.9, nz > 0.9, np.abs(nz) < 0.1
-            perimeter = 0.0
-            if floor.any():                     # edges used by one floor triangle only: the outline
-                fe = np.sort(m.faces[floor][:, [0, 1, 1, 2, 2, 0]].reshape(-1, 2), axis=1)
-                uniq, counts = np.unique(fe, axis=0, return_counts=True)
-                b = uniq[counts == 1]
-                perimeter = float(np.linalg.norm(m.vertices[b[:, 0]] - m.vertices[b[:, 1]], axis=1).sum())
-            s["geometry"]["room"] = {"floorArea": r6(area[floor].sum()), "ceilingArea": r6(area[ceil].sum()),
-                                     "wallArea": r6(area[wall].sum()), "perimeter": r6(perimeter),
-                                     "height": r6(float(np.ptp(m.vertices[:, 2])))}
-            rooms[s["id"]] = (m, m.triangles_center, m.face_normals, m.vertices.min(0), m.vertices.max(0))
+            s["geometry"]["room"] = {k: r6(v) for k, v in geometry.room_surfaces(m).items()}
+            rooms[s["id"]] = geometry.room_index(m)
         for e in elements:
             g = e["quantities"]["geometry"]
             if e["ifcClassBase"] not in FACE_CLASSES or e["id"] not in self.meshes or not g.get("obbAxes"):
                 continue
             m = self.meshes[e["id"]]
-            n = np.array(g["obbAxes"][2], dtype=float)          # thin axis
-            # a stable sign: up for slabs, else the first clear horizontal component positive
-            k = 2 if abs(n[2]) > 0.5 else (0 if abs(n[0]) > 1e-6 else 1)
-            n = n if n[k] > 0 else -n
-            dots = m.face_normals @ n
-            g["sides"] = {"axis": vec(n), "a": r6(m.area_faces[dots > 0.9].sum()), "b": r6(m.area_faces[dots < -0.9].sum())}
-            if not rooms:
-                continue
-            proj = m.vertices @ n
-            da, db = proj.max(), proj.min()
-            u, v = np.array(g["obbAxes"][0], dtype=float), np.array(g["obbAxes"][1], dtype=float)
-            ur = (float((m.vertices @ u).min()), float((m.vertices @ u).max()))
-            vr = (float((m.vertices @ v).min()), float((m.vertices @ v).max()))
-            lo, hi = m.vertices.min(0) - CONTACT_TOL, m.vertices.max(0) + CONTACT_TOL
-            contacts = []
-            for sid, (rm, cen, nrm, rlo, rhi) in rooms.items():
-                if np.any(rhi < lo) or np.any(rlo > hi):
-                    continue
-                rd, rc = nrm @ n, cen @ n
-                # a room on side a faces back towards the element (its outward normal is -n)
-                for side, mask in (("a", (rd < -0.9) & (np.abs(rc - da) < CONTACT_TOL)),
-                                   ("b", (rd > 0.9) & (np.abs(rc - db) < CONTACT_TOL))):
-                    if not mask.any():
-                        continue
-                    a = sum(_clip_area([(float(p @ u), float(p @ v)) for p in tri], ur, vr) for tri in rm.vertices[rm.faces[mask]])
-                    if a > 0.01:
-                        contacts.append({"spaceId": sid, "side": side, "area": r6(a)})
+            sides = geometry.element_sides(m, g["obbAxes"])
+            g["sides"] = {"axis": vec(sides["axis"]), "a": r6(sides["a"]), "b": r6(sides["b"])}
+            contacts = geometry.side_contacts(m, sides["axis"], g["obbAxes"], rooms) if rooms else []
             if contacts:
                 g["contacts"] = contacts
 
@@ -987,21 +933,25 @@ class Parser:
             if a.lower() == b.lower() or b.lower().startswith(a.lower() + " - ") or a.lower().startswith(b.lower() + " - "):
                 self.check("duplicate_material_name", "info", [], f"Materials '{a}' and '{b}' may be the same material.",
                            a=a, b=b)
-        # solid overlaps
+        # solid overlaps (sweep along x: only pairs whose boxes overlap are intersected). Each
+        # element keeps what it shares with others (measure.py turns columns through slabs into
+        # `embedded`); larger ones are also reported as checks.
         if self.do_overlaps:
-            cand = [e["id"] for e in elements if e["id"] in self.meshes
-                    and any(f.by_guid(e["id"]).is_a(c) for c in OVERLAP_CLASSES)]
-            for a, b in itertools.combinations(cand, 2):
-                A, B = self.meshes[a], self.meshes[b]
-                lo, hi = np.maximum(A.bounds[0], B.bounds[0]), np.minimum(A.bounds[1], B.bounds[1])
-                if np.any(hi - lo <= 1e-4):
-                    continue
-                try:
-                    vol = abs(A.intersection(B, engine="manifold").volume)
-                except Exception:
-                    continue
-                if vol > OVERLAP_MIN_M3:
+            cand = sorted((e["id"] for e in elements if e["id"] in self.meshes
+                           and any(f.by_guid(e["id"]).is_a(c) for c in OVERLAP_CLASSES)),
+                          key=lambda g: self.meshes[g].bounds[0][0])
+            for i, a in enumerate(cand):
+                A = self.meshes[a]
+                for b in cand[i + 1:]:
+                    B = self.meshes[b]
+                    if B.bounds[0][0] >= A.bounds[1][0] - 1e-4:
+                        break
+                    vol = geometry.shared_volume(A, B)
+                    if not vol or vol <= OVERLAP_MIN_M3:
+                        continue
                     ea, eb = elem_by_id[a], elem_by_id[b]
+                    for x, y in ((ea, b), (eb, a)):
+                        x["quantities"]["geometry"].setdefault("intersections", []).append({"elementId": y, "volume": r6(vol)})
                     self.check("overlap", "warning" if vol > 0.05 else "info", [a, b],
                                f"{ea['ifcClassBase']} '{ea.get('name', '')}' and {eb['ifcClassBase']} '{eb.get('name', '')}' "
                                f"overlap by {vol:.3f} m3.", volume=r6(vol))
@@ -1061,6 +1011,7 @@ def main(argv=None):
     with open(out_json, "w", encoding="utf-8") as fh:
         json.dump(doc, fh, indent=1)
     p.export_glb(os.path.join(args.out_dir, "geometry.glb"))
+    geometry.save_meshes(p.meshes, os.path.join(args.out_dir, "meshes.npz"))
     if args.schema:
         import jsonschema
         jsonschema.validate(doc, json.load(open(args.schema, encoding="utf-8")))

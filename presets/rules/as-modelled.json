@@ -471,7 +471,21 @@
         "all": "Yes, all",
         "over_threshold": "Yes, larger ones"
       },
-      "help": "Not applied by the engine yet (it needs embedded-element geometry). The answer is kept for when it is."
+      "help": "Columns, beams and members whose solids pass through a slab: the area they take out of it (shared volume / slab thickness). Found from the geometry, also across models of a federation; elements the modeller already cut out deduct nothing."
+    },
+    "embedded_threshold": {
+      "type": "number",
+      "value": 0.5,
+      "unit": "m2",
+      "label": "Size limit for elements passing through",
+      "section": "openings",
+      "question": "Above which plan area are elements passing through slabs deducted?",
+      "dependsOn": {
+        "param": "deduct_embedded",
+        "values": [
+          "over_threshold"
+        ]
+      }
     },
     "window_measure": {
       "type": "choice",
@@ -1037,7 +1051,11 @@
             "what": "embedded",
             "mode": {
               "param": "deduct_embedded"
-            }
+            },
+            "threshold": {
+              "param": "embedded_threshold"
+            },
+            "compareBy": "area"
           }
         ]
       },

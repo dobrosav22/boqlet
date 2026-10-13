@@ -13,6 +13,10 @@ Adoption policy (v0, constants below; documented in docs/05-engine.md):
               T-junctions, see parse.closed_surface).
   thickness   material layer set total, else reported, else smallest extent of the
               oriented bounding box (world axes would give a rotated wall's diagonal).
+  contradictions  reported volume vs a closed mesh, or a layer-set / reported thickness vs the
+              geometry (volume over the mean side area), differing by more than CONTRADICTION:
+              the reported value is kept and a non-blocking `contradiction` question asks, per
+              class and type, whether to use the geometry instead.
   wall area   net_volume / thickness  (keeps area, volume and layers consistent;
               authoring-tool "Area" is often inconsistent), else reported area.
   other area  reported area, else net_volume / thickness, else (open surface models
@@ -28,8 +32,10 @@ Adoption policy (v0, constants below; documented in docs/05-engine.md):
   family      the nearest listed class up the schema's supertypes (families.ts).
   discipline  "mep" for distribution elements, else the model's discipline guess.
   height      door/window OverallHeight, else reported, else vertical geometry extent.
-  faces       walls: side a and b, each = main area (v0 approximation; no per-face
-              geometry yet). Slabs/coverings: top and bottom.
+  faces       real sides from geometry with the rooms lying on them (side_faces), else
+              side a and b (walls) / top and bottom (slabs) each = main area.
+  embedded    linear elements (columns, beams, members) sharing solid volume with a planar
+              element (parse's overlap check): volume, and volume / thickness as area.
   layers      one per material layer: area = main net area, volume = area x thickness.
   steel mass  nominal kg/m parsed from the profile name (metric W shapes), see
               nominal_mass_per_length(); otherwise rules use volume x density.
@@ -46,6 +52,7 @@ from functools import lru_cache
 import ifcopenshell.ifcopenshell_wrapper as ifc_schema
 
 from .expr import fmt
+from .geometry import CONTACT_TOL
 from .log import CalcLog
 from .names import Resolver
 
@@ -53,8 +60,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FAMILIES = json.load(open(os.path.join(HERE, "data", "families.json"), encoding="utf-8"))["IFC_FAMILIES"]
 SOURCES = json.load(open(os.path.join(HERE, "data", "quantity_sources.json"), encoding="utf-8"))
 TOLERANCE = 0.01
+CONTRADICTION = 0.10     # reported vs geometry beyond this (and THICKNESS_MIN for thickness): ask
+THICKNESS_MIN = 0.005    # m
 PLANAR_VERTICAL = ("IfcWall", "IfcCurtainWall", "IfcPlate")
-CONTACT_TOL = 0.1    # m, as in parse.py: openings this close to a room's box face it
 LINEAR_VERTICAL = ("IfcColumn", "IfcPile")
 PHASE_MAP = {"new construction": "new", "new": "new", "existing": "existing"}
 # IFC2x3 distribution occurrences are generic; the specific class is on the type (IfcDuctSegmentType)
@@ -118,11 +126,28 @@ def common_pset(el: dict) -> dict:
     return {}
 
 
+def contradiction_id(what: str, cls: str, type_name: str | None) -> str:
+    return f"contradiction:{what}:{cls}:{type_name or ''}"
+
+
+def opening_record(o: dict, depth: float | None = None) -> dict:
+    """Parsed opening -> MeasuredElement opening."""
+    kind = {"IfcDoor": "door", "IfcWindow": "window"}.get(o.get("fillingClass") or "", "void")
+    w, h = o.get("width"), o.get("height")
+    return {"guid": o["id"], "kind": kind, "width": w, "height": h, "area": o.get("area"),
+            "depth": o.get("depth") or depth, "perimeter": 2 * ((w or 0) + (h or 0)),
+            "filling_guid": o.get("fillingId"), "filling_class": o.get("fillingClass")}
+
+
 def build(parsed: dict, rv: Resolver, log: CalcLog, model_id: str | None = None,
-          discipline: str | None = None) -> tuple[list[dict], list[dict]]:
+          discipline: str | None = None, answers: dict | None = None,
+          questions: list | None = None) -> tuple[list[dict], list[dict]]:
     """Returns (MeasuredElement dicts, name resolutions for questions).
     model_id / discipline: set by federation (the run's id for this model, the user's tag);
-    default to the file hash and the parser's discipline guess."""
+    default to the file hash and the parser's discipline guess. `answers` to earlier
+    `contradiction` questions are applied; new ones are appended to `questions`."""
+    answers = answers or {}
+    asked: dict[str, dict] = {}
     mats = {m["id"]: m["name"] for m in parsed["catalogues"]["materials"]}
     lsets = {l["id"]: l for l in parsed["catalogues"]["layerSets"]}
     types = {t["id"]: t for t in parsed["catalogues"]["types"]}
@@ -245,6 +270,24 @@ def build(parsed: dict, rv: Resolver, log: CalcLog, model_id: str | None = None,
         else:
             t_note = None
 
+        # a stated thickness the geometry contradicts (volume over the mean side area), only for a
+        # clear plate: its thin axis much thinner than its width, both sides about the same size
+        # (a wall stub shorter than it is thick has its "sides" at the ends)
+        sides = g.get("sides")
+        if (prov.get("thickness") == "reported" and fam == "planar" and closed and g.get("volume") and sides
+                and obb and obb[2] <= 0.5 * obb[1]
+                and min(sides["a"], sides["b"]) >= 0.7 * max(sides["a"], sides["b"]) > 0):
+            t_geo = g["volume"] / ((sides["a"] + sides["b"]) / 2)
+            if abs(t_geo - thickness) > max(CONTRADICTION * thickness, THICKNESS_MIN):
+                qid = contradiction_id("thickness", cls, type_name or el.get("name"))
+                if answers.get(qid) == "geometry":
+                    t_note = (f"{fmt(round(t_geo, 4))} m from geometry (volume / mean side area; answer to {qid}); "
+                              f"{t_note} said {fmt(thickness)}")
+                    thickness, prov["thickness"] = t_geo, "geometry"
+                elif answers.get(qid) != "reported":
+                    _ask(asked, qid, "thickness", cls, type_name or el.get("name"), el["id"], thickness, t_geo, t_note)
+                    notes.append(f"thickness {fmt(thickness)} m ({t_note}) but the geometry is {fmt(round(t_geo, 3))} m thick")
+
         # volume
         net_volume, v_note = None, None
         if rep["volume"][0]:
@@ -253,10 +296,18 @@ def build(parsed: dict, rv: Resolver, log: CalcLog, model_id: str | None = None,
             if geo_vol:
                 diff = (geo_vol - net_volume) / net_volume
                 v_note += f"; geometry {fmt(round(geo_vol, 4))} m3 ({diff:+.1%})"
-                if abs(diff) > TOLERANCE:
+                qid = contradiction_id("volume", cls, type_name or el.get("name"))
+                sure = abs(diff) > CONTRADICTION and g.get("hasBody") and closed is not False
+                if sure and answers.get(qid) == "geometry":
+                    net_volume, prov["net_volume"] = geo_vol, "geometry"
+                    v_note += f"; geometry used (answer to {qid})"
+                elif abs(diff) > TOLERANCE:
                     notes.append(f"geometry volume differs from reported by {diff:+.1%}; reported used")
                     log.warn("measure", f"{el.get('name') or el['id']}: geometry volume {fmt(round(geo_vol, 3))} m3 vs reported "
                              f"{fmt(round(net_volume, 3))} m3 ({diff:+.1%}). Using reported (join-aware).", guid=el["id"])
+                    if sure and answers.get(qid) != "reported":
+                        _ask(asked, qid, "volume", cls, type_name or el.get("name"), el["id"], net_volume, geo_vol,
+                             rep["volume"][1])
         elif geo_vol and closed is not False:
             net_volume, prov["net_volume"] = geo_vol, "geometry"
             v_note = f"{fmt(round(geo_vol, 4))} m3 from geometry"
@@ -266,13 +317,7 @@ def build(parsed: dict, rv: Resolver, log: CalcLog, model_id: str | None = None,
             notes.append("mesh not closed: geometric volume unreliable, not used")
 
         # openings hosted by this element
-        ops = []
-        for o in openings_by_host.get(el["id"], []):
-            kind = {"IfcDoor": "door", "IfcWindow": "window"}.get(o.get("fillingClass") or "", "void")
-            w, h = o.get("width"), o.get("height")
-            ops.append({"kind": kind, "width": w, "height": h, "area": o.get("area"),
-                        "depth": o.get("depth") or thickness, "perimeter": 2 * ((w or 0) + (h or 0)),
-                        "filling_guid": o.get("fillingId"), "filling_class": o.get("fillingClass")})
+        ops = [opening_record(o, thickness) for o in openings_by_host.get(el["id"], [])]
         open_area = sum(o["area"] or 0 for o in ops)
 
         # areas
@@ -343,7 +388,6 @@ def build(parsed: dict, rv: Resolver, log: CalcLog, model_id: str | None = None,
         sp = sorted(spaces_of.get(el["id"], set()) | {c["spaceId"] for c in g.get("contacts", [])})
         if net_area is not None:
             labels = ("a", "b") if cls in PLANAR_VERTICAL else ("top", "bottom")
-            sides = g.get("sides")
             if sides and (sides["a"] or sides["b"]):
                 faces = side_faces(sides, g.get("contacts", []), labels, open_area, rooms, common_pset(el).get("IsExternal"))
                 f_note = (f"faces {labels[0]} {fmt(round(sides['a'], 3))} / {labels[1]} {fmt(round(sides['b'], 3))} m2 net"
@@ -422,9 +466,59 @@ def build(parsed: dict, rv: Resolver, log: CalcLog, model_id: str | None = None,
         if nmpl:
             bits.append(f"profile {profile}: {fmt(nmpl)} kg/m")
         log.detail("measure", f"{el.get('name') or el['id']}: " + "; ".join(bits), guid=el["id"])
-    roll_up_parts(out, by_id, log)
+    roll_up_parts(out, {e["id"] for e in parsed["elements"] if e["quantities"]["geometry"].get("hasBody")}, log)
+    measured = {m["guid"]: m for m in out}
+    for m in out:
+        for x in by_id[m["guid"]]["quantities"]["geometry"].get("intersections", []):
+            if x["elementId"] in measured:
+                add_embedded(m, measured[x["elementId"]], x["volume"])
+        if m.get("embedded"):
+            log.detail("measure", f"{m.get('name') or m['guid']}: {len(m['embedded'])} element(s) pass through it, "
+                                  f"{fmt(round(sum(x['volume'] for x in m['embedded']), 4))} m3 shared", guid=m["guid"])
     out += measure_rooms(parsed, rooms, out, model_id, model_discipline, log)
+    if questions is not None:
+        questions += [public_question(q) for q in asked.values()]
     return out, resolutions
+
+
+def _ask(asked: dict, qid: str, what: str, cls: str, type_name: str | None, guid: str, stated: float, geo: float, source):
+    """One `contradiction` question per (what, class, type), collecting its elements."""
+    q = asked.get(qid)
+    diff = (geo - stated) / stated
+    if q is None:
+        q = asked[qid] = {"id": qid, "kind": "contradiction", "blocking": False, "guids": [], "occurrences": 0,
+                          "suggestion": "reported", "_range": [diff, diff], "_example": (stated, geo, source),
+                          "answer": {"kind": "choice", "options": [
+                              {"value": "reported", "label": f"Use the {what} stated in the file", "recommended": True},
+                              {"value": "geometry", "label": f"Use the {what} measured from the geometry"}]}}
+    q["guids"].append(guid)
+    q["occurrences"] += 1
+    q["_range"] = [min(q["_range"][0], diff), max(q["_range"][1], diff)]
+    lo, hi = q["_range"]
+    unit = "m3" if what == "volume" else "m"
+    st, ge, src = q["_example"]
+    spread = f"{lo:+.0%}" if abs(hi - lo) < 0.005 else f"{lo:+.0%} to {hi:+.0%}"
+    q["message"] = (f"{q['occurrences']} x {cls} '{type_name or ''}': the {what} stated in the file and the geometry "
+                    f"disagree by {spread} (e.g. {fmt(round(st, 3))} {unit} from {src} vs {fmt(round(ge, 3))} {unit} measured). "
+                    + ("The stated value is used; it usually allows for joins. " if what == "volume" else "The stated value is used. ")
+                    + "Which should be used?")
+
+
+def public_question(q: dict) -> dict:
+    return {k: v for k, v in q.items() if not k.startswith("_")}
+
+
+def add_embedded(host: dict, other: dict, volume: float, model: str | None = None) -> bool:
+    """A linear element sharing solid volume with a planar one passes through it."""
+    if host["family"] != "planar" or other["family"] != "linear" or volume <= 0:
+        return False
+    rec = {"guid": other["guid"], "ifc_class": other["ifc_class"], "volume": round(volume, 6)}
+    if host.get("thickness"):
+        rec["area"] = round(volume / host["thickness"], 6)
+    if model:
+        rec["model"] = model
+    host.setdefault("embedded", []).append(rec)
+    return True
 
 
 def side_faces(sides: dict, contacts: list, labels: tuple, open_area: float, rooms: dict, is_external) -> list[dict]:
@@ -497,25 +591,9 @@ def measure_rooms(parsed: dict, rooms: dict, elements: list[dict], model_id: str
         revit = (s.get("psets", {}).get("PSet_Revit_Dimensions") or {}).get("Area")
         if isinstance(revit, (int, float)) and floor and abs(revit - floor) / floor > TOLERANCE:
             bits.append(f"Revit Area {fmt(round(revit, 3))} not used ({(revit - floor) / floor:+.1%}, follows a Revit room area setting)")
-        # openings facing the room: in a bounding element, and their box next to the room's box
-        ops, lo, hi = [], g.get("bboxMin"), g.get("bboxMax")
-        for h in sorted(bounding.get(sid, ())):
-            for o in openings_by_host.get(h, []):
-                near = lo and o.get("bboxMin") and all(o["bboxMin"][i] <= hi[i] + CONTACT_TOL and o["bboxMax"][i] >= lo[i] - CONTACT_TOL
-                                                       for i in range(3))
-                if near and (o.get("height") or 0) >= (o.get("depth") or 0):
-                    kind = {"IfcDoor": "door", "IfcWindow": "window"}.get(o.get("fillingClass") or "", "void")
-                    ops.append({"kind": kind, "width": o.get("width"), "height": o.get("height"), "area": o.get("area"),
-                                "depth": o.get("depth"), "perimeter": 2 * ((o.get("width") or 0) + (o.get("height") or 0)),
-                                "filling_guid": o.get("fillingId"), "filling_class": o.get("fillingClass")})
-        open_area = sum(o["area"] or 0 for o in ops)
-        doors = sum(o["width"] or 0 for o in ops if o["kind"] == "door")
         walls_net, _ = find_reported(rec, "wall_area_net")
-        if walls_net is None and walls is not None:
-            walls_net = max(walls - open_area, 0.0)
-        skirting = max(perimeter - doors, 0.0) if perimeter is not None else None
-        if ops:
-            bits.append(f"{len(ops)} opening(s) {fmt(round(open_area, 3))} m2 in its walls, doors {fmt(round(doors, 3))} m wide")
+        if walls_net is not None:
+            prov["wall_area_net"] = "reported"
         storey = spatial.get(s.get("parentId"), {})
         volume, _ = find_reported(rec, "volume")
         if volume is None and g.get("volume") and g.get("closed", g.get("watertight", True)):
@@ -528,25 +606,55 @@ def measure_rooms(parsed: dict, rooms: dict, elements: list[dict], model_id: str
             "storey_elevation": storey.get("elevation") if is_storey else None,
             "spaces": [sid], "status": "new", "count": 1,
             "floor_area": floor, "ceiling_area": ceiling, "wall_area": walls, "wall_area_net": walls_net,
-            "skirting_length": skirting, "perimeter": perimeter, "height": height,
+            "skirting_length": None, "perimeter": perimeter, "height": height,
             "net_area": floor, "gross_area": floor, "footprint_area": floor, "net_volume": volume, "gross_volume": volume,
             "faces": [f for f in ({"side": "bottom", "gross_area": floor, "net_area": floor},
                                   {"side": "top", "gross_area": ceiling, "net_area": ceiling}) if f["gross_area"] is not None],
-            "openings": ops, "layers": [], "child_guids": [], "bounded_by": sorted(bounding.get(sid, ())),
+            "openings": [], "layers": [], "child_guids": [], "bounded_by": sorted(bounding.get(sid, ())),
             "props": {f"{ps}.{k}": v for ps, vals in s.get("psets", {}).items() for k, v in vals.items()},
             "provenance": prov, "warnings": [],
         }
+        bits += set_room_openings(m, facing_openings(g, [o for h in m["bounded_by"] for o in openings_by_host.get(h, [])]))
         out.append(m)
         label = f"{s.get('name') or sid} (room" + (f", {raw}" if raw and raw != s.get("name") else "") + (f" -> {term}" if term else "") + ")"
         log.detail("measure", label + ": " + "; ".join(bits) + f"; bounded by {len(m['bounded_by'])} element(s)", guid=sid)
     return out
 
 
-def roll_up_parts(out: list[dict], by_id: dict, log: CalcLog):
+def facing_openings(room_geo: dict, openings: list[dict]) -> list[dict]:
+    """Openings (parsed) in elements bounding a room that face it: their box next to the room's
+    box, and upright (a slab opening is not in the room's walls). Each opening once."""
+    lo, hi = room_geo.get("bboxMin"), room_geo.get("bboxMax")
+    if not lo:
+        return []
+    out, seen = [], set()
+    for o in openings:
+        if o["id"] in seen or not o.get("bboxMin"):
+            continue
+        near = all(o["bboxMin"][i] <= hi[i] + CONTACT_TOL and o["bboxMax"][i] >= lo[i] - CONTACT_TOL for i in range(3))
+        if near and (o.get("height") or 0) >= (o.get("depth") or 0):
+            seen.add(o["id"])
+            out.append(opening_record(o))
+    return out
+
+
+def set_room_openings(m: dict, ops: list[dict]) -> list[str]:
+    """A room's openings -> net wall area (unless reported) and skirting (perimeter less doors)."""
+    m["openings"] = ops
+    open_area = sum(o["area"] or 0 for o in ops)
+    doors = sum(o["width"] or 0 for o in ops if o["kind"] == "door")
+    if m["provenance"].get("wall_area_net") != "reported":
+        m["wall_area_net"] = max(m["wall_area"] - open_area, 0.0) if m.get("wall_area") is not None else None
+    m["skirting_length"] = max(m["perimeter"] - doors, 0.0) if m.get("perimeter") is not None else None
+    return [f"{len(ops)} opening(s) {fmt(round(open_area, 3))} m2 in its walls, doors {fmt(round(doors, 3))} m wide"] if ops else []
+
+
+def roll_up_parts(out: list[dict], has_body: set[str], log: CalcLog, only: set[str] | None = None):
     """An aggregate without its own body (IfcRoof made of slabs, IfcElementAssembly) takes its
     quantities from its parts: volume = sum of the parts' adopted volumes (only if every part
     with a body has one), area = sum of the planar parts' areas. Parts are still measurable on
-    their own; rules decide whether the whole or the parts are measured (rules.py)."""
+    their own; rules decide whether the whole or the parts are measured (rules.py).
+    `only`: re-roll just these aggregates (federation, after some parts went to another model)."""
     by_guid = {m["guid"]: m for m in out}
 
     def depth(m, seen=0):
@@ -554,10 +662,10 @@ def roll_up_parts(out: list[dict], by_id: dict, log: CalcLog):
         return 0 if p is None or seen > 20 else 1 + depth(p, seen + 1)
 
     for m in sorted(out, key=lambda m: -depth(m)):              # nested assemblies: deepest first
-        if by_id[m["guid"]]["quantities"]["geometry"].get("hasBody") or not m["child_guids"]:
+        if m["guid"] in has_body or not m["child_guids"] or (only is not None and m["guid"] not in only):
             continue
         parts = [by_guid[c] for c in m["child_guids"] if c in by_guid]
-        bodies = [p for p in parts if by_id[p["guid"]]["quantities"]["geometry"].get("hasBody") or p["child_guids"]]
+        bodies = [p for p in parts if p["guid"] in has_body or p["child_guids"]]
         bits = []
         if bodies and all(p["net_volume"] is not None for p in bodies):
             m["net_volume"] = sum(p["net_volume"] for p in bodies)
@@ -568,7 +676,7 @@ def roll_up_parts(out: list[dict], by_id: dict, log: CalcLog):
             m["net_volume"] = m["gross_volume"] = None
             m["warnings"].append("some parts have no reliable volume: no volume for the whole")
         planar = [p for p in parts if p["net_area"] is not None and (p["family"] == "planar" or (      # incl. rolled-up
-            p["child_guids"] and not by_id[p["guid"]]["quantities"]["geometry"].get("hasBody")))]     # sub-assemblies
+            p["child_guids"] and p["guid"] not in has_body))]                                        # sub-assemblies
         if m["net_area"] is None and planar:
             m["net_area"] = sum(p["net_area"] for p in planar)
             m["gross_area"] = sum(p["gross_area"] or p["net_area"] for p in planar)

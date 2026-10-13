@@ -154,9 +154,13 @@ Units are converted from SI at output (mm, km, ft, ft2, yd2, ft3, yd3, t, lb sup
 | `excess_only` | deduct only the part of each opening above the threshold |
 | `per_element_sum` | deduct all if the element's openings together exceed the threshold |
 
-`what`: openings, doors, windows, voids (working); embedded, recesses (accepted by the type,
-**ignored by the engine** with a note; needs embedded-element geometry). `compareBy`: area,
-width, height, length, volume. On `surface: "both"`, openings are deducted from each face.
+`what`: openings, doors, windows, voids; `embedded`: columns, beams and members passing through
+the element (`embedded[]` on the measured element, from the solids, also across federated models):
+an area measure deducts the area they take out of the face (shared volume / thickness), a volume
+measure that area x the part's thickness (so a layer gets its share); `compareBy` defaults to
+volume for them, and `where` sees `guid`, `ifc_class`, `volume`, `area`, `model`. `recesses` is
+accepted by the type but **ignored by the engine** with a note. `compareBy`: area, width, height,
+length, volume. On `surface: "both"`, openings are deducted from each face.
 
 ### Breakdown, splitting and labels
 
@@ -273,5 +277,5 @@ Faces and rooms: wall `side_a` / `side_b` / `larger` / `smaller` / `mean` / `bot
 `openings` (in their walls) and `bounded_by`; as-modelled's `room-floors`, `room-ceilings`, `room-walls`
 and `room-skirting` measure them when `room_finishes` is on.
 
-Known gaps in what rules can express today (see 11): embedded-element deductions; rooms and faces
-across federated models (contacts are found within one file).
+Known gaps in what rules can express today (see 11): recesses; where exactly an opening sits on a
+face (openings are shared over a side in proportion).

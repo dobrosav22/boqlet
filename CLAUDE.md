@@ -101,7 +101,9 @@ dictionary resolution, measuring, federation of several models into one BoQ, rul
 (items, derived, manual), classification
 into any number of code lists, questions and answers, calculation log, Excel export, and a dev
 UI, plus real wall faces with the rooms on them and room-by-room finishes. The engine reproduces the
-hand-made Duplex BoQ exactly. Not yet built: room/face links across federated models, contradiction questions, AI name suggestions, model revisions, background jobs, users and projects, the
+hand-made Duplex BoQ exactly. Across federated models the engine links doors to openings, rooms to walls
+and columns through slabs (with the `meshes.npz` sidecar), and it asks about contradictions and double claims.
+Not yet built: coordinate alignment between models, AI name suggestions, model revisions, background jobs, users and projects, the
 Java backend. Also run on 309 public IFC files from 30 authoring tools (buildingSMART samples,
 DURAARK, the Auckland OpenIFC repository, Schependomlaan): no engine errors, output valid
 against the contract; quantities checked only for the Duplex and the buildingSMART samples.

@@ -3,11 +3,13 @@ pipeline.py - getBoq: ParsedModel(s) + rules + classifications + dictionaries (+
 
     result = get_boq(parsed, rules, classifications=[(code_list, map)], dictionaries=[...],
                      resolution=settings, decisions=[...])
-    result = get_boq([{"id": "arch", "parsed": p1, "discipline": "architecture"},
-                      {"id": "str", "parsed": p2, "discipline": "structure", "scope": {...}}],
+    result = get_boq([{"id": "arch", "parsed": p1, "meshes": m1, "discipline": "architecture"},
+                      {"id": "str", "parsed": p2, "meshes": m2, "discipline": "structure", "scope": {...}}],
                      rules, ..., federation=FederationSettings)
 
 One ParsedModel is a federation of one; a list is combined by federation.py before the rules.
+`meshes` (optional, {guid: trimesh}) is the model's mesh sidecar (geometry.py); federation uses it
+to compare solids and to link rooms and embedded elements across models.
 
 `rules` may be a flattened RuleSet or a RuleSetPatch together with `rule_library`
 (all rule sets by id) so the chain can be flattened here.
@@ -132,10 +134,19 @@ def get_boq(parsed: dict, rules: dict, classifications: list[tuple[dict, dict]],
     log.info("names", "dictionaries: " + ", ".join(f"{d['id']} ({d['layer']})" for d in dictionaries)
              + (f"; {len(dec_entries)} name answer(s) from decisions" if dec_entries else ""))
     resolutions = []
+    measure_questions: dict[str, dict] = {}                # contradictions, merged across models
     for m in models:
-        m["elements"], res = measure(m["parsed"], rv, log, model_id=m["id"], discipline=m["discipline"])
+        qs: list[dict] = []
+        m["elements"], res = measure(m["parsed"], rv, log, model_id=m["id"], discipline=m["discipline"],
+                                     answers=answers, questions=qs)
         m["boxes"] = element_boxes(m["parsed"])
         resolutions += res
+        for q in qs:
+            if q["id"] in measure_questions:
+                measure_questions[q["id"]]["guids"] += q["guids"]
+                measure_questions[q["id"]]["occurrences"] += q["occurrences"]
+            else:
+                measure_questions[q["id"]] = q
     elements, model_reports, fed_questions, fed_warnings = combine(models, federation or {}, rv.expr, log, answers)
     distinct = {}
     for r in resolutions:
@@ -152,9 +163,10 @@ def get_boq(parsed: dict, rules: dict, classifications: list[tuple[dict, dict]],
     # 3. rules ----------------------------------------------------------------------------
     log.info("match", f"rule set '{flat['name']}' ({' -> '.join(flat['chain'])}), "
                       f"{len(flat['items'])} item rules, {len(flat.get('derived', []))} derived, {len(flat.get('manual', []))} manual")
-    warnings: list[dict] = [{"code": "rule_set", "message": p} for p in integrity(flat)] + fed_warnings
+    warnings: list[dict] = [{"code": "rule_set", "message": p} for p in integrity(flat)]
     for w in warnings:
         log.warn("match", w["message"])
+    warnings += fed_warnings                                # federation logged its own
     eng = RuleEngine(flat, elements, rv.expr, log, answers)
     eng.run_items()
     eng.finalize_lines()
@@ -163,7 +175,7 @@ def get_boq(parsed: dict, rules: dict, classifications: list[tuple[dict, dict]],
     manual_lines = eng.run_manual()
     lines = item_lines + derived_lines + manual_lines
     warnings += eng.warnings
-    questions: list[dict] = list(eng.questions) + fed_questions
+    questions: list[dict] = list(eng.questions) + fed_questions + list(measure_questions.values())
 
     # 4. coverage -------------------------------------------------------------------------
     parent_of = {e["guid"]: e.get("parent_guid") for e in elements}

@@ -16,10 +16,11 @@ without being rewritten.
                                         ├─ service.py   preset ids -> get_boq -> stored run
                                         ├─ pipeline.py  get_boq (names, measure, rules, classify, questions, log)
                                         ├─ parse.py     IFC -> ParsedModel (ifcopenshell, trimesh, manifold3d)
+                                        ├─ geometry.py  mesh measurements shared by parse and federation
                                         ├─ presets.py   reads /presets/*.json on every run, validates vs schemas
                                         ├─ export_xlsx.py
                                         └─ store.py     engine/.cache/  (stand-in for storage + DB)
-                                              models/<sha256>/model.ifc, parsed.json, geometry.glb
+                                              models/<sha256>/model.ifc, parsed.json, geometry.glb, meshes.npz
                                               runs/<runId>.json, runs/<runId>.xlsx
 ```
 
@@ -57,12 +58,13 @@ hundred KB; for large models the platform should page lines and logs instead.
 
 | Module | Owns | Must not |
 |---|---|---|
-| `parse.py` | Reading IFC, geometry, verification checks; output = `ParsedModel` | Apply dictionaries or choose quantities |
+| `parse.py` | Reading IFC, geometry, verification checks; output = `ParsedModel` + mesh sidecar | Apply dictionaries or choose quantities |
+| `geometry.py` | Mesh measurements (room surfaces, element sides, room contacts, shared volume), mesh sidecar format | Read IFC or decide anything |
 | `names.py` | Dictionary resolution, extractors, term hierarchy | Know about rules |
 | `measure.py` | Adoption policy: which number to trust per element | Know about rules |
 | `rules.py` | Executing a rule set over measured elements | Measure geometry or read IFC |
 | `classify.py` | Codes per line per system | Change quantities |
-| `federation.py` | Combining several models' measured elements: storeys, same GlobalId, ownership, overlaps | Read files or know about rules |
+| `federation.py` | Combining several models' measured elements: storeys, same GlobalId, ownership, overlaps, aggregates, links across models (fillings, rooms, embedded) | Read files or know about rules |
 | `pipeline.py` | Order of stages, coverage, questions, stats | Contain stage logic |
 | `service.py`, `api.py`, `cli.py`, `store.py`, `corpus.py` | Wiring: preset ids, storage, HTTP, terminal | Contain engine logic |
 
@@ -85,7 +87,7 @@ easy to translate (no reliance on Python-only tricks where a plain loop would do
         │ progress (WS/SSE)      │ enqueue    │ presigned URLs
         │                        ▼           ▼
         │                   Job queue     Object storage (S3-compatible)
-        │                        │         IFC files, parsed.json, geometry.glb, exports
+        │                        │         IFC files, parsed.json, geometry.glb, meshes.npz, exports
         │                        ▼           ▲
         └──────────────── Python engine workers (engine/ifc_boq) ─┘
                            parse, verify, measure, rules, classify, export

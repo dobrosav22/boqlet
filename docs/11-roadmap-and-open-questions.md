@@ -13,15 +13,15 @@ Keep this page current: when you fix a limitation, delete its row.
 | Infrastructure location | Elements in IfcBridgePart / IfcRoadPart have no storey; lines have no location | Infrastructure BoQs cannot split by part | `storey`-like field for the nearest spatial container |
 | Terrain and planting | IfcGeographicElement counted (nr) by as-modelled | Grass, soil, river bed as "1 nr" | Site-works rule set: area / volume by predefined type or material |
 | IFC2x3 / IFC4 infrastructure | Exported as proxies and IfcBuilding | Only counted as unknown objects | Dictionary or rules on ObjectType ("sleeper", "rail"); nothing to do in the engine |
-| Faces and rooms | Built (Oct 2026): real wall sides, faces per room from geometric contact (0.1 m), rooms measured with net wall area and skirting. Limits: contacts within one file only (an architectural room does not see a structural wall in another model); openings shared over a side in proportion, not placed; rooms bounded at wall centre lines by a tool are missed by the 0.1 m tolerance; slab top / bottom keep the main area | Room finishes across federated models need the architectural rooms and structural walls together | Contacts across models in `federation.py` (meshes or boxes beside the parsed model); opening placement on faces; `IfcRelSpaceBoundary` 2nd-level geometry where present |
+| Faces and rooms | Built (Oct 2026): real wall sides, faces per room from geometric contact (0.1 m), rooms measured with net wall area and skirting, also across federated models (needs the mesh sidecar). Limits: openings shared over a side in proportion, not placed; rooms bounded at wall centre lines by a tool are missed by the 0.1 m tolerance; slab top / bottom keep the main area | | Opening placement on faces; `IfcRelSpaceBoundary` 2nd-level geometry where present |
 | Footprint / developed area | Only where measured; developed falls back to net area | Sloped roofs and stairs approximated | `measure.py` |
-| Deductions | `embedded` and `recesses` are ignored (a note is written); as-modelled's `deduct_embedded` slot has no effect | Columns through slabs, beams in walls never deducted | Needs embedded-element intersection from parse |
+| Deductions | `embedded` works (from solid intersections, also across models) but only where parse's overlap check ran (on by default; the corpus runs had it off) and only linear elements in planar ones; `recesses` is ignored (a note is written) | Recesses never deducted; a footing through a slab is not "embedded" | Recesses: IFC4 `IfcOpeningElement` RECESS / IFC2x3 `IfcOpeningRecess` as their own opening kind |
 | Steel | Nominal kg/m only for metric W shapes parsed from the name | Other sections fall back to volume x density | Bundle a section table (check licence) or read profile area |
 | ArchiCAD quantity names | Entries in `quantity_sources.json` are guesses | May miss ArchiCAD quantities | Verify on a real export |
-| Questions | `overlap`, `contradiction` and `double_claim` questions are not raised (overlaps and contradictions are parse checks; double claims are warnings); `classification_conflict` answers are informative only | User cannot resolve those through the UI | `pipeline.py`, `classify.py`, deterministic ids |
-| Overlap check | O(n²) pairs with a bounding-box test | Too slow for large models | Spatial index (R-tree / BVH) |
+| Questions | `classification_conflict` answers are informative only; contradictions cover volume and thickness (not areas, flags such as IsExternal on a door vs its wall, or materials); overlaps inside one file stay parse checks | | `classify.py`; more contradiction kinds in `measure.py` |
+| Overlap check | Sweep along x, then a solid boolean per pair whose boxes overlap | Slow for large or tall models | Spatial index (R-tree / BVH) |
 | AI name suggestions | Settings exist, nothing implemented | Unknown names always go to a question | `names.py`; per unique name, cached, thresholds from settings |
-| Federation | v1 built (`federation.py`): ownership, scope, same-GlobalId merge, storeys, overlap questions. Bounding-box overlaps only; shared coordinates assumed; an aggregate's rolled-up area is not recomputed when some of its parts are left to another model | Possible misses on long diagonal elements; models in different coordinates are not aligned | Mesh-based overlap test (needs meshes beside the parsed model); alignment step; re-roll aggregates after federation |
+| Federation | Built (`federation.py`): ownership, scope, same-GlobalId merge, storeys, overlap questions (solids when the mesh sidecar is there, else boxes), aggregates re-summed, fillings / rooms / embedded linked across models. Shared coordinates assumed | Models in different coordinates are not aligned; without meshes (a parsed.json from an older build) rooms and embedded are not linked across models | Alignment step |
 | Revisions | No version diff; no change report per line | | Match lines by key and elements by GlobalId |
 | Item library / client templates | Not built; no GAEB, no "import a BoQ as template" | | New input or rule-set extension |
 | Export | Excel only | | GAEB, ÖNORM A 2063, CSV, IfcCostSchedule |
@@ -59,9 +59,9 @@ Engineering, roughly in order of value:
    NIBS Office federated set). Run each with `npm run corpus`, fix quirks, add tests. Nothing else
    de-risks as much: the buildingSMART samples alone found ten engine bugs (09), but they all come
    from one exporter.
-2. ~~**Real faces and rooms**~~ built (Oct 2026); next: room-to-face links across federated models.
-3. ~~**Federation v1**~~ built (Oct 2026); next: per-project saved scopes in the platform, mesh-based
-   overlaps, coordinate alignment.
+2. ~~**Real faces and rooms**~~ built (Oct 2026), also across federated models.
+3. ~~**Federation v1**~~ built (Oct 2026), with solid overlaps and links across models; next:
+   per-project saved scopes in the platform, coordinate alignment.
 4. **Platform skeleton in Java**: orgs, projects, model versions, decisions persisted, job table,
    the engine as a worker (see 03 for the mapping). Generate DTOs from `packages/types/schema`.
 5. **Rule editor v1**: the Library has the questionnaire over the master template plus the full editor; still

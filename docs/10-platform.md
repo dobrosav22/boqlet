@@ -111,10 +111,14 @@ Scope settings are saved per project and re-applied to new versions; companies c
 ("our standard three-discipline split").
 
 **Built (v1, engine `federation.py`, see 05):** steps 1-3 above plus same-GlobalId merging and storey
-alignment by elevation. Simplifications: shared coordinates are assumed (a warning when models do not
-overlap in space); overlaps are found with bounding boxes, not solids; an element its model does not own
-is left to the owning model only when that model has an element of the same IFC class in its place,
-otherwise it is kept (a hole avoided, with a warning). Saving scopes per project is the platform's job.
+alignment by elevation, and step 4 (link across models): doors and windows into other models'
+openings, rooms onto other models' walls and slabs, columns and beams through other models' elements,
+aggregates re-summed when parts go elsewhere. Overlaps compare solids when the mesh sidecar is there
+(D68), else bounding boxes. Simplifications: shared coordinates are assumed (a warning when models do
+not overlap in space); an element its model does not own is left to the owning model only when that
+model has an element of the same IFC class in its place, otherwise it is kept (a hole avoided, with a
+warning). Saving scopes per project is the platform's job; the worker needs `meshes.npz` next to
+`parsed.json`.
 
 ## Users, roles and access
 
@@ -201,8 +205,8 @@ the corpus):
 |---|---|---|
 | Reading the file | Fast | Simple parsing |
 | Generating geometry | Slowest | Every element turned into a solid with openings cut; curved shapes much slower |
-| Overlap checks | Slow | Solid comparisons, worse across federated models; needs a spatial index (today O(n²) with a bounding-box test) |
-| Room-face relationships | Medium | Which wall face touches which room (not built) |
+| Overlap checks | Slow | Solid comparisons, worse across federated models; a sweep along one axis today, a full spatial index for large models |
+| Room-face relationships | Medium | Which wall face touches which room, also across models (box prefilter, then clipping) |
 | AI name resolution | Small | Per unique name, cached (not built) |
 | Measuring, rules, output | Milliseconds to seconds | Arithmetic over prepared data |
 
