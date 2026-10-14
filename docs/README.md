@@ -23,6 +23,8 @@ what is built, what is not, and the open questions.
 | 12 | [12-ifc-corpus-catalogue.md](12-ifc-corpus-catalogue.md) | Which public IFC files exist, what each is (schema, tool, version, discipline), which ones the engine was run on, and what is still uncovered. Generated from `fixtures/corpus/catalogue.json`. |
 | 13 | [13-measurement-standards.md](13-measurement-standards.md) | You need to know which measurement standards exist worldwide and how much of our rule template each one covers (whole building, per trade, civil, areas only). |
 | 14 | [14-rules-guide.md](14-rules-guide.md) | You use the app and want to make or change a rule set: the tabs, step by step, formulas, common tasks, what to do when something looks wrong. |
+| 15 | [15-classifications-guide.md](15-classifications-guide.md) | You use the app and want to make or change a classification: how a line gets its code, the tabs, importing a code list, common tasks, what to do when something looks wrong. |
+| 16 | [16-dictionaries-guide.md](16-dictionaries-guide.md) | You use the app and want to teach it what names in models mean: layers, Names in the model, patterns, meanings, values read from names, common tasks. |
 
 ## Reference material (`reference/`)
 

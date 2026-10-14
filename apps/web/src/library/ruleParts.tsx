@@ -2,7 +2,7 @@
  * Building blocks of the rule-set editor: selectors, quantity specs (recursive:
  * choose / when nest other specs), deductions, rounding and missing-value handling.
  */
-import { useId } from "react";
+import { useId, useState } from "react";
 import type {
   DeductionRule,
   ElementFamily,
@@ -17,21 +17,32 @@ import type {
 import {
   AREA_SURFACES,
   BREAKDOWNS,
+  CLASS_GROUPS,
   COMPARE_BY,
   DEDUCTION_MODES,
   DEDUCTION_WHAT,
+  DEDUCT_MODE_WORDS,
+  DEDUCT_WHAT_WORDS,
   FAMILIES,
   IFC_CLASSES,
   LENGTH_BASES,
+  LENGTH_WORDS,
   MASS_BASES,
+  MASS_WORDS,
+  MEASURED_FIELDS,
+  MODES_WITH_SIZE,
   OP_LABEL,
   QUANTITY_KINDS,
-  QUANTITY_KIND_LABEL,
-  SELECTOR_FIELDS,
+  QUANTITY_KIND_WORDS,
   SELECTOR_OPS,
+  START_WORDS,
+  SURFACE_WORDS,
+  TEXT_FIELDS,
   UNITS,
+  classWords,
 } from "./vocab";
 import { ExprInput, Field, LazyText, LogicTree, Num, Options, Select, Text, ToggleChips, ValueField, isRef, parseLiteral } from "./fields";
+import { cap, composeMatch, decomposeMatch, fieldWords } from "./itemStory";
 import { put, removeAt, replaceAt } from "./store";
 
 type Slots = Record<string, Param>;
@@ -46,7 +57,7 @@ const LEAF_TEMPLATES: Record<LeafKind, Selector> = {
   family: { family: "planar" },
   expr: { expr: "" },
 };
-const LEAF_LABEL: Record<LeafKind, string> = { ifcClass: "IFC class", field: "Field", family: "Family", expr: "Expression" };
+const LEAF_LABEL: Record<LeafKind, string> = { field: "A value", ifcClass: "Element kind", family: "Measurement family", expr: "Formula" };
 
 const listOf = (v: unknown) => (Array.isArray(v) ? v : v === undefined || v === "" ? [] : [v]);
 const fmtList = (v: unknown) => listOf(v).map(String).join(", ");
@@ -55,7 +66,7 @@ const oneOrMany = <T,>(l: T[]): T | T[] => (l.length === 1 ? l[0] : l);
 
 function SelectorLeaf({ value, onChange, slots }: { value: Selector; onChange: (v: Selector) => void; slots: Slots }) {
   const kind = leafKind(value);
-  const ids = { fields: useId(), classes: useId() };
+  const ids = { classes: useId() };
   return (
     <div className="leaf">
       <select value={kind} onChange={(e) => onChange(LEAF_TEMPLATES[e.target.value as LeafKind])} aria-label="Condition type">
@@ -77,8 +88,7 @@ function SelectorLeaf({ value, onChange, slots }: { value: Selector; onChange: (
       {"expr" in value && <ExprInput slots={slots} value={value.expr} onChange={(v) => onChange({ expr: v ?? "" })} placeholder='thickness > 0.2 AND UNDER(element_type, "wall.party")' />}
       {"field" in value && (
         <>
-          <LazyText mono list={ids.fields} value={value.field} placeholder="field or props.Pset.Prop" onCommit={(s) => onChange({ ...value, field: s.trim() as typeof value.field })} />
-          <Options id={ids.fields} values={SELECTOR_FIELDS} />
+          <FieldPicker value={value.field} onChange={(f) => onChange({ ...value, field: f as typeof value.field })} />
           <Select<SelectorOp> value={value.op} options={SELECTOR_OPS} labels={OP_LABEL} onChange={(op) => onChange(put({ ...value, op: op ?? "eq" }, "value", op === "exists" || op === "missing" ? undefined : value.value))} />
           {value.op !== "exists" && value.op !== "missing" && (
             <ValueField<unknown> value={value.value as Value<unknown>} onChange={(v) => onChange(put(value, "value", v))} slots={slots}>
@@ -86,7 +96,7 @@ function SelectorLeaf({ value, onChange, slots }: { value: Selector; onChange: (
                 value.op === "in" || value.op === "not_in" || value.op === "between" ? (
                   <LazyText value={fmtList(lit)} placeholder={value.op === "between" ? "min, max" : "a, b, c"} onCommit={(s) => set(parseList(s))} />
                 ) : (
-                  <LazyText value={lit === undefined ? "" : String(lit)} placeholder={value.op === "under" ? "term, e.g. concrete" : "value"} onCommit={(s) => set(value.op === "matches" ? s : parseLiteral(s))} />
+                  <LazyText value={lit === undefined ? "" : String(lit)} placeholder={value.op === "under" ? "dictionary term, e.g. concrete" : "value"} onCommit={(s) => set(value.op === "matches" ? s : parseLiteral(s))} />
                 )
               }
             </ValueField>
@@ -101,16 +111,113 @@ export function SelectorEditor({ value, onChange, slots }: { value: Selector; on
   return <LogicTree<Selector> value={value} onChange={onChange} newLeaf={() => LEAF_TEMPLATES.field} renderLeaf={(l, set) => <SelectorLeaf value={l} onChange={set} slots={slots} />} />;
 }
 
-/** One-line text for list rows. */
-export function describeSelector(s: Selector): string {
-  if ("all" in s) return s.all.map(describeSelector).join(" and ");
-  if ("any" in s) return s.any.map(describeSelector).join(" or ");
-  if ("not" in s) return `not (${describeSelector(s.not)})`;
-  if ("ifcClass" in s) return fmtList(s.ifcClass);
-  if ("family" in s) return `${fmtList(s.family)} family`;
-  if ("expr" in s) return s.expr;
-  const v = isRef(s.value) ? `p.${s.value.param}` : fmtList(s.value);
-  return `${s.field} ${OP_LABEL[s.op]}${v ? ` ${v}` : ""}`;
+/** A field to test, by its name in words; property set values are typed. */
+function FieldPicker({ value, onChange }: { value: string; onChange: (f: string) => void }) {
+  const known = (TEXT_FIELDS as readonly string[]).includes(value) || (MEASURED_FIELDS as readonly string[]).includes(value);
+  return (
+    <>
+      <select value={known ? value : "__prop"} onChange={(e) => onChange(e.target.value === "__prop" ? "props." : e.target.value)} aria-label="Field">
+        <optgroup label="Describing the element">
+          {TEXT_FIELDS.map((f) => (
+            <option key={f} value={f}>
+              {cap(fieldWords(f))}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Measured">
+          {MEASURED_FIELDS.map((f) => (
+            <option key={f} value={f}>
+              {cap(fieldWords(f))}
+            </option>
+          ))}
+        </optgroup>
+        <option value="__prop">A property set value…</option>
+      </select>
+      {!known && <LazyText mono value={value.replace(/^props\./, "")} placeholder="Pset_WallCommon.FireRating" onCommit={(s) => onChange(`props.${s.trim()}`)} />}
+    </>
+  );
+}
+
+/** A select that adds one kind of element: those in the loaded model first, with their counts. */
+export function ClassPicker({ onPick, exclude = [], counts, prompt }: { onPick: (c: string) => void; exclude?: string[]; counts?: Record<string, number>; prompt: string }) {
+  const inModel = Object.entries(counts ?? {})
+    .filter(([c, n]) => n > 0 && !exclude.includes(c) && c !== "IfcOpeningElement")
+    .sort((a, b) => b[1] - a[1]);
+  const grouped = new Set(CLASS_GROUPS.flatMap(([, l]) => l));
+  const other = IFC_CLASSES.filter((c) => !grouped.has(c) && !exclude.includes(c));
+  const opt = (c: string) => (
+    <option key={c} value={c}>
+      {cap(classWords(c))}
+      {counts?.[c] ? ` (${counts[c]})` : ""}
+    </option>
+  );
+  return (
+    <select className="class-pick" value="" onChange={(e) => e.target.value && onPick(e.target.value)} aria-label={prompt}>
+      <option value="">{prompt}</option>
+      {inModel.length > 0 && <optgroup label="In the loaded model">{inModel.map(([c]) => opt(c))}</optgroup>}
+      {CLASS_GROUPS.map(([title, list]) => (
+        <optgroup key={title} label={title}>
+          {list.filter((c) => !exclude.includes(c)).map(opt)}
+        </optgroup>
+      ))}
+      {other.length > 0 && <optgroup label="Other">{other.map(opt)}</optgroup>}
+    </select>
+  );
+}
+
+/**
+ * "Which elements" as people think of it: kinds of element (walls, doors), then conditions that
+ * narrow them down ("only where", "except where"). Any selector fits: what is not a list of kinds
+ * shows as conditions, so nothing is lost.
+ */
+export function WhatEditor({ value, onChange, slots, counts }: { value: Selector; onChange: (v: Selector) => void; slots: Slots; counts?: Record<string, number> }) {
+  const { classes, extra } = decomposeMatch(value);
+  const set = (c: string[], e: Selector[]) => onChange(composeMatch(c, e));
+  const leaf = (l: Selector, s: (v: Selector) => void) => <SelectorLeaf value={l} onChange={s} slots={slots} />;
+  const blank: Selector = { field: "material", op: "under", value: "" };
+  return (
+    <>
+      <Field label="Kinds of element" group wide hint={counts ? "Numbers are how many the loaded model has." : "Load a model in the BoQ view to see how many of each it has."}>
+        <div className="slist">
+          {classes.map((c, i) => (
+            <span key={c} className="chip" title={c}>
+              {cap(classWords(c))}
+              {counts && <span className="chip-count">{counts[c] ?? 0}</span>}
+              <button type="button" className="chip-x" aria-label={`Remove ${classWords(c)}`} onClick={() => set(removeAt(classes, i), extra)}>
+                ×
+              </button>
+            </span>
+          ))}
+          <ClassPicker prompt={classes.length ? "+ another kind…" : "+ pick a kind of element…"} exclude={classes} counts={counts} onPick={(c) => set([...classes, c], extra)} />
+        </div>
+        {classes.length === 0 && extra.length === 0 && <span className="error small">Nothing picked: this item takes no elements.</span>}
+        {classes.length === 0 && extra.length > 0 && <span className="f-hint">No kind picked: any element that meets the conditions below.</span>}
+      </Field>
+      <Field label="Narrow it down" group wide hint="Optional. “Is a kind of” uses the dictionary: material is a kind of concrete also takes “concrete.in_situ”.">
+        {extra.length === 0 && <span className="muted small">No conditions: all of them.</span>}
+        {extra.map((x, i) => (
+          <div key={i} className="what-cond">
+            <span className="what-tag">{"not" in x ? "except where" : "only where"}</span>
+            <LogicTree<Selector>
+              value={"not" in x ? x.not : x}
+              onChange={(v) => set(classes, replaceAt(extra, i, "not" in x ? { not: v } : v))}
+              onRemove={() => set(classes, removeAt(extra, i))}
+              renderLeaf={leaf}
+              newLeaf={() => blank}
+            />
+          </div>
+        ))}
+        <div className="lt-add">
+          <button type="button" className="link small" onClick={() => set(classes, [...extra, blank])}>
+            + Only where…
+          </button>
+          <button type="button" className="link small" onClick={() => set(classes, [...extra, { not: blank }])}>
+            + Except where…
+          </button>
+        </div>
+      </Field>
+    </>
+  );
 }
 
 /* ================================================================ quantity */
@@ -138,18 +245,20 @@ export function UnitInput({ value, onChange, required }: { value: string | undef
 }
 
 /** Choice-valued field that may be bound to a slot. */
-function ChoiceValue<T extends string>({ label, value, options, onChange, slots, empty }: {
+function ChoiceValue<T extends string>({ label, value, options, onChange, slots, empty, labels, hint }: {
   label: string;
   value: Value<T> | undefined;
   options: readonly T[];
   onChange: (v: Value<T> | undefined) => void;
   slots: Slots;
   empty?: string;
+  labels?: Partial<Record<T, string>>;
+  hint?: string;
 }) {
   return (
-    <Field label={label} group>
+    <Field label={label} group hint={hint}>
       <ValueField<T> value={value} onChange={onChange} slots={slots} slotType="choice">
-        {(lit, set) => <Select<T> value={lit} options={options} onChange={set} empty={empty} />}
+        {(lit, set) => <Select<T> value={lit} options={options} onChange={set} empty={empty} labels={labels} />}
       </ValueField>
     </Field>
   );
@@ -204,7 +313,14 @@ export function BoolValue({ label, value, onChange, slots, dflt }: { label: stri
   );
 }
 
-export function QuantityEditor({ value, onChange, slots, depth = 0 }: { value: QuantitySpec; onChange: (v: QuantitySpec) => void; slots: Slots; depth?: number }) {
+export function QuantityEditor({ value, onChange, slots, depth = 0, suggest }: {
+  value: QuantitySpec;
+  onChange: (v: QuantitySpec) => void;
+  slots: Slots;
+  depth?: number;
+  /** The ways of measuring that suit the chosen elements, offered first. */
+  suggest?: QuantitySpec["kind"][];
+}) {
   const q = value;
   const setKind = (k: QuantitySpec["kind"]) => {
     const t = KIND_TEMPLATE[k];
@@ -215,24 +331,24 @@ export function QuantityEditor({ value, onChange, slots, depth = 0 }: { value: Q
     <div className={`qty ${depth ? "qty-nested" : ""}`}>
       <div className="f-grid">
         <Field label="Measure by">
-          <Select value={q.kind} options={QUANTITY_KINDS} labels={QUANTITY_KIND_LABEL} onChange={(k) => k && setKind(k)} />
+          <KindSelect value={q.kind} suggest={suggest} onChange={setKind} />
         </Field>
-        {q.kind === "length" && <ChoiceValue label="Length basis" value={q.basis} options={LENGTH_BASES} onChange={(v) => onChange(put(q, "basis", v))} slots={slots} empty="default" />}
+        {q.kind === "length" && <ChoiceValue label="Length taken" value={q.basis} options={LENGTH_BASES} labels={LENGTH_WORDS} onChange={(v) => onChange(put(q, "basis", v))} slots={slots} empty="usual (along the axis)" />}
         {q.kind === "area" && (
           <>
-            <ChoiceValue label="Surface" value={q.surface} options={AREA_SURFACES} onChange={(v) => onChange(put(q, "surface", v))} slots={slots} empty="main" />
-            <ChoiceValue label="Start from" value={q.start} options={["gross", "net"] as const} onChange={(v) => onChange(put(q, "start", v))} slots={slots} empty="default" />
+            <ChoiceValue label="Which surface" value={q.surface} options={AREA_SURFACES} labels={SURFACE_WORDS} onChange={(v) => onChange(put(q, "surface", v))} slots={slots} empty="main face (usual)" />
+            <ChoiceValue label="Start from" value={q.start} options={["gross", "net"] as const} labels={START_WORDS} onChange={(v) => onChange(put(q, "start", v))} slots={slots} empty="usual" />
           </>
         )}
-        {q.kind === "volume" && <ChoiceValue label="Start from" value={q.start} options={["gross", "net"] as const} onChange={(v) => onChange(put(q, "start", v))} slots={slots} empty="default" />}
+        {q.kind === "volume" && <ChoiceValue label="Start from" value={q.start} options={["gross", "net"] as const} labels={START_WORDS} onChange={(v) => onChange(put(q, "start", v))} slots={slots} empty="usual" />}
         {q.kind === "mass" && (
           <>
-            <ChoiceValue label="Mass from" value={q.basis} options={MASS_BASES} onChange={(v) => onChange({ ...q, basis: v ?? "nominal_per_length" })} slots={slots} />
+            <ChoiceValue label="Weight from" value={q.basis} options={MASS_BASES} labels={MASS_WORDS} onChange={(v) => onChange({ ...q, basis: v ?? "nominal_per_length" })} slots={slots} />
             <NumberValue label="Density (kg/m3)" value={q.density} onChange={(v) => onChange(put(q, "density", v))} slots={slots} placeholder="from material" />
           </>
         )}
         {q.kind === "choose" && (
-          <Field label="Pick option by" group hint="Usually a choice slot, so a standard picks the method.">
+          <Field label="Which answer chooses" group hint="Usually a Settings question with a choice of answers; each answer gets its own way of measuring below.">
             <ValueField<string> value={q.pick} onChange={(v) => onChange({ ...q, pick: v ?? "" })} slots={slots} slotType="choice">
               {(lit, set) => <Text value={lit} onChange={(v) => set(v ?? "")} placeholder="option name" />}
             </ValueField>
@@ -244,7 +360,7 @@ export function QuantityEditor({ value, onChange, slots, depth = 0 }: { value: Q
           </Field>
         )}
         {q.kind !== "choose" && q.kind !== "when" && q.kind !== "formula" && (
-          <Field label="Unit">
+          <Field label="Unit" hint="Empty: the usual unit (nr, m, m2, m3, kg).">
             <UnitInput value={q.unit} onChange={(u) => onChange(put(q, "unit", u))} />
           </Field>
         )}
@@ -260,7 +376,7 @@ export function QuantityEditor({ value, onChange, slots, depth = 0 }: { value: Q
 
       {q.kind === "when" && (
         <div className="branches">
-          <Field label="If" wide>
+          <Field label="If" wide hint="A condition on the element, e.g. [Thickness] >= 0.25: then measure one way, otherwise the other.">
             <ExprInput slots={slots} value={q.if} onChange={(v) => onChange({ ...q, if: v ?? "" })} placeholder="thickness >= p.masonry_volume_from" />
           </Field>
           <div className="branch">
@@ -268,7 +384,7 @@ export function QuantityEditor({ value, onChange, slots, depth = 0 }: { value: Q
             <QuantityEditor value={q.then} onChange={(v) => onChange({ ...q, then: v })} slots={slots} depth={depth + 1} />
           </div>
           <div className="branch">
-            <span className="branch-label">else</span>
+            <span className="branch-label">otherwise</span>
             <QuantityEditor value={q.else} onChange={(v) => onChange({ ...q, else: v })} slots={slots} depth={depth + 1} />
           </div>
         </div>
@@ -276,6 +392,29 @@ export function QuantityEditor({ value, onChange, slots, depth = 0 }: { value: Q
 
       {q.kind === "choose" && <ChooseOptions q={q} onChange={onChange} slots={slots} depth={depth} />}
     </div>
+  );
+}
+
+/** Ways of measuring, the ones that suit the elements first. */
+function KindSelect({ value, suggest, onChange }: { value: QuantitySpec["kind"]; suggest?: QuantitySpec["kind"][]; onChange: (k: QuantitySpec["kind"]) => void }) {
+  const opt = (k: QuantitySpec["kind"]) => (
+    <option key={k} value={k}>
+      {QUANTITY_KIND_WORDS[k]}
+    </option>
+  );
+  const first = (suggest ?? []).filter((k) => QUANTITY_KINDS.includes(k));
+  const rest = QUANTITY_KINDS.filter((k) => !first.includes(k));
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value as QuantitySpec["kind"])}>
+      {first.length ? (
+        <>
+          <optgroup label="Usual for these elements">{first.map(opt)}</optgroup>
+          <optgroup label="Other ways">{rest.map(opt)}</optgroup>
+        </>
+      ) : (
+        QUANTITY_KINDS.map(opt)
+      )}
+    </select>
   );
 }
 
@@ -290,6 +429,7 @@ function ChooseOptions({ q, onChange, slots, depth }: { q: Extract<QuantitySpec,
         <div className="branch" key={i}>
           <span className="branch-label">
             <LazyText mono value={name} onCommit={(n) => setEntries(entries.map((e, j) => (j === i ? [n, e[1]] : e)))} />
+            {slot?.type === "choice" && slot.optionLabels?.[name] && <span className="branch-name">{slot.optionLabels[name]}</span>}
             <button type="button" className="icon" aria-label={`Remove option ${name}`} onClick={() => setEntries(entries.filter((_, j) => j !== i))}>
               ×
             </button>
@@ -311,24 +451,6 @@ function ChooseOptions({ q, onChange, slots, depth }: { q: Extract<QuantitySpec,
   );
 }
 
-/** Short text for list rows, e.g. "area (main, gross) − openings". */
-export function describeQuantity(q: QuantitySpec): string {
-  const ref = (v: unknown) => (isRef(v) ? `p.${v.param}` : v === undefined ? "" : String(v));
-  switch (q.kind) {
-    case "when":
-      return `if … ${describeQuantity(q.then)} else ${describeQuantity(q.else)}`;
-    case "choose":
-      return `by ${ref(q.pick)}: ${Object.keys(q.options).join(" | ")}`;
-    case "formula":
-      return `formula, ${q.unit}`;
-    default: {
-      const bits = [("surface" in q && ref(q.surface)) || "", ("basis" in q && ref(q.basis)) || "", ("start" in q && ref(q.start)) || ""].filter(Boolean);
-      const ded = "deductions" in q && q.deductions?.length ? " − openings" : "";
-      return `${q.kind}${bits.length ? ` (${bits.join(", ")})` : ""}${ded}${"unit" in q && q.unit ? `, ${q.unit}` : ""}`;
-    }
-  }
-}
-
 /* ================================================================ deductions */
 
 function Deductions({ value, onChange, slots }: { value: DeductionRule[] | undefined; onChange: (v: DeductionRule[] | undefined) => void; slots: Slots }) {
@@ -337,33 +459,51 @@ function Deductions({ value, onChange, slots }: { value: DeductionRule[] | undef
   return (
     <div className="deductions">
       <div className="ed-section-head">
-        <span className="f-label">Deductions</span>
+        <span className="f-label">Taken out (deductions)</span>
         <button type="button" className="link small" onClick={() => set([...list, { what: "openings", mode: "all" }])}>
-          + Deduction
+          + Take something out
         </button>
       </div>
-      {list.length === 0 && <p className="hint">Nothing is deducted.</p>}
+      {list.length === 0 && <p className="hint">Nothing is taken out: openings, doors and windows stay in the quantity.</p>}
       {list.map((d, i) => (
-        <div key={i} className="ded">
-          <div className="f-grid">
-            <Field label="Deduct">
-              <Select value={d.what} options={DEDUCTION_WHAT} onChange={(w) => set(replaceAt(list, i, { ...d, what: w ?? "openings" }))} />
-            </Field>
-            <ChoiceValue label="When" value={d.mode} options={DEDUCTION_MODES} onChange={(m) => set(replaceAt(list, i, { ...d, mode: m ?? "all" }))} slots={slots} />
-            <NumberValue label="Threshold" value={d.threshold} onChange={(v) => set(replaceAt(list, i, put(d, "threshold", v)))} slots={slots} />
-            <ChoiceValue label="Compare by" value={d.compareBy} options={COMPARE_BY} onChange={(v) => set(replaceAt(list, i, put(d, "compareBy", v)))} slots={slots} empty="area" />
-            <BoolValue label="Add reveals back" value={d.addReveals} onChange={(v) => set(replaceAt(list, i, put(d, "addReveals", v)))} slots={slots} dflt={false} />
-            <button type="button" className="icon ded-x" aria-label="Remove deduction" onClick={() => set(removeAt(list, i))}>
-              ×
-            </button>
-          </div>
-          <Field label="Only openings where" wide>
-            <ExprInput slots={slots} value={d.where} onChange={(v) => set(replaceAt(list, i, put(d, "where", v)))} placeholder='kind = "window"' />
-          </Field>
-          {d.what === "recesses" && <p className="note small">Recesses: openings the model marks as recesses. Deducted as their face area, or area x recess depth for volumes; never part of “openings”.</p>}
-          {d.what === "embedded" && <p className="note small">Columns and beams passing through (rooms: columns standing in them), as the area they take, or that area x thickness for volumes.</p>}
-        </div>
+        <Deduction key={i} d={d} slots={slots} onChange={(x) => set(replaceAt(list, i, x))} onRemove={() => set(removeAt(list, i))} />
       ))}
+    </div>
+  );
+}
+
+function Deduction({ d, slots, onChange, onRemove }: { d: DeductionRule; slots: Slots; onChange: (d: DeductionRule) => void; onRemove: () => void }) {
+  const [narrow, setNarrow] = useState(!!d.where);
+  const sized = isRef(d.mode) || MODES_WITH_SIZE.includes(d.mode) || d.threshold !== undefined;
+  return (
+    <div className="ded">
+      <div className="f-grid">
+        <Field label="Take out">
+          <Select value={d.what} options={DEDUCTION_WHAT} labels={DEDUCT_WHAT_WORDS} onChange={(w) => onChange({ ...d, what: w ?? "openings" })} />
+        </Field>
+        <ChoiceValue label="Which ones" value={d.mode} options={DEDUCTION_MODES} labels={DEDUCT_MODE_WORDS} onChange={(m) => onChange({ ...d, mode: m ?? "all" })} slots={slots} />
+        {sized && (
+          <>
+            <NumberValue label="Size" value={d.threshold} onChange={(v) => onChange(put(d, "threshold", v))} slots={slots} placeholder="e.g. 0.5" />
+            <ChoiceValue label="Size measured as" value={d.compareBy} options={COMPARE_BY} onChange={(v) => onChange(put(d, "compareBy", v))} slots={slots} empty="area (m2)" />
+          </>
+        )}
+        <BoolValue label="Add the reveals back" value={d.addReveals} onChange={(v) => onChange(put(d, "addReveals", v))} slots={slots} dflt={false} />
+        <button type="button" className="icon ded-x" aria-label="Remove deduction" onClick={onRemove}>
+          ×
+        </button>
+      </div>
+      {narrow ? (
+        <Field label="Only those where" wide>
+          <ExprInput slots={slots} value={d.where} onChange={(v) => onChange(put(d, "where", v))} placeholder='kind = "window"' />
+        </Field>
+      ) : (
+        <button type="button" className="link small" onClick={() => setNarrow(true)}>
+          + only some of them…
+        </button>
+      )}
+      {d.what === "recesses" && <p className="note small">Recesses: openings the model marks as recesses. Deducted as their face area, or area x recess depth for volumes; never part of “openings”.</p>}
+      {d.what === "embedded" && <p className="note small">Columns and beams passing through (rooms: columns standing in them), as the area they take, or that area x thickness for volumes.</p>}
     </div>
   );
 }

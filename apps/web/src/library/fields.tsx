@@ -20,9 +20,9 @@ export function Field({ label, hint, children, wide, group }: { label: string; h
   );
 }
 
-export function Section({ title, hint, children, actions }: { title: string; hint?: ReactNode; children: ReactNode; actions?: ReactNode }) {
+export function Section({ title, hint, children, actions, id }: { title: string; hint?: ReactNode; children: ReactNode; actions?: ReactNode; id?: string }) {
   return (
-    <section className="ed-section">
+    <section className="ed-section" id={id}>
       <div className="ed-section-head">
         <h3>{title}</h3>
         {actions}

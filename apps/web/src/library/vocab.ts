@@ -53,7 +53,7 @@ const _ops: Same<(typeof SELECTOR_OPS)[number], SelectorOp> = true;
 export const OP_LABEL: Record<SelectorOp, string> = {
   eq: "is", neq: "is not", in: "is one of", not_in: "is none of", gt: ">", gte: "≥", lt: "<", lte: "≤",
   between: "between", contains: "contains", starts_with: "starts with", matches: "matches regex",
-  exists: "exists", missing: "is missing", under: "is under term",
+  exists: "is filled in", missing: "is missing", under: "is a kind of",
 };
 
 export const FAMILIES = Object.keys(FAMILY_INFO) as ElementFamily[];
@@ -85,6 +85,86 @@ export const BREAKDOWNS = ["element", "layer", "face", "material", "child"] as c
 const _bd: Same<(typeof BREAKDOWNS)[number], Breakdown> = true;
 export const MANUAL_KINDS = ["preliminary", "provisional_sum", "lump_sum", "daywork", "other"] as const satisfies readonly ManualItem["kind"][];
 const _mk: Same<(typeof MANUAL_KINDS)[number], ManualItem["kind"]> = true;
+
+/* ---------------------------------------------------------------- the same lists in plain words */
+
+/** IFC classes as people call them (plural). Classes not listed are spelled out from their name. */
+const CLASS_WORDS: Record<string, string> = {
+  IfcWall: "walls", IfcCurtainWall: "curtain walls", IfcSlab: "slabs", IfcRoof: "roofs", IfcCovering: "coverings (finishes, cladding)",
+  IfcPlate: "plates and panels", IfcBeam: "beams", IfcColumn: "columns", IfcMember: "members (studs, rafters, mullions)",
+  IfcRailing: "railings", IfcFooting: "footings", IfcPile: "piles", IfcChimney: "chimneys", IfcStair: "stairs",
+  IfcStairFlight: "stair flights", IfcRamp: "ramps", IfcRampFlight: "ramp flights", IfcDoor: "doors", IfcWindow: "windows",
+  IfcShadingDevice: "shading devices", IfcBuildingElementProxy: "unclassified objects (proxies)", IfcBuildingElementPart: "element parts",
+  IfcElementAssembly: "element assemblies", IfcReinforcingBar: "reinforcing bars", IfcReinforcingMesh: "reinforcing meshes",
+  IfcTendon: "tendons", IfcTendonAnchor: "tendon anchors", IfcFurnishingElement: "furnishing", IfcFurniture: "furniture",
+  IfcTransportElement: "lifts and escalators", IfcGeographicElement: "trees and terrain features", IfcPipeSegment: "pipes",
+  IfcDuctSegment: "ducts", IfcCableSegment: "cables", IfcCableCarrierSegment: "cable trays", IfcFlowSegment: "pipes and ducts (generic)",
+  IfcPipeFitting: "pipe fittings", IfcDuctFitting: "duct fittings", IfcFlowTerminal: "terminals (sanitary, lights, outlets)",
+  IfcFlowController: "valves, dampers, switches", IfcFlowMovingDevice: "pumps and fans", IfcFlowStorageDevice: "tanks",
+  IfcEnergyConversionDevice: "boilers, chillers, heat pumps", IfcDistributionControlElement: "sensors and controls",
+  IfcDistributionChamberElement: "manholes and pits", IfcEarthworksCut: "earthworks cut", IfcEarthworksFill: "earthworks fill",
+  IfcCourse: "pavement courses", IfcPavement: "pavements", IfcKerb: "kerbs", IfcRail: "rails", IfcSpace: "rooms", IfcZone: "zones",
+  IfcOpeningElement: "openings", IfcBuiltElement: "built elements (generic)",
+};
+/** "IfcCableCarrierFitting" -> "cable carrier fittings". */
+export function classWords(c: string): string {
+  if (CLASS_WORDS[c]) return CLASS_WORDS[c];
+  const w = c.replace(/^Ifc/, "").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+  return w.endsWith("s") ? w : `${w}s`;
+}
+
+/** The class picker's groups. A class of IFC_FAMILIES missing here is offered under "Other". */
+export const CLASS_GROUPS: [string, string[]][] = [
+  ["Building", ["IfcWall", "IfcCurtainWall", "IfcSlab", "IfcRoof", "IfcCovering", "IfcPlate", "IfcDoor", "IfcWindow", "IfcStair", "IfcStairFlight", "IfcRamp", "IfcRampFlight", "IfcRailing", "IfcChimney", "IfcShadingDevice"]],
+  ["Structure", ["IfcBeam", "IfcColumn", "IfcMember", "IfcFooting", "IfcPile", "IfcReinforcingBar", "IfcReinforcingMesh", "IfcTendon", "IfcTendonAnchor", "IfcBuildingElementPart", "IfcElementAssembly"]],
+  ["Services (MEP)", ["IfcPipeSegment", "IfcDuctSegment", "IfcCableSegment", "IfcCableCarrierSegment", "IfcFlowSegment", "IfcPipeFitting", "IfcDuctFitting", "IfcFlowFitting", "IfcFlowTerminal", "IfcFlowController", "IfcFlowMovingDevice", "IfcFlowStorageDevice", "IfcFlowTreatmentDevice", "IfcEnergyConversionDevice", "IfcDistributionControlElement", "IfcDistributionChamberElement", "IfcJunctionBox"]],
+  ["Rooms", ["IfcSpace", "IfcZone"]],
+  ["Furniture and equipment", ["IfcFurnishingElement", "IfcFurniture", "IfcSystemFurnitureElement", "IfcTransportElement"]],
+  ["Infrastructure and site", ["IfcEarthworksCut", "IfcEarthworksFill", "IfcReinforcedSoil", "IfcCourse", "IfcPavement", "IfcKerb", "IfcRail", "IfcTrackElement", "IfcBearing", "IfcDeepFoundation", "IfcCaissonFoundation", "IfcSign", "IfcSignal", "IfcSurfaceFeature", "IfcGeographicElement"]],
+];
+
+/** How a model's raw class counts read (IfcWallStandardCase counts as IfcWall, as in the engine). */
+export function classCounts(byClass: Record<string, number> | undefined): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [c, n] of Object.entries(byClass ?? {})) {
+    const k = c.replace(/(StandardCase|ElementedCase)$/, "");
+    out[k] = (out[k] ?? 0) + n;
+  }
+  return out;
+}
+
+export const QUANTITY_KIND_WORDS: Record<QuantitySpec["kind"], string> = {
+  count: "Count them", length: "Length", area: "Area", volume: "Volume", mass: "Weight", perimeter: "Perimeter",
+  formula: "My own formula", when: "Depends on a condition (if / else)", choose: "Let a Settings answer choose",
+};
+export const SURFACE_WORDS: Record<AreaSurface, string> = {
+  main: "main face", side_a: "one face (side a)", side_b: "the other face (side b)", both: "both faces", larger: "the larger face",
+  smaller: "the smaller face", mean: "average of both faces", top: "top", bottom: "underside", edges: "edges",
+  footprint: "plan area", developed: "true sloped / unfolded area",
+};
+export const LENGTH_WORDS: Record<LengthBasis, string> = {
+  axis: "along the axis", overall: "overall, with overlaps", clear: "clear span", centreline: "centreline", girth: "girth (developed width)", perimeter: "perimeter",
+};
+export const MASS_WORDS: Record<MassBasis, string> = {
+  nominal_per_length: "length × kg/m of the section", volume_density: "volume × density", reported: "as the model reports it",
+};
+export const START_WORDS = { gross: "gross, openings left in", net: "net, the model's openings taken out" };
+export const DEDUCT_WHAT_WORDS: Record<DeductionRule["what"], string> = {
+  openings: "openings", doors: "doors", windows: "windows", voids: "holes without a door or window",
+  embedded: "elements passing through", recesses: "recesses",
+};
+export const DEDUCT_MODE_WORDS: Record<DeductionMode, string> = {
+  none: "never", all: "all of them", over_threshold: "only those larger than a size, in full",
+  excess_only: "only the part above a size", per_element_sum: "all, when together they exceed a size",
+};
+/** Modes that need a size. */
+export const MODES_WITH_SIZE: DeductionMode[] = ["over_threshold", "excess_only", "per_element_sum"];
+export const BREAKDOWN_WORDS: Record<Breakdown, string> = {
+  element: "whole elements", layer: "each material layer", face: "each face (side)", material: "each material", child: "each part of an assembly",
+};
+
+/** Fields offered as "one line per …" ticks, in order. */
+export const LINE_SPLITS = ["type_name", "storey", "material", "thickness", "is_external", "ifc_class", "predefined_type", "family_name", "profile", "nominal_size", "system", "space_type"];
 
 /** Common units; any other text is allowed too. */
 export const UNITS = ["nr", "item", "sum", "mm", "m", "km", "m2", "m3", "kg", "t", "ft", "ft2", "ft3", "yd2", "yd3", "lb", "h", "kg/m3"];

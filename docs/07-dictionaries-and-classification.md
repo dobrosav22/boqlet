@@ -24,7 +24,11 @@ be given one term at once, as exact names or as one "starts with" entry when the
 optionally "only on" their IFC classes (writes a `when` condition). Names a BoQ run would ask about
 (`askFor` in the resolution settings) are marked "worth answering". Resolution is done by the engine
 (`pipeline.names_in_model`, `POST /api/models/{modelId}/names`, which accepts unsaved draft
-dictionaries); the browser only writes entries. The Entries tab remains for regex and expressions.
+dictionaries); the browser only writes entries. The editor opens with a few sentences on what the
+dictionary is (its layer, an example, how many names, meanings and value readers it has) and which
+dictionary wins; its other tabs are Names it explains (the entries, one sentence each, for patterns
+and conditions), Meanings (its own terms) and Advanced (values read from names, about, JSON),
+`dictStory.tsx`. User guide: 16.
 
 ### Building blocks
 
@@ -103,6 +107,22 @@ Classification **only labels lines**. It never changes a quantity (D14). Two sep
 `getBoq` takes any number of `{ codeList, map }` pairs, so one line can carry a Uniclass code, a
 company code and a client's tender position at once. The UI groups the sheet by the **first**
 ticked system; the Excel Lines sheet shows all.
+
+### In the Library
+
+The classification editor opens with a few sentences: what the classification does, its code list
+(how many codes, its levels), and the order in which a line gets its code (the map's `sources`, then
+`onUnmapped`), each part a link to where it is set. Then three tabs: **Codes per line** (the table
+below), **Code list** (the codes as a tree; "About this list" folds the publisher, levels, separator
+and licence), and **Advanced** (rules by condition, where codes come from, JSON).
+
+Under each table row the editor says what decides that row's code: the table, or the map rules aimed
+at that BoQ item (by rule id, tag or hand-entered kind), in the engine's order (higher priority
+first, ties to the earlier rule), with any condition in words ("When element type is a kind of
+wall.external: D.01 External walls, otherwise D.02"). Rules not aimed at any item (only conditions
+on line values, as in `demo-trades`) are listed once above the table as "Rules for any line". This
+is worked out from the map and the rule set's items alone (`classStory.tsx`); conditions are shown,
+never evaluated, so "in some cases" means a condition decides. The BoQ shows each line's actual code.
 
 ### The table: codes per line kind (normal way in)
 

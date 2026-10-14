@@ -265,8 +265,8 @@ export function NamesTab({ doc, onChange, presets, model, known, loadDictionary,
         <select value={status} onChange={(e) => setStatus(e.target.value as Status)}>
           <option value="all">all names</option>
           <option value="unresolved">not understood yet</option>
-          <option value="here">answered by this dictionary</option>
-          <option value="elsewhere">answered by another dictionary</option>
+          <option value="here">known from this dictionary</option>
+          <option value="elsewhere">known from another dictionary</option>
         </select>
         <input type="search" placeholder="Filter names" value={q} onChange={(e) => setQ(e.target.value)} />
         {busy && <span className="muted small">resolving…</span>}
@@ -310,7 +310,7 @@ export function NamesTab({ doc, onChange, presets, model, known, loadDictionary,
             <span>Name in the model</span>
             <span>Used on</span>
             <span>Means</span>
-            <span>Answered by</span>
+            <span>Known from</span>
           </div>
           {shown.length === 0 && <p className="muted small nt-empty">No names match.</p>}
           {shown.map((r) => {
@@ -365,7 +365,7 @@ export function NamesTab({ doc, onChange, presets, model, known, loadDictionary,
                       {higher && <span className="note small block">A {use.layer} dictionary answers this first; an answer here would not be used.</span>}
                     </>
                   ) : (
-                    <span className="muted">nobody yet</span>
+                    <span className="muted">no dictionary yet</span>
                   )}
                 </span>
               </div>

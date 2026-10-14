@@ -89,19 +89,49 @@ One list in three groups:
 | **Calculated from other items** | Work that is not modelled, calculated from the lines or elements of other items | Formwork, paint, reinforcement estimates, excavation |
 | **Entered by hand** | Lines with no model behind them; empty quantity = a line for you to fill | Site setup, scaffolding, provisional sums |
 
-Change an item only when no question covers what you need. An item's form, top to bottom:
+The list holds the rule set's items, not the lines of a BoQ: it is the same whatever you answer in
+Settings. An answer can switch an item off (its **Enabled** field points at a yes/no question); it
+stays in the list and the engine skips it. How many lines a generated BoQ has depends on the
+answers and on the model (one item can give a line per type, per storey…).
 
-- **Which elements**: conditions on IFC class, measurement family, a field (e.g. material "is
-  under term" concrete) or a formula; combine with All of / Any of / None of.
-- **Measures**: elements in this BoQ (normal) or only the elements the BoQ leaves out (demolition).
-- **Quantity**: measure by count, length, area, volume, mass, perimeter, a formula, "If / else", or
-  "Choose by slot" (a question decides). Area has a surface (main, one side, both sides, top…);
-  length, area and volume can have **deductions** (openings, doors, windows, voids, elements passing
-  through, recesses), each with a rule (never, all, above a size…).
-- **Lines**: what splits elements into separate lines (type name, storey…) and the line text.
-- **Adjustments**: factor (allowance), minimum quantity, rounding, what to do when a value is missing.
-- **Labels and checks**: tags (classifications can use them) and claims (two items claiming the
-  same element for the same purpose raise a double-count question).
+**How Settings and items connect.** Settings holds answers: yes/no, numbers, choices, and whole
+formulas. Items hold the structure: which elements, what quantity, how lines are split. Any field
+of an item either has a fixed value or takes its value from a question (the **slot** button);
+"Used by" under a question lists the items that do. **+ From the model**, **+ Calculated** and **+ By
+hand** add a new item. **+ From the model** first asks what you want in the BoQ: pick a kind of
+element (those in the loaded model come first, with how many there are) and the item starts
+measured the usual way for it, one line per type. Or copy an item that is close, or start empty.
+A new item uses no question until you point a field at one.
+
+Change an item only when no question covers what you need.
+
+**The sentence at the top** says what the item does in plain words, for example *"Measure the area
+(both faces) of walls where material is a kind of concrete, minus openings larger than 0.5 m2, one
+line per type name, written as "Wall, ‹Type name›"."* Click a part of it to jump to where it is
+set. Under it: whether the item is in the BoQ (and which answer switches it), what "More options"
+changes, and which Settings answers the item follows, with their current values.
+
+Then four steps, the questions a person asks about a BoQ item:
+
+1. **What is measured**: kinds of element (walls, doors, pipes…), then optionally **Only where…** /
+   **Except where…** conditions on a value (material is a kind of concrete, external is yes, a
+   property set value) or a formula. "Is a kind of" uses the dictionary: concrete also takes
+   concrete.in_situ.
+2. **How it is measured**: count, length, area, volume, weight, perimeter, your own formula, "depends
+   on a condition" (if / else) or "let a Settings answer choose". The ways that suit the chosen
+   elements are offered first. Area has a surface (main face, one face, both faces, top…); length,
+   area and volume can **take out** openings, doors, windows, holes, elements passing through or
+   recesses: all of them, only those larger than a size, only the part above a size….
+3. **How lines are split**: tick what separates lines (type name, storey, material, inside /
+   outside…); anything else, such as a split that only applies when an answer is yes, shows below
+   in words.
+4. **What each line says**: the line text, with values inserted by a click and read back in words.
+
+**More options** (folded; its title lists what is changed): which elements in detail (only the
+ones left out of this BoQ, for demolition; parts of assemblies; layers or faces), split by ranges
+(bands), factor, minimum quantity, rounding, what to do when a value is missing, tags, claims (two
+items claiming the same element for the same purpose raise a double-count question), notes and the
+id.
 
 A **slot** button on a field makes it take its value from a question instead of a fixed value.
 
@@ -115,13 +145,20 @@ it; if classifications refer to the old id, a banner offers to update them (as d
   compliance claim), unit system, **Left out of this BoQ** (conditions; elements matching them are
   not measured and not asked about), and defaults for rounding, missing values and breakdown.
 - **Questions setup**: every part of the questions, without JSON.
-  - **Sections**: add, rename, reorder, remove (a set based on another can retitle the parent's and add its own).
+  - **Sections** only arrange the Settings tab: its groups, their order and an optional
+    introduction for each. They never change a number. A question's section is chosen on the
+    question itself (**Section**); removing a section moves its questions to "Other settings". A set
+    based on another can retitle the parent's sections and add its own after them, but not reorder
+    or remove the parent's.
   - Per question: the question text, short name (also its name in formulas), section, kind of
-    answer (number, choice, yes/no, text, formula), help, example, unit, lowest / highest allowed,
-    the possible answers with the text people see, ready-made formulas, and **Only ask when**
-    (a follow-up of another question).
+    answer (number, choice, yes/no, text, formula), default answer, help, example, unit, lowest /
+    highest allowed, the possible answers with the text people see, ready-made formulas, and
+    **Only ask when** (a follow-up of another question).
   - **Stored as** is the name items use. Renaming it updates every item and formula in the set;
     renaming one of its answers updates the items that choose by it and the follow-ups.
+  - A question decides nothing by itself: what its answer does is decided by the item fields that
+    point at it (**Used by**). A new question has no effect until an item uses it; deleting one
+    that items use leaves them with a missing value (the app warns first).
   - **+ New question**, then point an item's field at it with the **slot** button.
 - **JSON**: the rule set exactly as stored. Everything can also be done in the forms.
 

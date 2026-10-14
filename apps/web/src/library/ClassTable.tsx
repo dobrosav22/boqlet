@@ -8,9 +8,10 @@
  *   split    { match: { all: [ { ruleId: X }, { where: <canonical condition> } ] }, code, priority: 6 }
  * Rules of any other shape stay "advanced": they still apply, but table rows take priority.
  */
-import { useEffect, useId, useMemo, useState } from "react";
-import type { ClassificationMap, CodeList, CodeTarget, MapRule, PresetsResponse, RuleSet } from "@ifc-boq/types";
+import { useId, useMemo, useState, type ReactNode } from "react";
+import type { ClassificationMap, CodeList, CodeTarget, MapRule, PresetsResponse } from "@ifc-boq/types";
 import { Options, Select, Text } from "./fields";
+import { OutcomeWords, aimed, codeWords, matchWords, outcomeFor, type LineKind } from "./classStory";
 
 /* ================================================================ the table <-> map rules */
 
@@ -45,7 +46,7 @@ const asTarget = (c: CodeTarget): Target | undefined =>
   typeof c === "string" ? c : "fromSource" in c ? { fromSource: true } : undefined;
 
 /** Which map rules the table understands, per line kind; the rest are advanced. */
-function readTable(map: ClassificationMap) {
+export function readTable(map: ClassificationMap) {
   const rows = new Map<string, RowConfig>();
   const used = new Set<number>();
   map.rules.forEach((r, i) => {
@@ -90,6 +91,8 @@ function writeRow(map: ClassificationMap, id: string, cfg: RowConfig): Classific
   if (cfg.code) fresh.push({ id: `t-${id}`, match: { ruleId: id }, code: cfg.code, priority: 5 });
   return { ...map, rules: [...fresh, ...kept] };
 }
+
+const cap = (t: string) => (t ? t[0].toUpperCase() + t.slice(1) : t);
 
 /* ================================================================ suggestions */
 
@@ -152,55 +155,36 @@ export interface RuleSetOption {
   name: string;
 }
 
-interface LineKind {
-  id: string;
-  label: string;
-  group: "item" | "derived" | "manual";
-  sub: string;
-}
+const GROUP_TITLE = { item: "Measured from the model", derived: "Calculated from other items (formwork, paint, estimates…)", manual: "Entered by hand" };
 
-function lineKinds(rs: RuleSet): LineKind[] {
-  return [
-    ...rs.items.map((i): LineKind => ({ id: i.id, label: i.label || i.id, group: "item", sub: i.tags?.join(", ") ?? "" })),
-    ...(rs.derived ?? []).map((d): LineKind => ({ id: d.id, label: d.label || d.id, group: "derived", sub: `from ${d.from.join(", ")}` })),
-    ...(rs.manual ?? []).map((m): LineKind => ({ id: m.id, label: typeof m.description === "string" ? m.description : m.id, group: "manual", sub: m.kind.replace(/_/g, " ") })),
-  ];
-}
-
-const GROUP_TITLE = { item: "Measured items", derived: "Derived items (formwork, paint, estimates…)", manual: "Items with no model behind them" };
-
-export function ClassTable({ codeList, map, onChange, presets, ruleSets, loadRuleSet, onAdvanced }: {
+export function ClassTable({ codeList, map, onChange, presets, ruleSets, rsId, setRsId, kinds: loaded, rsError, onOpenRule }: {
   codeList: CodeList;
   map: ClassificationMap;
   onChange: (m: ClassificationMap) => void;
   presets: PresetsResponse | null;
   ruleSets: RuleSetOption[];
-  loadRuleSet: (id: string) => Promise<RuleSet | null>;
-  onAdvanced: () => void;
+  rsId: string | undefined;
+  setRsId: (id: string) => void;
+  /** The BoQ items of the chosen rule set; null while loading. */
+  kinds: LineKind[] | null;
+  rsError: string | null;
+  /** Show a map rule in Advanced (by its index in map.rules). */
+  onOpenRule: (index: number) => void;
 }) {
-  const [rsId, setRsId] = useState(ruleSets.some((r) => r.id === "as-modelled") ? "as-modelled" : ruleSets[0]?.id);
-  const [rs, setRs] = useState<RuleSet | null>(null);
-  const [rsError, setRsError] = useState<string | null>(null);
   const [suggested, setSuggested] = useState<Record<string, string>>({});
   /** Rows being edited: a split whose values have no code yet has no map rule to read back from. */
   const [pending, setPending] = useState<Record<string, RowConfig>>({});
-  useEffect(() => {
-    if (!rsId) return;
-    let live = true;
-    setRs(null);
-    setRsError(null);
-    loadRuleSet(rsId)
-      .then((r) => live && (r ? setRs(r) : setRsError("This rule set cannot be resolved; check it in the Library.")))
-      .catch((e: Error) => live && setRsError(e.message));
-    return () => {
-      live = false;
-    };
-  }, [rsId, loadRuleSet]);
+  const rs = loaded;
 
   const titles = useMemo(() => new Map(codeList.codes.map((c) => [c.code, c.title])), [codeList]);
   const { rows, used } = readTable(map);
   const advanced = map.rules.filter((_, i) => !used.has(i));
-  const kinds = rs ? lineKinds(rs) : [];
+  /** Rules not aimed at any BoQ item: shown once above the table instead of under every row. */
+  const anyLine = map.rules
+    .map((r, i) => ({ r, i }))
+    .filter(({ r, i }) => !used.has(i) && !aimed(r.match))
+    .sort((a, b) => (b.r.priority ?? 0) - (a.r.priority ?? 0) || a.i - b.i);
+  const kinds = loaded ?? [];
   const orphans = [...rows.keys()].filter((id) => !kinds.some((k) => k.id === id));
   const terms = presets?.terms ?? [];
   const termOptions = (kind: SplitKind) => terms.filter((t) => (kind === "material" ? t.category === "material" || t.category === "product" : t.category === "element_type"));
@@ -242,16 +226,15 @@ export function ClassTable({ codeList, map, onChange, presets, ruleSets, loadRul
     setSuggested({});
   };
 
-  const unm = map.onUnmapped;
   return (
     <div className="ctable">
       <p className="hint">
-        Pick a code for each kind of BoQ line. Lines are the rules of a rule set; every standard built on the master template has the same ones, so one table works for all of them.
-        Split a row when one kind of line needs different codes, e.g. external and internal walls.
+        One row per BoQ item: every line that item makes gets the code picked here. Split a row when its lines need different codes, e.g. external and internal walls. Under a row:
+        what else decides its code (rules by condition, which win when they have a higher priority).
       </p>
       <div className="ct-tools">
         <label className="f">
-          <span className="f-label">Lines from rule set</span>
+          <span className="f-label">BoQ items of</span>
           <select value={rsId} onChange={(e) => setRsId(e.target.value)}>
             {ruleSets.map((r) => (
               <option key={r.id} value={r.id}>
@@ -259,28 +242,12 @@ export function ClassTable({ codeList, map, onChange, presets, ruleSets, loadRul
               </option>
             ))}
           </select>
+          <span className="f-hint">Rule sets built on As modelled share its items, so one table serves all of them.</span>
         </label>
-        <label className="f">
-          <span className="f-label">Lines with no code</span>
-          <select
-            value={typeof unm === "string" ? unm : "code"}
-            onChange={(e) => onChange({ ...map, onUnmapped: e.target.value === "code" ? { code: codeList.codes[0]?.code ?? "" } : (e.target.value as "flag" | "ask") })}
-          >
-            <option value="flag">stay without a code</option>
-            <option value="ask">ask the user (non-blocking)</option>
-            <option value="code">get a default code</option>
-          </select>
-        </label>
-        {typeof unm === "object" && (
-          <div className="f">
-            <span className="f-label">Default code</span>
-            <CodePicker value={unm.code} onChange={(c) => onChange({ ...map, onUnmapped: { code: c ?? "" } })} titles={titles} />
-          </div>
-        )}
         <div className="ct-actions">
           {rs && (
             <span className="small muted">
-              {coded} of {kinds.length} line kinds coded here
+              {coded} of {kinds.length} rows coded in the table
             </span>
           )}
           <button type="button" className="ghost small-btn" onClick={runSuggest} disabled={!rs || codeList.codes.length === 0}>
@@ -293,14 +260,26 @@ export function ClassTable({ codeList, map, onChange, presets, ruleSets, loadRul
           )}
         </div>
       </div>
-      {advanced.length > 0 && (
-        <p className="note small">
-          This map also has {advanced.length} advanced rule{advanced.length === 1 ? "" : "s"} (conditions on tags, materials, expressions). They still apply; a code set in this table
-          takes priority.{" "}
-          <button type="button" className="link small" onClick={onAdvanced}>
-            Show advanced rules
-          </button>
-        </p>
+      {anyLine.length > 0 && (
+        <section className="ct-any">
+          <h3>Rules for any line</h3>
+          <p className="hint">
+            These look at a line's values (material, element type…), not at which BoQ item made it, so they can apply to any row below that has no code of its own, or one with a lower
+            priority. Highest priority first.
+          </p>
+          <ul>
+            {anyLine.map(({ r, i }) => (
+              <li key={i}>
+                {cap(matchWords(r.match, (id) => kinds.find((k) => k.id === id)?.label ?? id))}: <b>{codeWords(r.code, titles)}</b>{" "}
+                <span className="muted">(</span>
+                <button type="button" className="link small" onClick={() => onOpenRule(i)}>
+                  rule “{r.id}”
+                </button>
+                <span className="muted">{r.priority ? `, priority ${r.priority}` : ""})</span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
       {rsError && <p className="error">{rsError}</p>}
       {!rs && !rsError && <p className="muted">Loading the rule set…</p>}
@@ -329,6 +308,8 @@ export function ClassTable({ codeList, map, onChange, presets, ruleSets, loadRul
                   via={viaAdvanced(k.id)}
                   suggestion={suggested[k.id]}
                   onAccept={() => setRow(k.id, { ...cfgOf(k.id), code: suggested[k.id] })}
+                  outcome={<OutcomeWords outcome={outcomeFor(map, k)} titles={titles} kind={k} kinds={kinds} map={map} table={used} onOpenRule={onOpenRule} />}
+                  covered={(({ base, ifs, general }) => !!base || ifs.length > 0 || general.length > 0)(outcomeFor(map, k))}
                 />
               ))}
             </section>
@@ -341,7 +322,7 @@ export function ClassTable({ codeList, map, onChange, presets, ruleSets, loadRul
           {orphans.map((id) => (
             <Row
               key={id}
-              kind={{ id, label: id, group: "item", sub: "not in this rule set" }}
+              kind={{ id, label: id, group: "item", tags: [], sub: "not in this rule set" }}
               cfg={cfgOf(id)}
               onChange={(c) => setRow(id, c)}
               titles={titles}
@@ -356,8 +337,12 @@ export function ClassTable({ codeList, map, onChange, presets, ruleSets, loadRul
   );
 }
 
-function Row({ kind, cfg, onChange, titles, termOptions, termLabel, via, suggestion, onAccept }: {
+function Row({ kind, cfg, onChange, titles, termOptions, termLabel, via, suggestion, onAccept, outcome, covered }: {
   kind: LineKind;
+  /** Some rule (table or other) can give these lines a code. */
+  covered?: boolean;
+  /** What decides this row's code, in words. */
+  outcome?: ReactNode;
   cfg: RowConfig;
   onChange: (c: RowConfig) => void;
   titles: Map<string, string>;
@@ -378,13 +363,10 @@ function Row({ kind, cfg, onChange, titles, termOptions, termLabel, via, suggest
   const valueLabel = (v: string) => (cfg.split === "external" ? (v === "true" ? "Outside (external)" : "Inside (internal)") : termLabel(v));
   const opts = termOptions(cfg.split).filter((t) => !cfg.values.some((v) => v.value === t.id));
   return (
-    <div className={`ct-row ${empty ? "uncoded" : ""}`}>
+    <div className={`ct-row ${empty && !covered ? "uncoded" : ""}`} title={empty && !covered ? "Nothing gives these lines a code" : undefined}>
       <span className="ct-kind">
         <b>{kind.label}</b>
-        <span className="muted small block">
-          <code>{kind.id}</code>
-          {kind.sub ? ` · ${kind.sub}` : ""}
-        </span>
+        <span className="muted small block">{kind.sub}</span>
       </span>
       <span>
         <Select value={cfg.split} options={["none", "external", "material", "element_type"] as const} labels={SPLIT_LABEL} onChange={(s) => setSplit(s ?? "none")} />
@@ -426,7 +408,7 @@ function Row({ kind, cfg, onChange, titles, termOptions, termLabel, via, suggest
             </button>
           </span>
         )}
-        {empty && via.length > 0 && <span className="muted small">Coded by advanced rule {via.join("; ")}</span>}
+        {outcome ?? (empty && via.length > 0 && <span className="muted small">Coded by advanced rule {via.join("; ")}</span>)}
       </span>
     </div>
   );

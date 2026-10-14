@@ -608,7 +608,7 @@ function Editor({ entry, drafts, presets, model, loadDictionary, onOpenBoq, rule
         </div>
       )}
       {kind === "rules" && (
-        <RuleSetEditor doc={doc as OurRuleType} onChange={onChange} parent={parent.flat} parentNote={parent.note} ruleSetIds={ruleSetIds} onItemRenamed={onItemRenamed} />
+        <RuleSetEditor doc={doc as OurRuleType} onChange={onChange} parent={parent.flat} parentNote={parent.note} ruleSetIds={ruleSetIds} onItemRenamed={onItemRenamed} model={model} />
       )}
       {kind === "dictionaries" && (
         <DictionaryEditor doc={doc as Dictionary} onChange={onChange} presets={presets} model={model} loadDictionary={loadDictionary} onOpenBoq={onOpenBoq} />

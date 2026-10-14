@@ -92,6 +92,8 @@ Environment: `IFC_BOQ_PYTHON` (python to use), `IFC_BOQ_SKIP_ENGINE_SETUP=1`,
 | Add or change an engine stage | `docs/05-engine.md` |
 | Write or change a rule set | `docs/06-rules-authoring.md` |
 | Use the Library to manage rule sets (user guide) | `docs/14-rules-guide.md` |
+| Use the Library to manage classifications (user guide) | `docs/15-classifications-guide.md` |
+| Use the Library to manage dictionaries (user guide) | `docs/16-dictionaries-guide.md` |
 | Dictionaries and code lists | `docs/07-dictionaries-and-classification.md` |
 | What is not built yet, open questions | `docs/11-roadmap-and-open-questions.md` |
 | Everything from the original conversation, verbatim | `docs/reference/` |
