@@ -93,6 +93,7 @@ export function App() {
       });
       setRun(r);
       if (r.result.status === "needs_input") setTab("questions");
+      return r;
     } catch (e) {
       setRunError((e as Error).message);
     } finally {
@@ -136,6 +137,22 @@ export function App() {
     const cl = settings.classifications.map((c) => presets.classifications.find((x) => x.id === c)?.name ?? c).join(", ");
     return `${rs}${cl ? ` / ${cl}` : ""}`;
   }, [presets, result, settings.classifications]);
+
+  /** Fetch the run's Excel; a hosted engine may have forgotten the run, so generate it again then. */
+  const downloadExcel = async () => {
+    if (!run) return;
+    let blob = await api.excel(run.xlsxUrl);
+    if (!blob) {
+      const again = await generate();
+      blob = again ? await api.excel(again.xlsxUrl) : null;
+    }
+    if (!blob) return setRunError("The Excel file could not be made. Generate the BoQ again.");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${(active[0]?.summary.fileName ?? "boq").replace(/\.[^.]+$/, "")} BoQ.xlsx`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+  };
 
   const head = <SideHead mode={mode} onMode={setMode} />;
   if (mode === "library") {
@@ -225,9 +242,9 @@ export function App() {
                 <button className="ghost" onClick={() => setPinned({ label: runLabel, result, classification: primary })}>
                   Pin for comparison
                 </button>
-                <a className="button" href={run.xlsxUrl}>
+                <button className="button" onClick={() => void downloadExcel()} disabled={running}>
                   Download Excel
-                </a>
+                </button>
               </div>
             </header>
             {runError && <p className="error">{runError}</p>}

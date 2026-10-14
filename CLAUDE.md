@@ -58,6 +58,7 @@ Environment: `IFC_BOQ_PYTHON` (python to use), `IFC_BOQ_SKIP_ENGINE_SETUP=1`,
 | `fixtures/` | The NIBS Duplex IFC and the hand-made reference BoQ; buildingSMART certification samples (CC BY 4.0) in `ifc/buildingsmart/`. |
 | `scripts/` | Node helpers that set up and run the Python engine from npm. |
 | `docs/` | Everything decided so far, written for the next developer or agent. |
+| `vercel.json`, `api/index.py`, `requirements.txt` | Demo deployment on Vercel only (docs/17): the web build plus the engine as one Python function. Keep the root `requirements.txt` in sync with `engine/requirements.txt`. |
 
 ## Rules of the road
 
@@ -94,6 +95,7 @@ Environment: `IFC_BOQ_PYTHON` (python to use), `IFC_BOQ_SKIP_ENGINE_SETUP=1`,
 | Use the Library to manage rule sets (user guide) | `docs/14-rules-guide.md` |
 | Use the Library to manage classifications (user guide) | `docs/15-classifications-guide.md` |
 | Use the Library to manage dictionaries (user guide) | `docs/16-dictionaries-guide.md` |
+| Deploy a demo on Vercel | `docs/17-deploying-a-demo.md` |
 | Dictionaries and code lists | `docs/07-dictionaries-and-classification.md` |
 | What is not built yet, open questions | `docs/11-roadmap-and-open-questions.md` |
 | Everything from the original conversation, verbatim | `docs/reference/` |

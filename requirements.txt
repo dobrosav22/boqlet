@@ -1,0 +1,11 @@
+# Python packages for the Vercel demo deployment (api/index.py): the engine's runtime only.
+# Keep in sync with engine/requirements.txt, which local development uses (npm install).
+ifcopenshell>=0.8.0,<0.9.99
+numpy>=1.26
+trimesh>=4.4
+networkx>=3.0
+manifold3d>=2.5
+openpyxl>=3.1
+jsonschema>=4.21
+fastapi>=0.115
+python-multipart>=0.0.9

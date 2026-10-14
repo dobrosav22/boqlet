@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "IFC_BOQ_SKIP_ENGINE_SETUP=1 npm ci",
+  "buildCommand": "VITE_DEPLOYED=1 VITE_MAX_UPLOAD_MB=4.4 npm run build",
+  "outputDirectory": "apps/web/dist",
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 300,
+      "excludeFiles": "{apps/**,docs/**,fixtures/**,node_modules/**,scripts/**,engine/tests/**,engine/scripts/**,engine/.cache/**,engine/.venv/**,packages/types/src/**,presets/user/**,**/__pycache__/**}"
+    }
+  },
+  "rewrites": [{ "source": "/api/:path*", "destination": "/api/index?__path=:path*" }]
+}

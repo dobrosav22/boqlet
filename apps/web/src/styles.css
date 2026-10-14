@@ -828,3 +828,15 @@ summary {
     transition: none !important;
   }
 }
+
+/* hosted demo (VITE_DEPLOYED): what the demo cannot do */
+.demo-note {
+  margin: 0;
+  padding: 6px 9px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #7a5a06;
+  background: var(--amber-soft);
+  border: 1px solid #e8d49a;
+  border-radius: var(--radius);
+}

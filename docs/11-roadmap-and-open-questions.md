@@ -67,7 +67,9 @@ add a row here before you finish, even if nobody asked: this page is how nothing
   against a model. The BoQ view shows each line's actual code after Generate.
 - **BoQ items** have no preview: what an item takes and the lines it makes are seen only after
   Generate. A preview against the loaded model (through the engine) is the next step for the form.
-- No auth, single user, CORS allows only localhost:5173. Not for deployment.
+- No auth, single user, CORS allows only localhost:5173. Not for deployment beyond the Vercel demo
+  (17): there, IFC files up to 4.4 MB, the engine forgets models between instances (the app re-sends
+  them), and Library saves are temporary.
 - `engine/.cache` grows with every upload and run; delete it freely.
 - On Windows, uvicorn's auto-reload stops the old engine worker with a Ctrl+C console event. When
   `npm run dev` runs without a console window (started by an IDE task or a background tool rather than a
@@ -142,6 +144,7 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-10-14 | (uncommitted) | Vercel demo deployment: `vercel.json` (Vite build, the engine as one Python function `api/index.py`, `/api/*` rewrite), root `requirements.txt`; the app knows it is deployed (`VITE_DEPLOYED`): demo note, upload limit with a clear message, re-sends a model the engine forgot, regenerates a lost Excel file. Tested locally with the function's entry point and a mid-session engine restart; not yet on Vercel itself. Doc 17 |
 | 2026-10-14 | 5e0bc4f | Dictionaries in plain words: the editor opens with what the dictionary is and which one wins (`dictStory.tsx`); four tabs instead of six (Names in the model, Names it explains, Meanings, Advanced: values read from names, about, JSON); a sentence per entry, meaning and value reader; plain labels for fields, match kinds, categories and value targets; record details, other languages, values and links folded under More options. Guide: 16 |
 | 2026-10-14 | 5e0bc4f | Classifications in plain words: the editor opens with what the classification does and the order a line gets its code from (`classStory.tsx`); three tabs instead of five (Codes per line, Code list with "About this list", Advanced: rules by condition, where codes come from, JSON); under each table row what decides its code, in the engine's order; rules not aimed at any item listed once as "Rules for any line"; map rules with a sentence, BoQ items picked by name, plain labels; formulas read UNDER(…) as "is a kind of" and IFC class tests as element kinds. Docs 07; guide: 15 |
 | 2026-10-14 | 5e0bc4f | BoQ items in plain words: each item opens with a sentence of what it does (`itemStory.tsx`), parts click through to the form; form regrouped into What is measured / How it is measured / How lines are split / What each line says, the rest under More options; element kinds by name with counts from the loaded model; plain words for ways of measuring, surfaces, deductions, fields; "one line per" ticks; line text with insert buttons and "Reads as"; "+ From the model" starts from a kind of element or a copy. Guide 14 updated (items tab, Settings and items, questions setup and sections) |
