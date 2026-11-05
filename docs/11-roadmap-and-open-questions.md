@@ -116,20 +116,23 @@ Product (non-engineering):
 
 ## Open questions
 
-- [ ] Who is the primary user for v1: QS firm, contractor bidding tenders, or designer checking costs?
+Questions answered by the product plan (`plan/`, Nov 2026) are ticked with the decision id from
+`plan/README.md`. What the plan still assumes is in `plan/09-open-questions.md`.
+
+- [x] Who is the primary user for v1? The firm that produces the BoQ: design and engineering firms first, QS firms on the same flows; contractors are invited bidders (P01, P02). To validate with interviews (plan Q1).
 - [ ] Which market and rulebook first (e.g. "as modelled" + an NRM-style preset)?
-- [ ] What exactly is in and out of v1 scope (single model or federated? Excel only? viewer?)
+- [x] What exactly is in and out of v1 scope? `plan/00-product/03-v1-scope.md` (federated + versions, viewer, approval, tendering, Excel).
 - [ ] Which QS or civil engineer partner translates rulebooks into presets and reviews the logic?
 - [ ] Legal check per standard: does encoding NRM, VOB, CESMM or ÖNORM rules as parameters need a licence?
 - [ ] CSI licence: only if North America is targeted.
 - [ ] Where will messy real files and the professional reference BoQs come from?
 - [ ] How is AI used for name resolution, and with which confidence thresholds?
 - [ ] Pricing validation and regional price levels.
-- [ ] Is pricing (rates, tender comparison) part of the product or a second product?
+- [x] Is pricing part of the product? No rate database; pricing through tendering: packages, bidder offers, comparison, award (P04).
 - [ ] MEP and infrastructure (IFC4.3) in scope, and when?
-- [ ] Non-functional targets: maximum file size, processing-time goals, data residency, security requirements.
-- [ ] Acceptance criteria for v1, e.g. "within X% of a professional BoQ on these 3 reference projects".
-- [ ] Frontend framework for the product UI (Vite SPA as now, or Next.js) given a Java backend.
+- [x] Non-functional targets: `plan/04-architecture/nfr.md` and `security.md` (region left to the deployment, P09).
+- [x] Acceptance criteria for v1: `plan/00-product/03-v1-scope.md` (accuracy against professional BoQs still needs reference projects).
+- [x] Frontend framework: Next.js (App Router) against a mock API, then the Java backend (P11, P12).
 
 ## What an engineer still needs before building the platform
 
@@ -144,6 +147,7 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-11-05 | (uncommitted) | Product plan for the deployment-ready app in `plan/`: product (vision, personas, v1 scope, glossary, plans), domain (data model, state machines, permissions, business rules), 15 feature specs, flows and screens, architecture (engine worker contract, storage/jobs/SSE, security, deployment, NFR), `openapi.yaml` (167 operations, lints clean), frontend (Next.js, PoC reuse, mock API), backend (Java modules, DB schema, decisions to ask), milestones and task lists (FE/BE/EN/TS), open questions. Noted: docs/08 R2/R8 and docs/00 test count are out of date |
 | 2026-10-14 | 1f1bd5f | Vercel demo deployment: `vercel.json` (Vite build, the engine as one Python function `api/index.py`, `/api/*` rewrite), root `requirements.txt`; the app knows it is deployed (`VITE_DEPLOYED`): demo note, upload limit with a clear message, re-sends a model the engine forgot, regenerates a lost Excel file. Tested locally with the function's entry point and a mid-session engine restart; not yet on Vercel itself. Doc 17 |
 | 2026-10-14 | 5e0bc4f | Dictionaries in plain words: the editor opens with what the dictionary is and which one wins (`dictStory.tsx`); four tabs instead of six (Names in the model, Names it explains, Meanings, Advanced: values read from names, about, JSON); a sentence per entry, meaning and value reader; plain labels for fields, match kinds, categories and value targets; record details, other languages, values and links folded under More options. Guide: 16 |
 | 2026-10-14 | 5e0bc4f | Classifications in plain words: the editor opens with what the classification does and the order a line gets its code from (`classStory.tsx`); three tabs instead of five (Codes per line, Code list with "About this list", Advanced: rules by condition, where codes come from, JSON); under each table row what decides its code, in the engine's order; rules not aimed at any item listed once as "Rules for any line"; map rules with a sentence, BoQ items picked by name, plain labels; formulas read UNDER(…) as "is a kind of" and IFC class tests as element kinds. Docs 07; guide: 15 |

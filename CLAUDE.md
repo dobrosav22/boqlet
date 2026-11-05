@@ -98,6 +98,7 @@ Environment: `IFC_BOQ_PYTHON` (python to use), `IFC_BOQ_SKIP_ENGINE_SETUP=1`,
 | Deploy a demo on Vercel | `docs/17-deploying-a-demo.md` |
 | Dictionaries and code lists | `docs/07-dictionaries-and-classification.md` |
 | What is not built yet, open questions | `docs/11-roadmap-and-open-questions.md` |
+| Build the product (Next.js frontend, mock API, Java backend, engine worker): specs, API contract, tasks | `plan/README.md` |
 | Everything from the original conversation, verbatim | `docs/reference/` |
 
 ## Status in one paragraph

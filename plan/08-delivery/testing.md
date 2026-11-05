@@ -1,0 +1,64 @@
+# Testing strategy
+
+## Layers
+
+| Layer | Tool | Where | What |
+|---|---|---|---|
+| Engine unit + acceptance | pytest | `engine/tests` | Existing suite (194 tests) incl. Duplex `HAND_BOQ`; new worker, diff, override, sheets tests (tasks-engine.md) |
+| Contract | Schemathesis or a hand-written suite over the generated client | `tests/contract` | Every operation in `openapi.yaml`: status codes, schemas, error codes; runs against the **mock** (M0–M4) and **Java** (M5+) |
+| Behaviour scenarios | Vitest (TS) over the generated client | `tests/scenarios` | Domain rules through the API: state machines, permissions, limits, sealed tenders, BR-xx. Same suite against mock and Java |
+| Frontend unit | Vitest + Testing Library | `apps/app` | Components with logic: grouping, readable formulas, comparison flags display, decimal display, permission gating |
+| End-to-end | Playwright | `apps/app/e2e` | Flows FL-1…FL-8 against mock + real engine (CI) and against Java on staging (nightly) |
+| Backend unit/integration | JUnit 5 + Testcontainers | `services/api` | Policies, state machines, repositories, ingestion, fake worker |
+| Performance | k6 (API), Playwright traces (UI), engine timing script | `tests/perf` | NFR targets (nfr.md) |
+| Accessibility | axe-core in Playwright | `apps/app/e2e` | Main screens, no serious/critical violations |
+
+## The shared suites are the handover mechanism
+
+`tests/contract` and `tests/scenarios` are written during M0–M4 **against the mock**. They
+describe the backend's behaviour precisely. The Java backend is done when the same suites pass
+against it unchanged (M5–M7). Scenario tests are named after rule ids (`BR-44 sealed tender
+hides rates from every firm endpoint`) and acceptance criteria (`F11-AC2`).
+
+Each scenario seeds through the API only (no direct DB access), so it runs against both
+implementations. A test-only endpoint `POST /_test/clock` (mock and Java, disabled in
+production builds) moves time for deadline tests.
+
+## Fixtures
+
+| Fixture | Source | Used by |
+|---|---|---|
+| Duplex v1 | `fixtures/ifc/Ifc2x3_Duplex_Architecture.ifc` | everything |
+| Duplex v2 | EN-008 script | revisions, diff |
+| Hand BoQ | `engine/tests/test_duplex.py` `HAND_BOQ`, exported to JSON for e2e | v1 criterion 1 |
+| Federated pair | NBU office architecture + structure (downloaded, docs/12) | federation, nightly |
+| buildingSMART samples | `fixtures/ifc/buildingsmart` | parse edge cases |
+| Bidder xlsx files | filled package files from Excel and LibreOffice (EN-006) | import |
+| Recorded engine outputs | results of the real worker on the fixtures | Java integration tests (fake worker) |
+
+## CI pipeline
+
+1. Lint: contract (`api:lint`), TS (eslint), Python (ruff if adopted), Java (spotless/checkstyle).
+2. Typecheck: workspaces.
+3. Engine tests (`npm run test:engine`).
+4. Codegen drift check: regenerate schemas/clients, fail on diff.
+5. Mock + engine up → contract + scenario suites → Playwright smoke (FL-2 Duplex).
+6. Java build + unit/integration (from M5) → contract + scenario suites against Java.
+7. Nightly: full Playwright on Java staging, federated pair, performance, accessibility.
+
+## Test tasks
+
+| ID | Milestone | Task | Acceptance |
+|---|---|---|---|
+| TS-001 | M0 | Scaffold `tests/contract` and `tests/scenarios` (Vitest over the generated client, base URL from env), seed helpers through the API, `/_test/clock`; wire into CI against the mock | One contract test per tag and one scenario per state machine run green against the mock |
+| TS-002 | M8 | Performance suite (k6 for API paths in nfr.md, engine timing on reference files, Playwright traces for sheet and viewer) | NFR table filled with measured values on staging |
+| TS-003 | M8 | Accessibility suite (axe in Playwright on S05, S10, S12a–c, S15c, S20, S29) | No serious/critical violations |
+| TS-004 | M8 | v1 acceptance run on staging (00-product/03 criteria 1–11), results recorded in `plan/README.md` | All green |
+
+## Definition of done (every task)
+
+- Acceptance criteria of the task met and covered by an automated test where marked (A).
+- Contract and scenario suites green.
+- No new hard-coded UI strings; i18n keys added.
+- Audit events written for new write actions.
+- Docs: plan status updated if a milestone moved; `docs/11` "Done" row added (project rule).

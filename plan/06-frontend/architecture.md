@@ -1,0 +1,163 @@
+# Frontend architecture
+
+The product frontend lives in `apps/app` (new). It is a **UI only**: no business logic, no
+quantity computation (BR-01), no direct engine access. It talks to the API in `openapi.yaml`
+(mock first, Java later) through a generated client.
+
+## Stack
+
+| Concern | Choice | Notes |
+|---|---|---|
+| Framework | **Next.js (App Router)**, React 19, TypeScript strict | Pin the current stable version in FE-001. `output: "standalone"` for containers |
+| Data fetching | **TanStack Query v5** + `openapi-fetch` client generated with `openapi-typescript` | Server state lives only in the query cache |
+| Realtime | SSE via `@microsoft/fetch-event-source` (sends auth headers) | One connection per tab, in the app layout |
+| Tables | **TanStack Table v8 + TanStack Virtual** | BoQ sheet, comparison, decisions, audit |
+| Forms | react-hook-form + zod (form-level validation only) | Server validation is the authority |
+| URL state | `nuqs` (typed search params) | Tabs, filters, grouping, selected line |
+| Client state | React state; Zustand only for the Library editor drafts and viewer selection | Port of `apps/web/src/library/store.ts` |
+| i18n | **next-intl** (ICU) | `messages/en/*.json`, pseudo-locale `en-XA` |
+| Styling | Tailwind CSS + Radix UI primitives (shadcn/ui-style components kept in the repo) | **Recommendation; owner to confirm in FE-001** |
+| 3D | three.js (port of `apps/web/src/viewer`) | Lazy-loaded route chunk |
+| Decimals | `big.js` | Bidder amount display only; the backend computes the stored amounts (BR-47) |
+| Tests | Vitest + Testing Library; Playwright e2e against mock API + engine | 08-delivery/testing.md |
+| Lint | ESLint (next, typescript, `react/jsx-no-literals` or `i18next/no-literal-string` for UI text), Prettier | No literal UI strings (F15) |
+
+## Rendering model
+
+- The app is behind authentication and is data-heavy. Pages are **client components that fetch
+  through TanStack Query**. Server Components are used for layouts, static chrome and the
+  public pages (sign-in shell, invitation previews).
+- **No Next.js route handlers with business logic.** Next serves the UI. The API is a separate
+  service (same domain, `/api/v1` routed to it), so swapping mock → Java changes only
+  `NEXT_PUBLIC_API_BASE_URL` (P11).
+- Next middleware is allowed only to redirect unauthenticated users to `/sign-in`, when the
+  auth adapter exposes a cookie the middleware can check.
+
+## Folder structure
+
+```text
+apps/app/
+  app/
+    (public)/sign-in/[[...rest]]/page.tsx
+    (public)/sign-up/[[...rest]]/page.tsx
+    (public)/invite/[token]/page.tsx
+    (public)/bid-invite/[token]/page.tsx
+    (app)/layout.tsx                   # auth gate, SSE connection, QueryClientProvider, IntlProvider
+    (app)/onboarding/page.tsx
+    (app)/account/page.tsx
+    (app)/notifications/page.tsx
+    (app)/[org]/layout.tsx             # org chrome: top bar, left nav, org resolution by slug
+    (app)/[org]/page.tsx               # dashboard
+    (app)/[org]/projects/new/page.tsx
+    (app)/[org]/projects/[projectId]/layout.tsx      # project sub-nav
+    (app)/[org]/projects/[projectId]/page.tsx
+    (app)/[org]/projects/[projectId]/models/…
+    (app)/[org]/projects/[projectId]/boqs/[boqId]/page.tsx   # workspace with ?tab=
+    (app)/[org]/projects/[projectId]/decisions/page.tsx
+    (app)/[org]/projects/[projectId]/tenders/[tenderId]/page.tsx
+    (app)/[org]/projects/[projectId]/library/…
+    (app)/[org]/projects/[projectId]/settings/page.tsx
+    (app)/[org]/projects/[projectId]/activity/page.tsx
+    (app)/[org]/library/…
+    (app)/[org]/settings/{general,members,billing,usage,audit}/page.tsx
+    (bidder)/layout.tsx                # minimal chrome
+    (bidder)/bids/page.tsx
+    (bidder)/bids/[invitationId]/page.tsx
+  src/
+    api/            schema.d.ts (generated), client.ts, keys.ts (query keys), hooks/<resource>.ts, errors.ts
+    auth/           AuthAdapter.ts, adapters/mock.tsx, adapters/<provider>.tsx (after the decision)
+    realtime/       sse.ts (connect, reconnect, Last-Event-ID), invalidation.ts (event → query keys)
+    features/       one folder per feature: projects, models, boq-sheet, questions, viewer, changes,
+                    review, library (ported), tenders, bids, settings, billing, notifications
+    components/     design-system components (design-system.md)
+    i18n/           config, formatters (numbers, units, currency, dates)
+    lib/            permissions.ts, units.ts, decimal.ts, download.ts
+    viewer/         ported three.js viewer
+  messages/en/*.json, messages/en-XA/ (generated pseudo-locale)
+```
+
+## Data layer rules
+
+1. **Generated types only.** No hand-written API types. `npm run api:gen` regenerates
+   `src/api/schema.d.ts` from `packages/api/openapi.yaml`. Engine types (`BoqLine`,
+   `Question`, `RuleSet`...) come from `@ifc-boq/types` when a component needs the engine
+   shape directly (Library editors).
+2. **Query keys** are centralised in `src/api/keys.ts`: `['project', id]`, `['run', id, 'lines', params]`...
+3. **Immutable data is cached forever:** runs that finished, their lines/questions/log, model
+   versions that are `ready`, preset versions that are published, scene/geometry
+   (`staleTime: Infinity`). Mutable lists use `staleTime` 30 s plus SSE invalidation.
+4. **SSE → invalidation map** (`realtime/invalidation.ts`):
+   - `job.finished {type: "parse", subjectId}` → `['modelVersion', subjectId]`, `['models', projectId]`
+   - `job.finished {type: "run"}` → `['revision', …]`, `['runs', revisionId]`, `['boq', …]`
+   - `entity.changed {entityType, entityId}` → that entity and its parent lists
+   - `notification.created` → `['notifications']` + toast when relevant
+5. **Mutations** use optimistic updates for decisions, overrides, manual items, offer draft
+   rates and notification reads. They roll back on error and show the translated error.
+6. **Errors:** one `ApiError` class with `code`, `details`, `status`. Global handling: `401` →
+   `auth.signIn({returnTo})`; `402` → `<LimitDialog>` (F14); `404` → route `notFound()`;
+   `409 revision_locked` and other state conflicts → a toast and refetch. Everything else →
+   inline error with retry.
+7. **Permissions:** `can(resource.permissions, "approve")` for UI gating, from the API's
+   `permissions` objects. Org-level from `GET /me`. Never infer permissions from roles in more
+   than one place (`lib/permissions.ts`).
+
+## Auth adapter
+
+```ts
+export interface AuthAdapter {
+  /** "loading" until the provider has restored a session. */
+  useSession(): { status: "loading" | "authenticated" | "anonymous"; email?: string; name?: string };
+  /** Bearer token for API calls, or null when the provider uses cookies. */
+  getAccessToken(): Promise<string | null>;
+  signIn(opts?: { returnTo?: string; email?: string }): Promise<void>;
+  signUp(opts?: { returnTo?: string; email?: string }): Promise<void>;
+  signOut(): Promise<void>;
+  /** Optional embedded UI for providers that render forms in-app. */
+  SignInPage?: React.ComponentType;
+  SignUpPage?: React.ComponentType;
+}
+```
+- `mock` adapter: a sign-in page listing seeded users. The token is `mock:<userId>`, kept in
+  `sessionStorage`.
+- The real adapter is written after the auth decision (07-backend/decisions-to-make.md). No
+  component imports a provider SDK directly.
+
+## BoQ workspace (the heaviest screen)
+
+- Route `/{org}/projects/{p}/boqs/{b}?rev=&tab=&line=&group=`. Default: the current
+  revision, Sheet tab.
+- Loads `boq` → `revision` → `currentRun` → `lines` (one request up to 20k lines; above that
+  server-side grouping), in parallel with `questions` count and `warnings`.
+- Grouping by code path is done client-side with memoised selectors. For 20k lines, run
+  it in a Web Worker if profiling shows > 100 ms.
+- Selection (line keys, element GlobalIds) is shared between sheet, detail panel and viewer
+  through a small Zustand store, mirrored to `?line=`.
+- The viewer is a lazy chunk. It loads `geometry.glb` for each input model version and
+  `scene.json`, `coverage` for the run.
+
+## Library (port)
+
+The PoC Library (`apps/web/src/library/*`) is the most valuable UI code in the repo. Port it
+into `features/library` (reuse-from-poc.md): keep its components and plain-language
+"story" helpers, and replace its data access (`api.ts`, `presets/user` saves) with the new
+endpoints (drafts, publish, versions, preview). Its CSS (`library.css`) is re-expressed in the
+design system.
+
+## Performance budgets
+
+- Initial JS for `/{org}` ≤ 250 KB gzip. Viewer, Library editors and the comparison grid are
+  separate chunks.
+- Sheet: 60 fps scroll at 20k rows (virtualised rows, fixed row height, no per-row
+  subscriptions).
+- Lighthouse performance ≥ 80 on the dashboard (warm API).
+
+## Environment
+
+| Variable | Example |
+|---|---|
+| `NEXT_PUBLIC_API_BASE_URL` | `/api/v1` (proxied in dev to the mock on `http://localhost:4010`) |
+| `NEXT_PUBLIC_AUTH_ADAPTER` | `mock` |
+| `NEXT_PUBLIC_SENTRY_DSN` | optional |
+
+In dev, `next.config` rewrites `/api/v1/*` to the mock (or Java) so cookies and CSP behave as
+in production (same origin).
