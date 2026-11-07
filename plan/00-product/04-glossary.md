@@ -32,6 +32,11 @@ API and UI copy.
 | Promote | Turn a project name answer into an entry in the org's company dictionary. Needs library-editor rights. | action |
 | Override | A user-set quantity for one line, with a reason, kept across runs. Shown as overridden, never hidden. | `LineOverride` |
 | Manual line | A BoQ line with no model behind it (preliminaries, provisional sums, lump sums), added in the sheet. | `ManualItem` (engine rule) |
+| Item number | A code in a classification as the firm uses it in its BoQs ("05.03"). | `Code.code` |
+| Item text | The written description of a BoQ item that bidders price ("Laying external walls {thickness} cm thick…"). A template on a code, filled per line by the engine. Shown as the line's description when present. | `Code.description` → `LineCode.text` |
+| Line text | The rule set's short label for a line ("Wall, Exterior - Brick on Block, 417 mm"). Shown when the line's code has no item text, and always in the line detail as "Measured as". | `BoqLine.description` |
+| Setup wizard | The guided first setup of an org's rule set, classification and company dictionary (F16). | `Org.setup` |
+| Setup question | A rule-set question the setup wizard asks, marked in the rule set. | `SlotPrompt.setup` |
 | Adjustments | A BoQ's overrides and manual lines together. | `Boq.adjustments` |
 | Change report | Difference between two runs: lines added / removed / changed, elements added / removed / changed, questions new / resolved. | `RunDiff` |
 | Library | The org's presets: rule sets, classifications, dictionaries (and federation/resolution settings). | UI area |

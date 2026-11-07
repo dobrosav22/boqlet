@@ -14,8 +14,8 @@ M0 Contract + scaffolding ─► M1 Core loop (FE) ─► M2 Library (FE) ─►
 | # | Milestone | Contents | Exit criteria |
 |---|---|---|---|
 | **M0** | Contract and scaffolding | FE-001…FE-004, EN-001, TS-001 | `packages/api/openapi.yaml` lints; Next app and mock start with `npm run dev:app`; mock answers `GET /me` for seeded users; engine HTTP transport parses and runs the Duplex with inline presets; CI runs lint, typecheck, engine tests, contract tests |
-| **M1** | Core loop on the mock | FE-005…FE-016, EN-003, EN-004, EN-007 | FL-1 and FL-2 up to "run complete" work end to end with real engine numbers; Duplex reproduction through the stack (v1 criterion 1) passes against the mock; sheet, questions, viewer, overrides, manual lines |
-| **M2** | Library | FE-017…FE-021, EN-005 | FL-6 works; v1 criterion 7 passes against the mock |
+| **M1** | Core loop on the mock | FE-005…FE-016, FE-042, EN-003, EN-004, EN-007 | FL-1 and FL-2 up to "run complete" work end to end with real engine numbers; Duplex reproduction through the stack (v1 criterion 1) passes against the mock; sheet, questions, viewer, overrides, manual lines |
+| **M2** | Library | FE-017…FE-021, FE-040, FE-041, EN-005, EN-010, EN-011 | FL-6 and FL-1 step 6 (setup wizard) work; v1 criteria 7 and 12 pass against the mock |
 | **M3** | Revisions, workflow, exports, notifications | FE-022…FE-028, EN-002, EN-006 (xlsx part), EN-008 | FL-3 works; v1 criteria 3, 4, 5 pass against the mock |
 | **M4** | Tendering | FE-029…FE-036, EN-006 (package/import/comparison) | FL-4 and FL-5 work; v1 criterion 6 passes against the mock |
 | **M5** | Backend core (Java) | BE-000 (decisions), BE-001…BE-012 | Contract suite green for tags me, orgs, projects, models, library, decisions, boqs, adjustments, runs, diffs, exports, jobs; frontend runs against Java on staging for M1–M3 flows |

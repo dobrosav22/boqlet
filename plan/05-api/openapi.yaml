@@ -119,6 +119,25 @@ paths:
       responses:
         "202": { description: Deletion scheduled }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /orgs/{orgId}/setup:
+    parameters: [{ $ref: "#/components/parameters/OrgId" }]
+    get:
+      tags: [orgs]
+      operationId: getOrgSetup
+      description: Setup wizard progress (F16). `204` when the org never started setup.
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/OrgSetup" } } } }
+        "204": { description: Setup not started }
+    put:
+      tags: [orgs]
+      operationId: putOrgSetup
+      description: Save setup wizard progress (owner, admin, library editor). The presets themselves are saved through the Library endpoints.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/OrgSetupUpdate" } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/OrgSetup" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /orgs/{orgId}/members:
     parameters: [{ $ref: "#/components/parameters/OrgId" }]
     get:
@@ -984,10 +1003,14 @@ paths:
           application/json:
             schema:
               type: object
-              required: [reviewerIds]
+              required: [reviewerIds, notModelledConfirmed]
               properties:
                 reviewerIds: { type: array, items: { type: string, format: uuid }, minItems: 1 }
                 message: { type: string }
+                notModelledConfirmed:
+                  type: boolean
+                  const: true
+                  description: The submitter confirms that work not in the models was added (F09 §1, BR-12).
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/BoqRevision" } } } }
         "409": { $ref: "#/components/responses/Conflict" }
@@ -2021,7 +2044,31 @@ components:
         slug: { type: string }
         planId: { type: string }
         settings: { $ref: "#/components/schemas/OrgSettings" }
+        setup: { $ref: "#/components/schemas/OrgSetup" }
         createdAt: { type: string, format: date-time }
+    OrgSetup:
+      type: object
+      description: Setup wizard progress (F16). The drafts it created are ordinary presets.
+      required: [status, step, updatedAt]
+      properties:
+        status: { type: string, enum: [in_progress, done, dismissed] }
+        step: { type: string, enum: [start, measure, items, names, review] }
+        modelVersionId: { type: string, format: uuid, description: the model version the preview runs on }
+        ruleSetPresetId: { type: string, format: uuid }
+        classificationPresetId: { type: string, format: uuid }
+        dictionaryPresetId: { type: string, format: uuid }
+        startedBy: { $ref: "#/components/schemas/UserRef" }
+        updatedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time }
+    OrgSetupUpdate:
+      type: object
+      properties:
+        status: { type: string, enum: [in_progress, done, dismissed] }
+        step: { type: string, enum: [start, measure, items, names, review] }
+        modelVersionId: { type: [string, "null"], format: uuid }
+        ruleSetPresetId: { type: string, format: uuid }
+        classificationPresetId: { type: string, format: uuid }
+        dictionaryPresetId: { type: string, format: uuid }
     OrgSettings:
       type: object
       properties:
@@ -2938,6 +2985,7 @@ components:
         allowPartial: { type: boolean }
         deviationThresholdPct: { type: number }
         sharedWithGuests: { type: boolean }
+        textSystem: { type: string, description: "Classification id whose item numbers and item texts bidders see (P14). Default: the revision's first classification." }
         status: { $ref: "#/components/schemas/TenderStatus" }
         currentAddendum: { type: integer }
         counts:
@@ -2964,9 +3012,11 @@ components:
         allowPartial: { type: boolean, default: false }
         deviationThresholdPct: { type: number, default: 30 }
         sharedWithGuests: { type: boolean, default: false }
+        textSystem: { type: string, description: "Classification id whose item numbers and item texts bidders see (P14). Default: the revision's first classification." }
     TenderUpdate:
       type: object
       properties:
+        textSystem: { type: string, description: Only while the tender is a draft. }
         name: { type: string }
         currency: { type: string }
         deadline: { type: string, format: date-time }
@@ -3016,9 +3066,9 @@ components:
         id: { type: string, format: uuid }
         lineKey: { type: string }
         sortIndex: { type: integer }
-        code: { type: string }
+        code: { type: string, description: Item number in the tender's textSystem. }
         groupPath: { type: array, items: { type: object, properties: { code: { type: string }, title: { type: string } } } }
-        description: { type: string }
+        description: { type: string, description: "The filled item text in the tender's textSystem, or the rule set's line text when the code has none (P14)." }
         unit: { type: string }
         quantity: { type: [number, "null"] }
         source: { type: string }

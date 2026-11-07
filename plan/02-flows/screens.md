@@ -52,6 +52,7 @@ and **read-only** (archived project, issued revision, insufficient role) states.
 | S27 | `/bid-invite/[token]` | public → bidder | invitation preview | accept |
 | S28 | `/bids` | bidder | my invitations | open |
 | S29 | `/bids/[invitationId]` | bidder | tender, lines, offer | price, import, submit, withdraw, decline |
+| S30 | `/{org}/setup` | owner, admin, library editor | org setup, presets, preview, names | setup wizard steps (F16), publish all |
 
 Global chrome (all `/{org}` routes): top bar with org switcher, search (projects, BoQs, later
 elements), notifications bell, user menu. Left nav: Dashboard, Projects, Library, Settings.

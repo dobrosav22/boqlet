@@ -14,6 +14,14 @@
 
 ## Behaviour
 
+- **Description column:** the line's item text in the export's grouping classification when
+  its code has one (P14), else the rule set's line text. Item texts wrap in the cell. The
+  "Lines" sheet has both: a column "Measured as" (rule set's line text) and one item-text
+  column per classification that has texts.
+- **Not in the models** (P15, BR-12): a note above the BoQ table: "Quantities are taken from
+  the models only. Work not modelled as objects is included only where derived or added by
+  hand (N manual lines)." Translated through the export's message catalogue.
+
 - Exports are **jobs** (`export_xlsx`, `export_package`, `export_comparison`), usually done in
   seconds. The UI shows a spinner, then downloads via `GET /exports/{exportId}/download`
   (302 to a signed URL). Small CSVs stream directly.
@@ -38,5 +46,6 @@ GAEB DA XML, ÖNORM A 2063, CSV of lines, IfcCostSchedule, PDF print layout.
 ## Acceptance criteria
 
 - [ ] A Duplex run's Excel opens in Excel and LibreOffice without repair prompts, and its totals match the sheet.
+- [ ] With a classification that has item texts, the BoQ sheet's Description column holds the filled texts, and the "Lines" sheet holds both texts.
 - [ ] A draft export carries a DRAFT watermark. The issued export doesn't, and is frozen.
 - [ ] The package Excel round-trips through the bidder import (F11).

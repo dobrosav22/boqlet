@@ -76,6 +76,7 @@ number of tenders, all with one login.
 | settings.defaultLocale | string | |
 | settings.defaultCurrency | string | ISO 4217 |
 | settings.defaultUnitSystem | `metric` \| `imperial` | |
+| setup | `OrgSetup`? | setup wizard progress (F16): `{status: "in_progress" \| "done" \| "dismissed", step, modelVersionId?, ruleSetPresetId?, classificationPresetId?, dictionaryPresetId?, startedBy, updatedAt, completedAt?}` |
 | createdAt | datetime | |
 
 ### Membership
@@ -202,6 +203,8 @@ Org owners and admins have `lead` rights on every project without a row.
 
 A classification version's `doc` is `{codeList: CodeList, map: ClassificationMap}`. Large code
 lists (Uniclass) may be stored in object storage, with `doc.codeList` replaced by a storage key.
+A code's `description` is its **item text** (P14): a template with blanks, filled per line by
+the engine into `LineCode.text` (EN-010).
 
 ## Decisions and adjustments
 
@@ -305,7 +308,7 @@ layer.
 Rows written from the `BoqResult` when a run job succeeds, so lines can be paged, filtered and
 grouped without loading the whole result.
 
-- `RunLine`: `{runId, lineKey, sortIndex, ruleId, ruleKind, description, unit, quantity, source, family, keys, codes, location, tags, notes, trace, overridden: {quantity, reason}?}`. Same fields as engine `BoqLine` plus `sortIndex` and `overridden`.
+- `RunLine`: `{runId, lineKey, sortIndex, ruleId, ruleKind, description, unit, quantity, source, family, keys, codes, location, tags, notes, trace, overridden: {quantity, reason}?}`. Same fields as engine `BoqLine` plus `sortIndex` and `overridden`. `description` is the rule set's line text; each `codes[system].text` is that system's filled item text, when its code has one (EN-010).
 - `RunLineElement`: `{runId, lineKey, guid, modelVersionId, quantity}`. The element ↔ line index for the viewer and for diffs.
 - `RunQuestion`: engine `Question` + `{runId}`. Whether it is answered is a join with `Decision`.
 - `RunLogEntry`: engine `LogEntry` + `{runId}`.
@@ -334,6 +337,7 @@ grouped without loading the whole result.
 | allowPartial | boolean | default false; offers may leave lines unpriced |
 | deviationThresholdPct | number | default 30; comparison flags rates further than this from the median |
 | sharedWithGuests | boolean | default false; project guests may see the comparison after close |
+| textSystem | string? | classification id whose item numbers and item texts bidders see (P14); default the revision's first classification |
 | status | `draft` \| `open` \| `closed` \| `awarded` \| `cancelled` | |
 | openedAt, closedAt | | |
 
@@ -358,6 +362,8 @@ A line belongs to at most one package of a tender. The API rejects overlapping s
 
 ### PackageLine (frozen copy, per addendum)
 `{id, packageId, addendumNumber, lineKey, sortIndex, code, description, unit, quantity, source, notes}`.
+`code` and `description` come from the tender's `textSystem`: the item number and filled item
+text, or the rule set's line text when the code has none.
 Flagged lines (quantity null) are included and shown as "quantity to be confirmed". Bidders may
 price them as a rate only.
 

@@ -12,8 +12,11 @@ system interaction where it isn't obvious. Screens are defined in [screens.md](s
 | 3 | Owner | Optional: invite colleagues (skip allowed) | `/onboarding` step 2 | `POST /orgs/{id}/invitations` |
 | 4 | Owner | Empty dashboard with "Create your first project" and "Try with a sample project" | `/{org}` | `GET /orgs/{id}/projects` |
 | 5 | Owner | Sample project: a copy of the Duplex project (model, BoQ, a few answered questions) to explore | `/{org}/projects/{p}` | `POST /orgs/{id}/projects?sample=duplex` |
+| 6 | Owner | "Set up how your firm measures": the setup wizard (F16) on the sample Duplex or an uploaded model; publishes the org's rule set, classification with item texts and company dictionary, starred as project defaults | `/{org}/setup` | `GET/PUT /orgs/{id}/setup`, Library endpoints (F16 API) |
 
 The sample project doesn't count as an active project, and its processing doesn't count as usage.
+Steps 5 and 6 are optional and in any order. Previews run by the wizard count as processing
+(BR-62), except on the sample project.
 
 ## FL-2 Main loop: models to an issued BoQ
 
@@ -127,6 +130,9 @@ sequenceDiagram
 | 5 | | Publish v1 with a note | editor | `POST /presets/{id}/publish` |
 | 6 | | Classifications → New → import the office code list from Excel → map items | classification editor | `POST /codelists/read`, `/build` |
 | 7 | | Sets them as project defaults on new projects (org setting "starred presets") | Library | `PATCH /presets/{id}` (`starred`) |
+
+The setup wizard (F16) is the short form of this flow for a new org: steps 1–3 and 6 with only
+the setup questions, a live preview and one "Publish all".
 
 ## FL-7 Questions, the fast path
 

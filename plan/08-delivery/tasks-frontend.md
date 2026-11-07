@@ -70,6 +70,12 @@ Override dialog, struck-through engine value, manual line form (formula check vi
 `/presets/check`), edit/delete. Depends on EN-003, EN-007.
 **Accept:** F06 criteria 3, 4.
 
+### FE-042 Not in the models (F06 §12, F09 §1)
+Sheet notice with counts by source and "Add line", collapsible per user; same text as the
+empty state of empty groups and in the "Add line" help; submit dialog checkbox (M3, with
+with FE-024, the submit dialog). Strings from the message catalogue.
+**Accept:** F06 criterion 7; submitting without the tick is impossible.
+
 ### FE-012 Viewer (F07)
 Port `SceneView.ts`/`links.ts`; multi-model load; line ↔ element; element panel; colour modes
 coverage/code/source/model; storey filter, section box, isolate/hide; "Show in 3D" entry
@@ -115,6 +121,22 @@ Publish dialog with change note, preview panel (job, SSE, compact sheet + change
 published). Depends on EN-005.
 **Accept (M2):** F10 criteria; v1 criterion 7 against the mock.
 
+### FE-040 Item texts (F10 §8, §13; F06 §2, §5)
+Code list tab: "Item text" box under each code with insert buttons and "Reads as" (port the
+rule-set line text field); import mapping labels the description column "Item text"; Codes per
+line shows each row's sample text. Sheet: Description from `codes[groupBy].text` with fallback,
+three-line clamp, detail shows the item text and "Measured as". Depends on EN-010.
+**Accept:** F10 criterion 5; F06 criterion 6.
+
+### FE-041 Setup wizard (F16)
+S30 `/{org}/setup`: step list, start step (model picker incl. sample Duplex, start-from preset),
+setup questions from the rule set's `setup` slots with the Settings controls, preview panel with
+changed lines (EN-005), import and Codes per line (reuse FE-019), names (reuse FE-020), review
+and "Publish all" (publish, star, optional project defaults), resume from `Org.setup`, dashboard
+card and Library button, hint on sheets generated with system presets only; mock endpoints
+`GET/PUT /orgs/{orgId}/setup`. Depends on EN-011, FE-017…FE-021.
+**Accept:** F16 criteria (the 15-minute one walked through by hand, v1 criterion 12).
+
 ## M3 Revisions, workflow, exports
 
 ### FE-022 New versions and revisions (F08 §1–2)
@@ -125,8 +147,9 @@ Changes tab with summary, lines and elements tables, filters, viewer "changes" c
 change report export. Depends on EN-002.
 
 ### FE-024 Review, approve, issue (F09)
-Submit dialog with reviewers, review screen (change report first), line comments, request
-changes, approve, issue dialog, reopen warnings, issued read-only mode.
+Submit dialog with reviewers and the "not in the models" confirmation (FE-042), review screen
+(change report first), line comments, request changes, approve, issue dialog, reopen warnings,
+issued read-only mode.
 
 ### FE-025 Exports tab and frozen exports (F12)
 S12g; issued exports; decisions CSV, audit CSV.
@@ -143,7 +166,7 @@ Playwright: FL-3 with Duplex v1 → v2 (EN-008), assert the change report and no
 
 ## M4 Tendering
 
-### FE-029 Tender create and settings (F11 §1)
+### FE-029 Tender create and settings (F11 §1, incl. "item texts from" `textSystem`)
 ### FE-030 Packages builder (F11 §2): selection by codes/families/lines, preview-selection with conflicts, from-groups quick start, unassigned lines panel
 ### FE-031 Bidders and opening (F11 §3–4): invitations per package, address book, open with validation
 ### FE-032 While open (F11 §5): status board (sealed-aware), remind, addendum dialog with dryRun preview, extend, close

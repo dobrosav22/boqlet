@@ -92,6 +92,37 @@ question ids, keep the Duplex acceptance test green. Worker code holds **no engi
   `engine/tests/fixtures/duplex_v1_v2_diff.json`.
 - **Acceptance:** file parses; EN-002 test uses it.
 
+### EN-010 Item texts on lines
+- **Specs:** P14, BR-11, F06 §2 and §5, F10 §13, F11 §2, F12.
+- **Do:**
+  1. Types first: document `Code.description` as the item text (a template, same syntax as a
+     rule's line text) and add `LineCode.text?: string` (the filled text) in
+     `packages/types/src/classification.ts`; `npm run codegen`.
+  2. `classify.py`: after a line gets a code, fill the code's `description` through the same
+     template code that fills rule line texts (one evaluator, `expr.py`), with the same values the
+     line's own text can use. A blank with no value for this line stays as `{name}` and adds a
+     run warning `item_text_blank` (message code, EN-004) naming the line and the blank.
+  3. Preset check: an item text with a syntax error or a name no line can have is a problem.
+  4. `export_xlsx`: Description = the grouping system's `text`, else the line text; "Lines"
+     sheet gets "Measured as" and one item-text column per system with texts; the "not in the
+     models" note above the table (P15) with the manual-line count.
+  5. Package lines (EN-006): `description` from the tender's `textSystem`.
+- **Acceptance:** with a copy of `acme-cost-codes` whose walls code has the text
+  `External walls {thickness*100} cm, measured per m2`, the Duplex brick wall line carries
+  `codes.acme.text = "External walls 41.7 cm, measured per m2"`; quantities are identical with
+  and without texts (BR-02 test extended); a blank `{fire_rating}` on a line without one stays
+  visible and gives one warning; the Duplex acceptance test is unchanged.
+
+### EN-011 Setup questions
+- **Specs:** F16 step 1, Q22.
+- **Do:** add `setup?: number` to `SlotPrompt` (rules.ts: asked by the setup wizard, in this order;
+  codegen); mark about ten slots in `presets/rules/as-modelled.json` (wall unit, masonry volume
+  from, wall opening mode and limit, slab opening mode and limit, formwork separate, excavation,
+  reinforcement estimates, room finishes, preliminaries, lines per storey); patches inherit and may
+  change them. Check: two slots with the same `setup` number is a problem.
+- **Acceptance:** the flattened "As modelled" lists its setup slots in order; changing one number in
+  the JSON changes the order with no code change.
+
 ### EN-009 Queue transport
 - **Specs:** engine-worker.md "Queue transport", db-schema `jobs`.
 - **Do:** `python -m ifc_boq.worker --types parse,run,preview --pool standard` loop: claim with

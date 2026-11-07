@@ -35,7 +35,7 @@ product to build. When they disagree about the *product*, `plan/` wins. When the
 | 7 | [03-domain/state-machines.md](03-domain/state-machines.md) | Lifecycles of versions, jobs, runs, revisions, tenders, offers |
 | 8 | [03-domain/permissions.md](03-domain/permissions.md) | Who may do what |
 | 9 | [03-domain/business-rules.md](03-domain/business-rules.md) | Invariants every component must keep |
-| 10 | [01-features/](01-features/) | One spec per feature (F01–F15) |
+| 10 | [01-features/](01-features/) | One spec per feature (F01–F16) |
 | 11 | [02-flows/flows.md](02-flows/flows.md), [02-flows/screens.md](02-flows/screens.md) | End-to-end flows, screen inventory, wireframes |
 | 12 | [04-architecture/](04-architecture/) | System, engine worker contract, storage/jobs/realtime, security, deployment, NFRs |
 | 13 | [05-api/](05-api/) | `openapi.yaml` and API conventions |
@@ -64,6 +64,9 @@ decisions D01–D68 are in `docs/02-decisions.md` and still hold unless changed 
 | P11 | **Frontend first, against a mock API** that implements `openapi.yaml`, keeps CRUD state itself and uses the **real Python engine** for computation. The Java backend replaces the mock by changing a base URL. |
 | P12 | Frontend: **React + Next.js**. Backend: **Java** (D62). Engine: **Python workers** (D61). |
 | P13 | "Needs input" is a state of a **run and its BoQ revision**, not of a job. A job always ends (succeeded, failed or cancelled); answering questions starts a new run. (Refines doc 10.) |
+| P14 | **Item texts live on the classification's codes.** A firm's BoQ item is a number plus a written description that bidders price. The text is the code's `description`, a template with blanks the engine fills per line; the line shows it instead of the rule set's short line text. Classification still never changes a number (BR-02, BR-11). |
+| P15 | **What isn't in the models is the user's to add.** The engine does not guess missing work. The app says so plainly on the sheet, at submit and in exports, and makes manual lines easy (BR-12). |
+| P16 | **A setup wizard in v1** for a new org's first rule set, classification and dictionary (F16). "Start from your last BoQ" comes after v1. |
 
 ## Where the code will live (target monorepo)
 

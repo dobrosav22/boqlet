@@ -29,6 +29,10 @@ questions from `docs/11` that this plan answers are marked there by P-decisions 
 | Q13 | Is a per-line rate history (rate library from past offers) the natural next product? | Tender data accumulates; possible "pricing" follow-up (P04) |
 | Q14 | Should bidders be able to propose alternative items or quantities? | Today: notes per line + qualifications |
 | Q15 | Is the line key stable enough across rule-set edits for change reports that users trust? | Rule-set changes show as remove + add; may need a key-mapping table on rule renames |
+| Q22 | Which rule-set questions are the setup wizard's essential ones (F16 step 1)? | A first list of about ten in "As modelled" (EN-011); to be checked with a QS or engineer who has made BoQs by hand, and per market preset (Q9) |
+| Q23 | How should "start from your last BoQ" (F16, after v1) match a past BoQ's items to kinds of line: name matching, rules on units, or AI suggestions with confirmation? | Same family as Q8. Only the firm's own documents (BR-53) |
+| Q24 | Do firms need item texts in two languages in one BoQ (bilingual tenders)? | P14 stores one text per code; `CodeList.locale` gives its language. A second text would be `Code.titles`-style translations, later |
+| Q25 | Is a reminder enough for work not in the models (P15), or do firms want a checklist of typical non-modelled items per market to tick through? | Reminder in v1 (BR-12); a checklist would be data per market, like the rule sets |
 
 ## Platform
 

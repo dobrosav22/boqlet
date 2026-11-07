@@ -17,6 +17,8 @@ rule has an id. Tests and code comments cite it (`// BR-07`).
 | BR-08 | **Model versions are immutable.** A new file is always a new version. Identical content (same sha256 in the org) reuses parse artifacts. | D16, D41 |
 | BR-09 | **Overrides are explicit.** An overridden line shows both the engine quantity and the override, with the reason, in the sheet, the exports and the change report. An override whose line disappears becomes an `orphan_override` question, never silently dropped. | BR-03 |
 | BR-10 | Only `blocking` questions keep a run in `needs_input`. Informative questions are listed but don't block submission. | D20 |
+| BR-11 | **Item texts never change a number.** An item text belongs to a code in a classification (P14). Its blanks are filled by the engine only (BR-01), from the line's values. A blank the line has no value for stays visible and raises a run warning, never an empty or guessed text. | P14 |
+| BR-12 | **The app says what it cannot see.** Quantities come only from what the models contain; work not modelled as objects is the user's to add (manual lines) unless the rule set derives it. The sheet, the submit dialog and the exports say so (F06 §12, F09 §1, F12). The app never claims a BoQ is complete. | P15 |
 
 ## Revisions and workflow
 

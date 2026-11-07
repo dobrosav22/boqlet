@@ -9,11 +9,12 @@
 | Models | Several discipline models per project, versions, upload with progress, parse job, input-check report, discipline and scope rules per model | F03 |
 | BoQ | Several BoQs per project; inputs (model versions + presets); runs as background jobs; needs-input state | F04 |
 | Questions | All engine question kinds; answer, dismiss, bulk answer; project decisions carried across versions and BoQs; promote name answers to the company dictionary | F05 |
-| Sheet | Virtualised BoQ sheet, group by any attached code system, subtotals per group, filters, line trace, calculation log, warnings, manual lines, quantity overrides with reason | F06 |
+| Sheet | Virtualised BoQ sheet, group by any attached code system, subtotals per group, filters, line trace, calculation log, warnings, manual lines, quantity overrides with reason; "not in the models" notice with counts by source (P15) | F06 |
 | Viewer | 3D view of the run's models; line → elements highlight; element → lines; colour by coverage / code group | F07 |
 | Revisions | New model version → re-run → change report (lines and elements); compare any two runs | F08 |
 | Workflow | Draft → in review → approved → issued (locked); optional four-eyes; audit log | F09 |
-| Library | Rule sets, classifications, dictionaries at system / org / project layer; versions with draft and publish; preview against a model version; code-list import from spreadsheets | F10 |
+| Library | Rule sets, classifications, dictionaries at system / org / project layer; versions with draft and publish; preview against a model version; code-list import from spreadsheets; item texts on codes, shown as line descriptions and sent to bidders (P14) | F10 |
+| Setup | Guided first setup: the essential measuring questions with a live preview, item list and item texts import, names, publish as the org's defaults (P16) | F16 |
 | Tendering | Tenders from issued revisions, packages, bidder invitations, bidder portal, offers, Excel round-trip, addenda, sealed bids, comparison, award per package | F11 |
 | Exports | Excel BoQ (per run and frozen per issued revision), package Excel, comparison Excel | F12 |
 | Notifications | In-app (live) and email for job finished, needs input, review requests, tender events | F13 |
@@ -24,6 +25,7 @@
 
 | Item | Why later |
 |---|---|
+| Setup wizard: "start from your last BoQ" (suggestions read from an uploaded past BoQ) | Needs matching texts to kinds of line, likely AI-assisted (F16 "Later", Q23) |
 | BCF issues to designers | Design-led users fix their own models (P06) |
 | AI name suggestions | Settings exist in the engine, nothing built; questions cover it (09) |
 | Coordinate alignment between models | Engine assumes shared coordinates; warning when they don't overlap |
@@ -74,3 +76,6 @@ walked through by hand otherwise (M).
     files.
 11. **i18n (A).** A pseudo-locale build shows no hard-coded English strings in the app shell,
     sheet, questions, tender and bidder screens.
+12. **First setup (M).** A person new to the app runs the setup wizard (F16) on the sample
+    Duplex in under 15 minutes and gets a BoQ whose Excel shows their item numbers and filled
+    item texts, with the "not in the models" note.

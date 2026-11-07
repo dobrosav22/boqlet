@@ -18,7 +18,9 @@ From an issued revision ("Tender this revision") or the project's Tenders tab:
 name, revision (issued only), currency (default project), deadline (date, time, timezone),
 instructions (markdown), attachments (PDF/DWG/any, ≤ 100 MB each, stored, scanned if
 available), sealed (default on), allow partial offers (default off), share comparison with
-guests (default off). Status `draft`. Checks `openTenders` when opening.
+guests (default off), **item texts from** (`textSystem`: the classification whose item numbers
+and item texts bidders see, P14; default the revision's first classification). Status
+`draft`. Checks `openTenders` when opening.
 
 ### 2. Packages
 - **Build** a package from a selection (`PackageSelection`): pick code groups in any
@@ -29,6 +31,9 @@ guests (default off). Status `draft`. Checks `openTenders` when opening.
   packages from the groups, named after the group titles.
 - **Unassigned lines** panel: lines in no package (they won't be priced). Shown as a count
   and a list. Not an error, but visible (BR-03).
+- A package line's `code` and `description` come from the tender's `textSystem`: the item
+  number and the filled item text, or the rule set's line text when the code has no text.
+  Bidders price that text, so the draft package preview shows exactly what they will see.
 - Package lines are frozen copies (`PackageLine`) taken when the tender opens or an
   addendum is made (BR-42). In `draft`, the package shows a live preview from the revision.
 
@@ -152,6 +157,7 @@ addendum, deadline in 24 h (if not submitted), tender closed, awarded / not awar
 ## Acceptance criteria
 
 - [ ] "One package per top-level group" on the Duplex creates packages that cover every coded line exactly once, and unassigned lines are listed.
+- [ ] With a `textSystem` that has item texts, bidders see the item numbers and filled item texts in the portal and in the package Excel, frozen at opening.
 - [ ] A sealed tender exposes no rate or total to the firm before close, through any endpoint, export or notification (automated test over all firm endpoints).
 - [ ] A bidder invited to package A gets `404` for package B's lines and any project endpoint.
 - [ ] An Excel round-trip fills the draft with 100% of rates from a file filled in by an Excel user, and reports any rows that don't match.

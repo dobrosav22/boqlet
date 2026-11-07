@@ -8,7 +8,11 @@ trail of who did what.
 ## Behaviour
 
 1. **Submit for review** (estimator, lead): preconditions in BR-22. Dialog: pick reviewers
-   (project approvers/leads; at least one), optional message. Revision → `in_review`,
+   (project approvers/leads; at least one), optional message. The dialog also shows the
+   **not in the models** reminder (P15, BR-12) with the revision's manual-line count and a
+   checkbox "I have added the work the models don't contain" that must be ticked to submit.
+   The tick is stored on the submission (`revision.submitted` audit event, `notModelledConfirmed:
+   true`). It is a reminder, not a check of content. Revision → `in_review`,
    notification `revision.review_requested` to reviewers.
 2. **Review screen:** the sheet read-only, the change report against the previous issued
    revision (if any) opened first, the questions summary (answered decisions, informative ones

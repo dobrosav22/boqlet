@@ -32,13 +32,19 @@ traceable to its elements and formula, adjustable with manual lines and override
    and one column per extra classification (toggleable). Units are displayed with superscripts
    (m² m³), and numbers use the project locale and the rule set's rounding (already applied by
    the engine). Quantity of flagged lines shows "—" with the reason.
+   **Description** shows the line's **item text** in the "Group by" system
+   (`codes[system].text`, P14, EN-010) when that code has one, else the rule set's line text
+   (`description`). Switching "Group by" switches the texts with the grouping, client-side,
+   because every line carries the filled text of each of its codes. Long item texts wrap,
+   clamped to three lines in the row and shown in full in the line detail.
 3. **Subtotals:** per group, the count of lines and (only when all lines in a group share one
    unit) the sum of quantities. No money in the sheet (P04; amounts live in tenders).
 4. **Filters:** source (measured, derived, manual, flagged, overridden), storey, family, model,
    text search over description and code. Filters never change the data, and the header shows
    "Filtered: 37 of 412 lines".
-5. **Line detail panel** (`GET /runs/{runId}/lines/by-key?key=`): description, unit,
-   quantity, source; the **trace**: formula in readable form (reuse `apps/web/src/library/readable.ts`),
+5. **Line detail panel** (`GET /runs/{runId}/lines/by-key?key=`): the item text in full,
+   with the rule set's line text under it as "Measured as: Wall, Exterior - Brick on Block,
+   417 mm" (so the user always sees what was measured), unit, quantity, source; the **trace**: formula in readable form (reuse `apps/web/src/library/readable.ts`),
    parameter values, elements table (GlobalId, name, model, share of quantity, note), source
    line for derived lines (clickable); codes in every system with their source (map rule,
    decision, IFC, default); location; notes; log entries for this line (filtered log).
@@ -62,6 +68,20 @@ traceable to its elements and formula, adjustable with manual lines and override
     Selection is shared with the viewer.
 11. **Read-only modes:** issued revisions, and users without edit rights, see the sheet with no
     override or add actions. Viewers and guests see issued revisions only.
+12. **Not in the models** (P15, BR-12): the app says plainly that it measures only what the
+    models contain, and that the rest is the user's to add:
+    - A notice at the top of the sheet, under the header: "This BoQ contains what the models
+      contain. Work not modelled as objects (for example earthworks, plaster, screed,
+      waterproofing, reinforcement, scaffolding, site setup) is in it only if your rule set
+      derives it or you add it. [Add line]". With the counts by source: "120 measured · 8
+      derived · 3 manual · 2 to confirm". Collapsible to the counts line per user; never
+      removed.
+    - The same paragraph is the empty state of a group with no lines and of the "Add line"
+      dialog's help.
+    - Submitting for review asks for a confirmation (F09 §1).
+    - The Excel export carries it as a note (F12).
+    The examples come from the message catalogue (EN-004), not from the rule set: they are a
+    reminder, not a check. The app does not try to guess what is missing.
 
 ## Edge cases
 
@@ -87,4 +107,6 @@ traceable to its elements and formula, adjustable with manual lines and override
 - [ ] Every line's detail shows formula, parameters and element shares that sum to the line quantity (within rounding).
 - [ ] An override survives regeneration and a new model version, and appears in the Excel export with its reason.
 - [ ] A manual line added under group "9 Preliminaries" appears there after regeneration, with the code of that group.
+- [ ] With a classification that has item texts, Description shows the filled item texts; switching "Group by" to a system without texts shows the rule set's line texts; the line detail shows both.
+- [ ] The "not in the models" notice and the counts by source are visible on every draft BoQ sheet, and collapsing it is remembered per user.
 - [ ] The sheet scrolls smoothly at 20,000 lines (60 fps target on a mid-range laptop; measured in a perf test).

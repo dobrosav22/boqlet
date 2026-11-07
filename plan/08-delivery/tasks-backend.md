@@ -19,7 +19,8 @@ Token or session validation, just-in-time users, `GET/PATCH /me`, notification p
 
 ### BE-003 Orgs, members, invitations (F01)
 Including slug rules, last-owner rule, invitation emails through the notifications module
-(stub email adapter until BE-020).
+(stub email adapter until BE-020). `GET/PUT /orgs/{orgId}/setup` (F16): one `Org.setup` JSON
+per org, writable by owner, admin and library editor.
 
 ### BE-004 Entitlements core (F14 part)
 Plans seed, subscriptions (free on org creation), `EntitlementService.check`, `402` mapping,
@@ -75,7 +76,7 @@ Notification rows for every kind in F13, batching, `GET /notifications`, read en
 ### BE-016 Tenders core (F11 firm §1–5)
 Tenders, attachments, packages with selection resolution and `tender_line_assignments`
 (BR-41), preview-selection, from-groups, invitations (token hash, emails), open (package-line
-snapshot), status board (sealed-aware), remind, extend, close, cancel, scheduler for deadlines.
+snapshot, `code` and `description` from `textSystem`, P14), status board (sealed-aware), remind, extend, close, cancel, scheduler for deadlines.
 
 ### BE-017 Addenda (F11 §5)
 Addendum with dryRun, re-snapshot, supersede offers, carry rates, notifications.
