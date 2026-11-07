@@ -829,6 +829,150 @@ summary {
   }
 }
 
+/* ---------- Guide (components/Guide.tsx) ---------- */
+
+.guide {
+  max-width: 76ch;
+}
+.guide-intro {
+  margin-bottom: 28px;
+}
+.guide-intro h1 {
+  font-size: 2.2rem;
+  font-stretch: 80%;
+}
+.guide-lede {
+  font-size: 1.08rem;
+}
+.guide-section {
+  padding-top: 22px;
+  margin-top: 6px;
+  border-top: 1px solid var(--ruling-soft);
+  scroll-margin-top: 12px;
+}
+.guide-section h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.guide-section h3 {
+  margin-top: 1.2em;
+}
+.guide-section ul,
+.guide-section ol {
+  padding-left: 1.3em;
+  margin: 0 0 0.9em;
+}
+.guide-section li {
+  margin-bottom: 0.35em;
+}
+.guide-anchor {
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: var(--pencil);
+  text-decoration: none;
+  opacity: 0;
+}
+.guide-section h2:hover .guide-anchor,
+.guide-anchor:focus-visible {
+  opacity: 1;
+}
+.guide-steps li::marker {
+  font-weight: 700;
+  color: var(--accent);
+}
+.guide-table {
+  overflow-x: auto;
+  margin: 0 0 0.9em;
+}
+.guide-table table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92rem;
+}
+.guide-table th,
+.guide-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--ruling);
+}
+.guide-table th {
+  font-weight: 600;
+  background: var(--paper-2);
+}
+.guide-dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px 18px;
+  margin: 0 0 0.9em;
+}
+.guide-dl dt {
+  font-weight: 600;
+}
+.guide-dl dd {
+  margin: 0;
+}
+.guide-toc {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.9rem;
+}
+.guide-toc a {
+  display: block;
+  padding: 4px 0 4px 10px;
+  border-left: 3px solid transparent;
+  color: var(--pencil);
+  text-decoration: none;
+}
+.guide-toc a.on {
+  color: var(--ink);
+  font-weight: 600;
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+}
+.guide-lang {
+  display: inline-flex;
+  align-self: flex-start;
+  border: 1px solid var(--ruling);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.guide-lang button {
+  background: var(--paper);
+  border: 0;
+  padding: 5px 12px;
+  font-size: 0.82rem;
+  color: var(--pencil);
+  cursor: pointer;
+}
+.guide-lang button + button {
+  border-left: 1px solid var(--ruling);
+}
+.guide-lang button.on {
+  background: var(--ink);
+  color: #fff;
+  font-weight: 600;
+}
+.guide-toc a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+@media (max-width: 900px) {
+  .guide-dl {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .guide-dl dd {
+    margin-bottom: 8px;
+  }
+  .guide-anchor {
+    opacity: 1;
+  }
+}
+
 /* hosted demo (VITE_DEPLOYED): what the demo cannot do */
 .demo-note {
   margin: 0;

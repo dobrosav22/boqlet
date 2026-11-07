@@ -8,6 +8,7 @@ import { QuestionsView } from "./components/QuestionsView";
 import { InputsView } from "./components/InputsView";
 import { CompareView, type Pinned } from "./components/CompareView";
 import { SideHead, type Mode } from "./components/SideHead";
+import { Guide, GuideToc, SAMPLE_MODEL, type GuideLang } from "./components/Guide";
 import { Library } from "./library/Library";
 import type { LibState } from "./library/store";
 import { ms } from "./format";
@@ -17,6 +18,19 @@ import { buildLinks } from "./viewer/links";
 const ModelPanel = lazy(() => import("./viewer/ModelPanel").then((m) => ({ default: m.ModelPanel })));
 
 type Tab = "boq" | "log" | "questions" | "inputs" | "compare";
+
+/** A link ending in #guide (or #guide-<section>) opens the guide, so it can be sent around. */
+const guideInUrl = () => location.hash.startsWith("#guide");
+
+/** The guide's language is a per-viewer convenience; storage may be missing (private window). */
+const GUIDE_LANG_KEY = "ifc-boq.guideLang";
+const storedGuideLang = (): GuideLang => {
+  try {
+    return localStorage.getItem(GUIDE_LANG_KEY) === "en" ? "en" : "sr";
+  } catch {
+    return "sr";
+  }
+};
 
 export function App() {
   const [presets, setPresets] = useState<PresetsResponse | null>(null);
@@ -34,7 +48,28 @@ export function App() {
   const [pinned, setPinned] = useState<Pinned | null>(null);
   const [tab, setTab] = useState<Tab>("boq");
   const [logFilter, setLogFilter] = useState<LogFilter>({ stages: [], showDetail: true, q: "" });
-  const [mode, setMode] = useState<Mode>("boq");
+  const [mode, setModeState] = useState<Mode>(() => (guideInUrl() ? "guide" : "boq"));
+  const setMode = useCallback((m: Mode) => {
+    setModeState(m);
+    if (m === "guide" && !guideInUrl()) history.replaceState(null, "", "#guide");
+    if (m !== "guide" && guideInUrl()) history.replaceState(null, "", location.pathname + location.search);
+    window.scrollTo(0, 0);
+  }, []);
+  useEffect(() => {
+    const onHash = () => guideInUrl() && setModeState("guide");
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+  const [sampleBusy, setSampleBusy] = useState(false);
+  const [guideLang, setGuideLangState] = useState<GuideLang>(storedGuideLang);
+  const setGuideLang = (l: GuideLang) => {
+    setGuideLangState(l);
+    try {
+      localStorage.setItem(GUIDE_LANG_KEY, l);
+    } catch {
+      /* not kept: fine */
+    }
+  };
   const [scene, setScene] = useState<SceneIndex | null>(null);
   const [show3d, setShow3d] = useState(true);
   const [selectedLine, setSelectedLine] = useState<string | null>(null);
@@ -115,6 +150,22 @@ export function App() {
     setPinned(null);
   };
 
+  /** The public Duplex sample, served with the web app: one click for someone without an IFC file. */
+  const loadSample = async () => {
+    setMode("boq");
+    setRunError(null);
+    setSampleBusy(true);
+    try {
+      const res = await fetch(SAMPLE_MODEL.url);
+      if (!res.ok) throw new Error("The sample model could not be downloaded.");
+      onModel(await api.uploadModel(new File([await res.blob()], SAMPLE_MODEL.fileName)));
+    } catch (e) {
+      setRunError((e as Error).message);
+    } finally {
+      setSampleBusy(false);
+    }
+  };
+
   const applyAnswers = (answers: Decision[]) => {
     const merged = [...decisions.filter((d) => !answers.some((a) => a.questionId === d.questionId)), ...answers];
     setDecisions(merged);
@@ -155,6 +206,19 @@ export function App() {
   };
 
   const head = <SideHead mode={mode} onMode={setMode} />;
+  if (mode === "guide") {
+    return (
+      <div className="app">
+        <aside className="side">
+          {head}
+          <GuideToc lang={guideLang} onLang={setGuideLang} onOpenBoq={() => setMode("boq")} />
+        </aside>
+        <main className="main">
+          <Guide lang={guideLang} onOpenBoq={() => setMode("boq")} onLoadSample={() => void loadSample()} />
+        </main>
+      </div>
+    );
+  }
   if (mode === "library") {
     return (
       <div className="app">
@@ -201,7 +265,18 @@ export function App() {
               Every quantity can be traced back to its formula and elements.
             </p>
             <p className="muted">
-              Try it with <code>fixtures/ifc/Ifc2x3_Duplex_Architecture.ifc</code> from this repository.
+              New to this? <button className="link" onClick={() => setMode("guide")}>Read the guide</button>.
+              {" "}No IFC file at hand?{" "}
+              {sampleBusy ? (
+                <span>Reading the sample model. This takes a few seconds, up to a minute the first time online…</span>
+              ) : (
+                <>
+                  <button className="link" onClick={() => void loadSample()} disabled={!!models.length}>
+                    Load the sample model
+                  </button>{" "}
+                  ({SAMPLE_MODEL.label}).
+                </>
+              )}
             </p>
             {runError && <p className="error">{runError}</p>}
             <div className="sheet sheet-blank" aria-hidden>

@@ -1,8 +1,8 @@
 import { DEPLOYED, MAX_UPLOAD_MB } from "../api";
 
-export type Mode = "boq" | "library";
+export type Mode = "boq" | "library" | "guide";
 
-/** Brand and the switch between producing a BoQ and editing the preset library. */
+/** Brand and the switch between producing a BoQ, editing the preset library and reading the guide. */
 export function SideHead({ mode, onMode }: { mode: Mode; onMode: (m: Mode) => void }) {
   return (
     <>
@@ -20,6 +20,7 @@ export function SideHead({ mode, onMode }: { mode: Mode; onMode: (m: Mode) => vo
           [
             ["boq", "Bill of quantities"],
             ["library", "Library"],
+            ["guide", "Guide"],
           ] as [Mode, string][]
         ).map(([m, label]) => (
           <button key={m} role="tab" aria-selected={mode === m} className={mode === m ? "on" : ""} onClick={() => onMode(m)}>

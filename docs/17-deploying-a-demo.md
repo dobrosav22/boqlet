@@ -18,6 +18,11 @@ The build sets `VITE_DEPLOYED=1` and `VITE_MAX_UPLOAD_MB=4.4`. With them the app
 under its name, refuses files above the limit with a clear message, and recovers when the engine has
 forgotten a model (below). Locally none of this changes anything.
 
+The web build also carries the public Duplex sample (`/samples/Ifc2x3_Duplex_Architecture.ifc`, read from
+`fixtures/` by a plugin in `apps/web/vite.config.ts`) and the in-app **Guide** (`/#guide`), so people sent the
+link can learn the tool and try it without an IFC file of their own. With `VITE_DEPLOYED` the guide adds a
+section on what the online demo cannot do.
+
 `api/index.py` points the engine's cache and the Library's save folder to `/tmp` (the only writable
 place on Vercel) and passes the path the browser asked for to the engine (the rewrite hands it over
 as `__path`).
