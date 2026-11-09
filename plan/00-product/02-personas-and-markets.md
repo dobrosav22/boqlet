@@ -54,10 +54,10 @@ round-trips through Excel (F11).
 ```text
 Design development ──► model versions (v1 … vN) ──► BoQ: working, saved versions (A, B, C) ──► confirmed
                                                       └─(pricing module)─► estimate, offers from vendors
-       │                     │                          │                       │
-   authoring tool        upload to app             review, approve,        packages to
-   (Revit, Archicad…)    parse, questions          issue (locked)          contractors, offers,
-                         answers carried over                              comparison
+       │                     │                          │
+   authoring tool        upload to app             edit lines, save versions (locked),
+   (Revit, Archicad…)    parse, questions          optional review/approval, confirm when done
+                         answers carried over
 ```
 
 Typical rhythm: weeks to months of design with a new model version every few days or weeks; the
@@ -70,7 +70,7 @@ The product's part ends there; tendering and construction happen outside it.
 |---|---|---|
 | Estimator | Turn this model into a BoQ in our office's way of measuring | F03, F04, F06 |
 | Estimator | Tell the app what our odd material names mean, once | F05, F10 |
-| Estimator | See what changed since the last issue and why | F08 |
+| Estimator | See what changed since the last saved version and why | F08 |
 | Estimator | Check a suspicious number in seconds | F06, F07 |
 | Project lead | Save versions and confirm a BoQ I can defend; switch on approval when the firm wants it | F09 |
 | Library editor | Encode our rules and codes so every project uses them | F10 |

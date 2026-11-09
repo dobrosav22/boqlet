@@ -5,7 +5,7 @@
 | Layer | Tool | Where | What |
 |---|---|---|---|
 | Engine unit + acceptance | pytest | `engine/tests` | Existing suite (194 tests) incl. Duplex `HAND_BOQ`; new worker, diff, override, sheets tests (tasks-engine.md) |
-| Contract | Schemathesis or a hand-written suite over the generated client | `tests/contract` | Every operation in `openapi.yaml`: status codes, schemas, error codes; runs against the **mock** (M0–M4) and **Java** (M5+) |
+| Contract | Schemathesis or a hand-written suite over the generated client | `tests/contract` | Every operation in `openapi.yaml`: status codes, schemas, error codes; runs against the **mock** (phase 1) and **Java** (phase 2, unchanged) |
 | Behaviour scenarios | Vitest (TS) over the generated client | `tests/scenarios` | Domain rules through the API: state machines, permissions, limits, versions and confirmation, BR-xx. Same suite against mock and Java |
 | Frontend unit | Vitest + Testing Library | `apps/app` | Components with logic: grouping, readable formulas, comparison flags display, decimal display, permission gating |
 | End-to-end | Playwright | `apps/app/e2e` | Flows FL-1…FL-8 against mock + real engine (CI) and against Java on staging (nightly) |
@@ -15,9 +15,10 @@
 
 ## The shared suites are the handover mechanism
 
-`tests/contract` and `tests/scenarios` are written during M0–M4 **against the mock**. They
-describe the backend's behaviour precisely. The Java backend is done when the same suites pass
-against it unchanged (M5–M7). Scenario tests are named after rule ids (`BR-27 confirmed BoQ refuses writes`) and acceptance criteria (`F11-AC2`).
+`tests/contract` and `tests/scenarios` are written by the frontend agent in phase 1 **against
+the mock**. They describe the backend's behaviour precisely. The backend agent's Java backend is
+done when the same suites pass against it unchanged (phase 2). Tests that depend on an engine
+fake (`mock-api.md`) are tagged `@fake` and must pass on the real engine in phase 3. Scenario tests are named after rule ids (`BR-27 confirmed BoQ refuses writes`) and acceptance criteria (`F11-AC2`).
 
 Each scenario seeds through the API only (no direct DB access), so it runs against both
 implementations. A test-only endpoint `POST /_test/clock` (mock and Java, disabled in
@@ -50,10 +51,10 @@ production builds) moves time for deadline tests.
 
 | ID | Milestone | Task | Acceptance |
 |---|---|---|---|
-| TS-001 | M0 | Scaffold `tests/contract` and `tests/scenarios` (Vitest over the generated client, base URL from env), seed helpers through the API, `/_test/clock`; wire into CI against the mock | One contract test per tag and one scenario per state machine run green against the mock |
-| TS-002 | M8 | Performance suite (k6 for API paths in nfr.md, engine timing on reference files, Playwright traces for sheet and viewer) | NFR table filled with measured values on staging |
-| TS-003 | M8 | Accessibility suite (axe in Playwright on S05, S10, S12a–c, S15c, S20, S29) | No serious/critical violations |
-| TS-004 | M8 | v1 acceptance run on staging (00-product/03 criteria 1–11), results recorded in `plan/README.md` | All green |
+| TS-001 | M0 (frontend agent) | Scaffold `tests/contract` and `tests/scenarios` (Vitest over the generated client, base URL from env), seed helpers through the API, `/_test/clock`; wire into CI against the mock | One contract test per tag and one scenario per state machine run green against the mock |
+| TS-002 | M8 (frontend agent) | Performance suite (k6 for API paths in nfr.md, engine timing on reference files, Playwright traces for sheet and viewer) | NFR table filled with measured values on staging |
+| TS-003 | M8 (frontend agent) | Accessibility suite (axe in Playwright on S05, S10, S12a–c, S15c, S20, S29) | No serious/critical violations |
+| TS-004 | M8 (frontend agent) | v1 acceptance run on staging (00-product/03 criteria 1–17), results recorded in `plan/README.md` | All green |
 
 ## Definition of done (every task)
 

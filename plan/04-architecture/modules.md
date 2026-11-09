@@ -33,6 +33,7 @@ the core only through the extension points and events below.
 | `sheet.selectionActions` | an action on selected lines / sections / elements | Request offers |
 | `sheet.lineBadges` | a small badge on lines, from a module query | "sent to 3 vendors" |
 | `settings.orgSections` | a section in org settings | pricing settings (stale price age, member editing) |
+| `project.overviewCards` | a card on the project overview | open offer requests |
 | `area.routes` | a separate area with its own layout and sign-in routing | the vendor area `/vendor` |
 | `notifications.kinds` | notification kinds with i18n keys and email templates | `pricing.*` kinds (F13) |
 | `audit.actions` | audit action names | `pricing.*` actions |

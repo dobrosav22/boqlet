@@ -66,7 +66,7 @@ Fields mirror `03-domain/data-model.md`. Where a column holds an engine document
 
 Size note: a large run (50k lines, 500k line-element links, 200k log entries) is ~1 GB with
 indexes. Consider partitioning `run_line_elements` and `run_log_entries` by `run_id` hash, and
-a retention policy: keep rows for current, issued and recent runs; old superseded runs keep
+a retention policy: keep rows for current, saved-version and recent runs; old superseded runs keep
 only their `result_key` in storage and are rehydrated on demand.
 
 ## Platform

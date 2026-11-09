@@ -73,7 +73,7 @@ walked through by hand otherwise (M).
    pass unchanged (P36).
 7. **Library (M).** An org library editor creates a rule set on "As modelled", changes three
    settings, previews against the Duplex, publishes; a new BoQ using it shows the changed
-   numbers; BoQs issued earlier are unchanged.
+   numbers; BoQ versions saved earlier are unchanged.
 8. **Isolation (A).** Automated tests prove a member of org X cannot read any resource of org Y,
    a project viewer cannot edit, and a vendor cannot read anything but their own invitations,
    the lines sent to them and their own pricebooks.

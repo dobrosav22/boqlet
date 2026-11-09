@@ -16,7 +16,7 @@ quantity computation (BR-01), no direct engine access. It talks to the API in `o
 | URL state | `nuqs` (typed search params) | Tabs, filters, grouping, selected line |
 | Client state | React state; Zustand only for the Library editor drafts and viewer selection | Port of `apps/web/src/library/store.ts` |
 | i18n | **next-intl** (ICU) | `messages/en/*.json`, pseudo-locale `en-XA` |
-| Styling | **shadcn/ui** (Tailwind CSS + Radix UI primitives, components kept in the repo), one self-hosted monospace font | **Decided (P23)**; design-system.md |
+| Styling | **shadcn/ui** (Tailwind CSS + Radix UI primitives, components kept in the repo), one self-hosted monospace font | **Decided (P23)**; look per `design-guidelines.md` (owner, P41), else design-system.md; font fallback JetBrains Mono |
 | 3D | three.js (port of `apps/web/src/viewer`) | Lazy-loaded route chunk |
 | Decimals | `big.js` | Pricing module amount display only; the backend computes the stored amounts (BR-47) |
 | Tests | Vitest + Testing Library; Playwright e2e against mock API + engine | 08-delivery/testing.md |

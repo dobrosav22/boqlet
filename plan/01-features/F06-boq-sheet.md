@@ -11,10 +11,10 @@ regenerations and new model versions, and are always visible as edits (BR-09).
 
 ```text
 ┌ Project / BoQ name · Working (last saved B) · run 14:02 · 412 lines · 3 flagged ─ [Generate] [Save version] ┐
-│ Tabs: Sheet | Questions (7) | Viewer | Changes | Log | Setup | Exports                              │
+│ Tabs: Sheet | Questions (7) | Viewer | Changes | Log | Setup | Exports | Versions (+ module tabs)    │
 ├──────────────────────────────────────────────────────────────┬─────────────────────────────────────┤
 │ Group by [ACME cost codes ▾]  Filter [source ▾][storey ▾][family ▾][search…]   Columns ▾          │
-│ Ref      Description                          Unit    Qty      Source  Storey   │ Line detail      │
+│ No.      Item   Description                   Unit    Qty      Source  Storey   │ Line detail      │
 │ ▸ 2 Superstructure                                             subtotal …       │ formula          │
 │   2.5  External walls                                                            │ params           │
 │     2.5.1  Cavity wall, brick on block 290    m²     412.60   measured  L1      │ elements (n)     │
@@ -109,7 +109,7 @@ regenerations and new model versions, and are always visible as edits (BR-09).
       removed.
     - The same paragraph is the empty state of a group with no lines and of the "Add line"
       dialog's help.
-    - Submitting for review asks for a confirmation (F09 §1).
+    - Saving a version asks for a confirmation (F09 §2).
     - The Excel export carries it as a note (F12).
     The examples come from the message catalogue (EN-004), not from the rule set: they are a
     reminder, not a check. The app does not try to guess what is missing.

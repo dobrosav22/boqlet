@@ -1,5 +1,11 @@
 # Frontend tasks (`apps/app`, `apps/mock-api`, `packages/api`)
 
+**Owner: the frontend agent**, in phase 1 (M0–M4, MP1) and phase 3 (M8a, M8); see
+`milestones.md`. In phase 1 the mock talks to the existing proof-of-concept engine API
+(`engine/ifc_boq/api.py`) and fakes engine features that don't exist yet
+(`06-frontend/mock-api.md`, "Engine fakes"). The frontend agent never edits `engine/`; a needed
+engine change becomes a fake plus a note on the matching EN task.
+
 Each task: specs to read, what to build, acceptance. Every screen handles loading, empty,
 error and read-only states (02-flows/screens.md). Every UI string goes through i18n (F15).
 Every task adds or extends Playwright e2e coverage of its flow against the mock + engine.
@@ -13,8 +19,10 @@ Every task adds or extends Playwright e2e coverage of its flow against the mock 
   `../types/schema/`), leave a pointer in `plan/05-api/`. Add `redocly.yaml`, `npm run api:lint`,
   `npm run api:gen` (openapi-typescript → `packages/api/src/schema.d.ts`), and the
   `openapi-fetch` client factory exported from `@ifc-boq/api`.
-- Styling is decided (P23): shadcn/ui on Tailwind + Radix, one self-hosted monospace font
-  (JetBrains Mono unless the owner prefers another, design-system.md). Confirm the Next.js version.
+- Styling: shadcn/ui on Tailwind + Radix (P23). The look follows the owner's
+  `06-frontend/design-guidelines.md` when it exists (P41); until then keep every visual choice in
+  tokens so it can change in one place. Font: as the guidelines say, else **JetBrains Mono**
+  (self-hosted). Pin the current stable Next.js version and record it in `06-frontend/architecture.md`.
 - **Accept:** lint passes; types generated; CI step fails on contract drift.
 
 ### FE-002 Next app skeleton
@@ -25,7 +33,8 @@ Every task adds or extends Playwright e2e coverage of its flow against the mock 
 - **Accept:** `npm run dev:app` serves the shell; the lint rule blocks a literal string in JSX.
 
 ### FE-003 Mock API skeleton
-- `apps/mock-api` per 06-frontend/mock-api.md: Hono server, OpenAPI validation, JSON store,
+- `apps/mock-api` per 06-frontend/mock-api.md (engine connection: the PoC engine API in phase 1,
+  with the engine fakes behind one `engine` interface so phase 2 can swap them out): Hono server, OpenAPI validation, JSON store,
   blob folder with signed URL emulation, SSE bus, dev endpoints (`/_dev/users`, `/_dev/clock`,
   `/_dev/outbox`, `/_dev/checkout`), seed script skeleton with plans, orgs, users and system
   presets from `presets/`.
@@ -159,7 +168,7 @@ three-line clamp, detail shows the item text and "Measured as". Depends on EN-01
 
 ### FE-041 Setup wizard (F16)
 S30 `/{org}/setup`: step list, start step (model picker incl. sample Duplex, start-from preset),
-setup questions from the rule set's `setup` slots with the Settings controls, preview panel with
+step 1 built from the rule set's data as F16 says (1a checklist derived from item-switching yes/no slots, 1b follow-ups of what was switched on, 1c screens from `setupSteps`), with the Settings controls, preview panel with
 changed lines (EN-005), import and Codes per line (reuse FE-019), names (reuse FE-020), review
 and "Publish all" (publish, star, optional project defaults), resume from `Org.setup`, dashboard
 card and Library button, hint on sheets generated with system presets only; mock endpoints
@@ -267,7 +276,21 @@ withdraw, decline, Excel round-trip, update banner.
 Playwright: FL-4 and FL-5 end to end; module switched off for an org hides everything.
 **Accept:** v1 criterion 6 (if the module ships), F17 criterion 3.
 
-## M8 Hardening (frontend)
+## Phase 3: wire up and release (M8a, M8)
+
+### FE-053 Point the app at Java
+Base URL per environment, per-tag switch while the backend lands (a tag served by Java once its
+contract tests pass), SSE against Java, file uploads to real storage; the mock stays as the e2e
+test double. Run the full Playwright suite against Java staging.
+**Accept:** every M1–M4 flow passes against Java staging.
+
+### FE-054 Remove the engine fakes
+For each row of `mock-api.md` "Engine fakes": confirm the replacing EN task is done, delete the
+fake, re-run the criteria marked "(fake)" in phase 1 against the real engine, adjust the UI where
+real behaviour differs (e.g. derived lines now follow edited quantities, real trace steps).
+**Accept:** the fakes table is empty; every "(fake)" criterion green on the real engine.
+
+## M8 Hardening (frontend, phase 3)
 
 ### FE-037 Real auth adapter (after backend decision D1)
 ### FE-038 Accessibility pass (axe in Playwright on main screens) and pseudo-locale pass (v1 criterion 11)

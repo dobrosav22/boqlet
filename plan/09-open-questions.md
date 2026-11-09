@@ -1,9 +1,18 @@
 # Open questions and assumptions to validate
 
-What the plan assumes but nobody has confirmed with real users. Each item has a way to find
-out and what changes if the assumption is wrong. The owner decides when each is closed. Product
-questions from `docs/11` that this plan answers are marked there by P-decisions in
-`plan/README.md`.
+What the plan assumes but nobody has confirmed, and the questions still open. The owner decides
+when each is closed. **None of these blocks phase 1** (the frontend on the mock); the
+"Needed by" list below says which ones block a later step. Settled decisions are in
+`plan/README.md` (P01–P41).
+
+## Needed by (what blocks what)
+
+| When | Must be answered | Who |
+|---|---|---|
+| Before phase 1 screens get their final look | Design guidelines and the typeface (P41, Q31) | Owner (`06-frontend/design-guidelines.md`) |
+| Start of phase 2 (BE-000) | Q16 auth provider, Q17 hosting and region, and D2–D9 in `07-backend/decisions-to-make.md` | Owner, asked by the backend agent |
+| Before public launch | Q18 and Q26 (tiers, limits, prices), Q19 and Q20 (legal) | Owner (+ lawyer) |
+| After pilots | Q1–Q3, Q7, Q8, Q10–Q15, Q23, Q24, Q27–Q30, Q32 | Owner, with pilot firms |
 
 ## Users and market (highest risk)
 
@@ -22,17 +31,17 @@ questions from `docs/11` that this plan answers are marked there by P-decisions 
 | # | Question | Notes |
 |---|---|---|
 | Q8 | How should unknown local-language names be handled at scale: per-language seed dictionaries, bSDD, or AI suggestions with confirmation? | docs/11 marks this as the main blocker on real files. AI suggestions are out of v1 (03-v1-scope) but may need to come early if Q2 shows many names |
-| Q9 | Which first rulebook preset ships beside "As modelled" (e.g. an NRM-style preset written in our own words)? | D33; needs a QS partner and a legal check (docs/08) |
+| Q9 | ~~Which first rulebook preset ships beside "As modelled"?~~ | Closed by P35: no market is built in; firms build theirs with the setup wizard and the Library |
 | Q10 | Are MEP models in scope for the first pilots? | Federation runs on MEP untested (docs/11); affects ownership defaults |
 | Q11 | Is coordinate alignment needed for v1 pilots (models exported with different origins)? | Out of v1; check pilots' export practice |
 | Q12 | Do firms need GAEB / ÖNORM export at launch in DACH? | Excel only in v1 |
 | Q13 | (Pricing module) Should offers a firm receives feed its own pricebook ("save these rates as our prices")? | Pricebooks are the core (P33); offers already flow into estimates |
 | Q14 | (Pricing module) Should vendors be able to propose alternative items or quantities? | Today: notes per line + qualifications |
 | Q15 | Is the line key stable enough across rule-set edits for change reports that users trust? | Rule-set changes show as remove + add; may need a key-mapping table on rule renames |
-| Q22 | Which rule-set questions are the setup wizard's essential ones (F16 step 1)? | A first list of about ten in "As modelled" (EN-011); to be checked with a QS or engineer who has made BoQs by hand, and per market preset (Q9) |
+| Q22 | ~~Which rule-set questions does the setup wizard ask?~~ | Closed by P42: derived from the rule set's data (switches and their follow-ups) plus six marked measuring screens; F16 "Wizard content for As modelled" |
 | Q23 | How should "start from your last BoQ" (F16, after v1) match a past BoQ's items to kinds of line: name matching, rules on units, or AI suggestions with confirmation? | Same family as Q8. Only the firm's own documents (BR-53) |
 | Q24 | Do firms need item texts in two languages in one BoQ (bilingual tenders)? | P14 stores one text per code; `CodeList.locale` gives its language. A second text would be `Code.titles`-style translations, later |
-| Q25 | Is a reminder enough for work not in the models (P15), or do firms want a checklist of typical non-modelled items per market to tick through? | Reminder in v1 (BR-12); a checklist would be data per market, like the rule sets |
+| Q25 | ~~Reminder or checklist for work not in the models?~~ | Closed: a plain reminder (P15, BR-12); firms add the rest as manual lines |
 | Q26 | What are the paid tiers priced on: active projects, seats, or both (P17)? And what does the default tier include? | Entitlements support any combination; decide before public launch, with Q18 |
 | Q27 | Single session (P22): is 12 h idle the right expiry, and should one person be allowed a phone and a laptop at once later (a "same person, second device" allowance)? | v1: strictly one; watch support requests |
 | Q28 | Should platform admins ever see project content for support, and how is it granted (owner grants time-limited access, audited)? | v1: metadata only (BR-57) |
@@ -54,6 +63,8 @@ questions from `docs/11` that this plan answers are marked there by P-decisions 
 
 ## Planning assumptions
 
-- One frontend owner (the product owner) builds M0–M4. Coding agents help with tasks.
-- Backend agents start after the contract and the scenario suites are stable (end of M4).
-- Engine tasks EN-001, EN-003, EN-004 and EN-007 are needed for M1. The others can follow.
+- Release 1 is the full v1 (P37). Three sequential phases by two agents (P38): frontend agent
+  (phase 1, mock), backend agent (phase 2: BE-000, engine, Java), frontend agent (phase 3: wire
+  up, release). See `08-delivery/milestones.md`.
+- Everyone commits straight to `main` (P40); phases don't overlap.
+- The owner reviews at the end of each milestone and answers questions that come up.

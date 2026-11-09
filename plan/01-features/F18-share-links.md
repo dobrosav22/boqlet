@@ -10,8 +10,8 @@ explanations and 3D view the firm sees (P26).
 
 1. **Create** (BoQ workspace › Share): a dialog with:
    - **What:** "This version as it is now" (pins the working or saved version's current run;
-     default) or "Always the latest saved version of this BoQ" (follows new issues; shows nothing until
-     one is issued).
+     default) or "Always the latest saved version of this BoQ" (follows each newly saved version; shows
+     nothing until one is saved).
    - **Includes:** the sheet (always), grouped by the chosen classification with its item texts
      (P14); line detail with **How it is calculated** (F06 §5, default on); the **3D view**
      (F07, default on); the calculation log (default off); **Excel download** (default off).
@@ -55,8 +55,8 @@ Owners and admins may revoke any link in the org (org settings › Share links l
 
 ## Edge cases
 
-- The pinned run's revision is later issued: the link keeps showing that run, now labelled
-  with the issued status. A "follow latest saved" link moves to each newly saved version.
+- The pinned run's working version is later saved: the link keeps showing that run, now
+  labelled with the saved version. A "follow latest saved" link moves to each newly saved version.
 - The project is archived: links keep working (read-only data). Deleting the org ends them.
 - The BoQ uses several models: the viewer loads all of them, as in F07.
 

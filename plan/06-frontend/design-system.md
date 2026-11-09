@@ -1,5 +1,8 @@
 # Design system
 
+**Provisional.** The owner's `design-guidelines.md` (P41) overrides this file wherever they
+differ; the typeface is decided there (JetBrains Mono is the fallback).
+
 A work tool for professionals who read numbers all day. Very clean, no visual noise, modern,
 easy to use, keyboard friendly (P23). Built with **shadcn/ui** components (Tailwind CSS +
 Radix primitives, copied into the repo and restyled), set in **one monospace typeface**
@@ -35,7 +38,7 @@ throughout. The PoC's "ruled sheet" look (a printed BoQ) is the visual reference
 - Type: **one monospace typeface** for everything, self-hosted (no runtime Google Fonts
   dependency). Requirements: OFL or similar licence, Latin Extended and Cyrillic (č ć đ š ž,
   Serbian, Russian, Ukrainian…), true italics optional, at least regular / medium / semibold.
-  Candidates: **JetBrains Mono** (recommended), IBM Plex Mono; confirm in FE-001. Sizes
+  Decided in `design-guidelines.md`; fallback **JetBrains Mono**. Sizes
   12 / 13 / 14 / 16 / 20 / 24; headings differ by weight and size, not by another font.
 - Spacing 4 px grid. Radius 4 / 6. Elevation: two levels (popover, dialog).
 - Motion: 120–200 ms, reduced-motion respected.

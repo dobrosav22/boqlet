@@ -36,7 +36,7 @@ API and UI copy.
 | Item text | The written description of a BoQ item that is priced ("Laying external walls {thickness} cm thick…"). A template on a code, filled per line by the engine. Shown as the line's description when present. | `Code.description` → `LineCode.text` |
 | Line text | The rule set's short label for a line ("Wall, Exterior - Brick on Block, 417 mm"). Shown when the line's code has no item text, and always in the line detail as "Measured as". | `BoqLine.description` |
 | Setup wizard | The guided first setup of an org's rule set, classification and company dictionary (F16). | `Org.setup` |
-| Setup question | A rule-set question the setup wizard asks, marked in the rule set. | `SlotPrompt.setup` |
+| Setup question | A rule-set question the setup wizard asks: every item-switching yes/no question (derived), their follow-ups, and the measuring questions a rule set marks for its setup screens. | `SlotPrompt.setup`, `RuleSet.setupSteps` |
 | Share link | A public, read-only, revocable link to a BoQ revision; opens without an account. | `ShareLink` |
 | Session | One signed-in device of an account. Only one is active at a time. | `Session` |
 | Platform admin | An operator of the product (not a customer) with the admin console. | `User.platformRole` |

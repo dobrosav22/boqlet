@@ -98,7 +98,7 @@ Environment: `IFC_BOQ_PYTHON` (python to use), `IFC_BOQ_SKIP_ENGINE_SETUP=1`,
 | Deploy a demo on Vercel | `docs/17-deploying-a-demo.md` |
 | Dictionaries and code lists | `docs/07-dictionaries-and-classification.md` |
 | What is not built yet, open questions | `docs/11-roadmap-and-open-questions.md` |
-| Build the product (Next.js frontend, mock API, Java backend, engine worker): specs, API contract, tasks | `plan/README.md` |
+| Build the product (Next.js frontend, mock API, Java backend, engine worker): specs, API contract, phases, tasks | `plan/README.md`, section "Start here" |
 | Everything from the original conversation, verbatim | `docs/reference/` |
 
 ## Status in one paragraph
@@ -115,3 +115,7 @@ Java backend. Also run on 309 public IFC files from 30 authoring tools (building
 DURAARK, the Auckland OpenIFC repository, Schependomlaan): no engine errors, output valid
 against the contract; quantities checked only for the Duplex and the buildingSMART samples.
 What was run and what is still uncovered: `docs/12-ifc-corpus-catalogue.md`.
+
+The product to build on top of this is fully specified in `plan/` (decisions P01–P42, phases,
+milestones, tasks). **The build has not started; wait for the owner's go-ahead**, then follow
+`plan/README.md` "Start here".

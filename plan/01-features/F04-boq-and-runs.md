@@ -50,10 +50,13 @@ run. The result is either complete or needs input.
 4. **Pending changes indicator:** the revision shows "Inputs changed since this run" when
    inputs, decisions or adjustments differ from those in `currentRun.request` (the backend
    computes `revision.pendingChanges: string[]`, e.g. `["decisions", "inputs.ruleSet"]`).
-   Submit is disabled while pending changes exist (BR-22).
+   Save version (and Submit, with approval on) is disabled while pending changes exist (BR-22).
 5. **Run history:** list of runs per revision (time, who, status, line count, flagged count,
    duration), open any old run read-only, compare two (F08).
-6. **Several BoQs per project:** e.g. "Cost check" under one rule set and "Tender BoQ" under
+6. **Archive a BoQ** (lead): hides it from the BoQ list (e.g. an abandoned variant) and makes it
+   read-only; restore with `PATCH /boqs/{boqId}` `{archived: false}`. Different from confirming
+   (F09 §5, "done") and from archiving the whole project (F02 §7).
+7. **Several BoQs per project:** e.g. "Cost check" under one rule set and "Tender BoQ" under
    another, both from the same models and the same project decisions.
 
 ## States shown in the BoQ workspace header
@@ -88,5 +91,5 @@ run. The result is either complete or needs input.
 - [ ] Creating a BoQ in a project with two ready models preselects both latest versions and the project defaults.
 - [ ] Generating the Duplex BoQ (cached parse) finishes in under 10 s end to end and shows the sheet without a reload.
 - [ ] A run with blocking questions lands in `needs_input`, and the header links to the questions.
-- [ ] Changing any input shows "Inputs changed since this run" and disables Submit until regenerated.
+- [ ] Changing any input shows "Inputs changed since this run" and disables Save version until regenerated.
 - [ ] Two runs with different classifications have identical quantities per line key (BR-02, automated).

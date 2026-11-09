@@ -15,7 +15,7 @@ layout (`apps/mock-api/.data/blobs/`).
 | `orgs/{orgId}/runs/{runId}/result.json.gz`, `boq.xlsx` | run job | while the run exists |
 | `orgs/{orgId}/diffs/{diffId}/diff.json.gz` | diff job | cache, may be recomputed |
 | `orgs/{orgId}/previews/{jobId}/…` | preview job | 7 days (lifecycle rule) |
-| `orgs/{orgId}/exports/{exportId}/{fileName}` | export jobs | issued: while the revision exists; others: 90 days |
+| `orgs/{orgId}/exports/{exportId}/{fileName}` | export jobs | saved versions: while the version exists; others: 90 days |
 | `orgs/{orgId}/pricing/…` | pricing module (attachments, workbooks) | the module's own rules; deleted with the module's data |
 | `orgs/{orgId}/imports/{jobId}/{fileName}` | browser (signed PUT) | 7 days |
 | `orgs/{orgId}/presets/{presetVersionId}/codelist.json.gz` | API | large code lists only |

@@ -1,5 +1,10 @@
 # Backend tasks (Java, `services/api`)
 
+**Owner: the backend agent, in phase 2** (`milestones.md`), after the frontend agent's phase 1
+on the mock. Order: BE-000 → the engine tasks (`tasks-engine.md`, milestone ME) → M5 → M6 → M7
+→ MP2 (optional). The contract and scenario suites written in phase 1 are the specification:
+make them pass against Java without changing them; a suite that looks wrong goes to the owner.
+
 Start with **BE-000**. Every task is done when the contract suite passes for its endpoints
 (08-delivery/testing.md), and when its Policy and state-machine unit tests cover every row of
 `03-domain/permissions.md` and `state-machines.md` that it touches.
@@ -69,7 +74,7 @@ warnings, log paging, element lines, coverage.
 
 ### BE-012 Diffs and exports (F08, F12)
 Compare (cached diff or diff job), diff lines/elements paging, export jobs, downloads,
-issued frozen export, CSV exports (decisions, audit), BoQ edits import job and its report,
+saved-version frozen export, CSV exports (decisions, audit), BoQ edits import job and its report,
 preset template download/import through the engine rpc (F10 §14).
 
 ### BE-013 Queue transport
@@ -87,7 +92,7 @@ Notification rows for every kind in F13, batching, `GET /notifications`, read en
 ### BE-029 Share links (F18)
 `share_links`, create (token shown once, hash stored), list, edit, revoke, org list, org setting
 `publicLinksAllowed`; public endpoints without auth (token resolution, includes, pinned vs
-latest issued, signed URLs), rate limits, view counting, audit; automated check that public
+latest saved, signed URLs), rate limits, view counting, audit; automated check that public
 responses carry no forbidden fields (BR-56).
 
 ### BE-030 Platform admin (F19)

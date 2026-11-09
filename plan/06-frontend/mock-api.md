@@ -2,7 +2,9 @@
 
 A Node service that implements `openapi.yaml` well enough to build and test the whole frontend
 before the Java backend exists (P11). CRUD state lives in a JSON file. Computation goes to the
-**real Python engine** through the worker contract's HTTP transport
+**real Python engine**: in phase 1 through the existing proof-of-concept engine API
+(`engine/ifc_boq/api.py`, port 8787), with the engine features that don't exist yet **faked**
+(table below, P39); from phase 2 (milestone ME) through the worker contract's HTTP transport
 (`04-architecture/engine-worker.md`). When Java is ready, the frontend points at it and the
 mock stays as a test double for frontend e2e tests.
 
@@ -20,11 +22,34 @@ because the frontend is built against it.
 | Types | The same generated `schema.d.ts` as the frontend |
 | Store | In-memory object, persisted to `apps/mock-api/.data/db.json` (debounced). `npm run mock:reset` reseeds |
 | Blobs | `apps/mock-api/.data/blobs/` with the storage key layout of `storage-jobs-realtime.md`. Signed URLs become `http://localhost:4010/_blobs/<key>?sig=…` (PUT/GET) |
-| Engine | HTTP transport: `POST {ENGINE_URL}/jobs/{type}` (NDJSON progress → SSE `job.progress`), `POST {ENGINE_URL}/rpc/{op}`. Engine storage root = the mock's blob folder (`ENGINE_STORAGE=file://…/.data/blobs`) |
+| Engine | One `engine` interface with two implementations. **Phase 1:** `PocEngine` over the proof-of-concept API (`POST /api/models`, `GET /api/models/{id}/scene`, `/geometry.glb`, `POST /api/models/{id}/names`, `POST /api/runs`, `GET /api/runs/{id}/boq.xlsx`, `POST /api/presets/{kind}/check`, `PUT /api/presets/{kind}/{id}`, `POST /api/codelists/read`, `/build`), plus the fakes below. **Phase 2:** `WorkerEngine` over the HTTP transport (`POST {ENGINE_URL}/jobs/{type}` with NDJSON progress → SSE `job.progress`, `POST {ENGINE_URL}/rpc/{op}`; storage root = the mock's blob folder) |
 | SSE | In-process event bus → `GET /api/v1/events` |
 | Email | Written to `.data/outbox/*.html` and listed at `GET /_dev/outbox` (dev page) |
 | Clock | `GET/POST /_dev/clock` to move time forward (invitation and session expiry; module deadlines) |
 | Port | 4010 |
+
+## Engine fakes (phase 1 only, P39)
+
+Engine features the plan needs but the proof-of-concept engine doesn't have yet. Each fake lives
+in `apps/mock-api/src/engine/fakes/<name>.ts`, is behind the `engine` interface, and is deleted
+when its task lands in phase 2 (FE-054 checks the table is empty). Fakes **never measure**
+(BR-01): they only rearrange, relabel or apply values a person entered. Criteria that depend on
+a fake are marked "(fake)" in phase-1 test runs and re-checked in phase 3.
+
+| Fake | What the mock does in phase 1 | Known gap until the real task | Replaced by |
+|---|---|---|---|
+| Line edits applied | Applies `LineOverride` fields (quantity, text, unit, code, exclusion) to the engine's result lines after the run | Derived lines don't follow an edited quantity; no `orphan_override` question | EN-003 |
+| Message codes | None: the UI falls back to the engine's `message` text (F15 §4 allows it) | Questions and warnings untranslated | EN-004 |
+| Preview | Saves the draft as a temporary user preset through the PoC API, runs, deletes it; diff of two runs by line key | Slower; no `compareWith` in one job | EN-005 |
+| Change report | Diffs two runs' lines by line key and elements by GlobalId (plain comparison, no measuring) | Causes limited to `elements_*` and `override_changed` | EN-002 |
+| BoQ export meta, edits import | PoC Excel as is; edits import reads the uploaded xlsx with SheetJS using a hidden line-key column the mock adds on export | Layout differs from the final export | EN-006 |
+| Manual items with codes | Adds the chosen codes to manual lines after the run | Map rules don't see them | EN-007 |
+| Duplex v2 fixture | Seeds "v2" as a copy of v1 with a different file name | Change report shows no element changes | EN-008 |
+| Item texts filled | Fills `{name}` blanks in a code's `description` with the line's values by plain substitution | No expressions (`{thickness*1000}`), no `item_text_blank` warning | EN-010 |
+| Setup markers | The F16 "Wizard content for As modelled" markers (`setupSteps`, `setup` per slot) kept in the mock's config and merged into the flattened rule set it serves; parts 1a and 1b are derived from the rule set as F16 says | Only "As modelled" and patches on it have markers | EN-011 |
+| Preset Excel templates | SheetJS writes and reads a simple Settings / Codes / Names layout | No data validation dropdowns | EN-012 |
+| Trace steps | Builds `start`/`deduct`/`result` steps from the existing trace (formula, params, element shares) | Approximate wording; derived chains shallow | EN-013 |
+| Pricing workbooks (MP1) | SheetJS for offer request and pricebook workbooks | Simplified layouts | EN-P1 |
 
 ## What it implements
 

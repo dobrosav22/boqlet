@@ -411,7 +411,7 @@ console's "hit a limit" signal (F19).
 
 ### AuditEvent (append-only)
 `{id, orgId, projectId?, actorId, actorKind: "user" | "system" | "vendor" | "platform_admin", action, entityType, entityId, data, ip?, at}`.
-Actions are dotted verbs: `model_version.uploaded`, `decision.set`, `revision.issued`,
+Actions are dotted verbs: `model_version.uploaded`, `decision.set`, `version.saved`,
 `version.saved`, `boq.confirmed`, `member.role_changed`... (full list in F09); modules register
 `pricing.*` actions.
 

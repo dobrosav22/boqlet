@@ -77,7 +77,7 @@ of delay, the org detail is live.
 `PATCH /admin/orgs/{orgId}` (tags, suspend), `PUT /admin/orgs/{orgId}/subscription`,
 `PUT /admin/orgs/{orgId}/entitlement-overrides`, `GET /admin/orgs/{orgId}/notes`,
 `POST /admin/orgs/{orgId}/notes`, `GET /admin/users`, `DELETE /admin/users/{userId}/session`,
-`GET /admin/vendors`, `GET /admin/health`, `GET /admin/orgs.csv`.
+`GET /admin/health` (vendor statistics come from the pricing module: `GET /pricing/admin/vendors`), `GET /admin/orgs.csv`.
 
 ## Acceptance criteria
 

@@ -1,5 +1,12 @@
 # Engine tasks (Python, `engine/ifc_boq`)
 
+**Owner: the backend agent, in phase 2, milestone ME** (after BE-000, before the Java work; P39).
+During phase 1 the frontend agent's mock faked these features on top of the proof-of-concept
+engine API; `06-frontend/mock-api.md` "Engine fakes" lists each fake and the task that replaces
+it. When a task lands, switch the mock to the real behaviour and delete its fake. Suggested
+order: EN-001 (worker + HTTP transport; switch the mock to it), EN-004, EN-003, EN-007, EN-013,
+EN-010, EN-011, EN-012, EN-005, EN-002, EN-008, EN-006; EN-009 in M6; EN-P1 with MP2.
+
 Rules (from CLAUDE.md): types first (`packages/types/src` → `npm run codegen`), no measuring
 logic in rules and no rule logic in measuring, formulas only in `expr.py`, deterministic
 question ids, keep the Duplex acceptance test green. Worker code holds **no engine logic**.
@@ -121,15 +128,25 @@ question ids, keep the Duplex acceptance test green. Worker code holds **no engi
   and without texts (BR-02 test extended); a blank `{fire_rating}` on a line without one stays
   visible and gives one warning; the Duplex acceptance test is unchanged.
 
-### EN-011 Setup questions
-- **Specs:** F16 step 1, Q22.
-- **Do:** add `setup?: number` to `SlotPrompt` (rules.ts: asked by the setup wizard, in this order;
-  codegen); mark about ten slots in `presets/rules/as-modelled.json` (wall unit, masonry volume
-  from, wall opening mode and limit, slab opening mode and limit, formwork separate, excavation,
-  reinforcement estimates, room finishes, preliminaries, lines per storey); patches inherit and may
-  change them. Check: two slots with the same `setup` number is a problem.
-- **Acceptance:** the flattened "As modelled" lists its setup slots in order; changing one number in
-  the JSON changes the order with no code change.
+### EN-011 Setup markers in rule sets
+- **Specs:** F16 step 1 (and its table "Wizard content for As modelled"), P42.
+- **Do:**
+  1. Types first (`packages/types/src/rules.ts`, then codegen): `SlotPrompt.setup?: string`: the id
+     of a `RuleSet.setupSteps` entry the question appears on (wizard part 1c), or `"skip"` to keep an
+     item-switching yes/no question off the wizard's checklist (part 1a). `RuleSet.setupSteps?:
+     {id: string; title: string; intro?: string}[]` in screen order. `RuleSetPatch` may set both;
+     flattening merges them like other slot fields.
+  2. Mark `presets/rules/as-modelled.json` exactly as F16's table: steps `walls`, `wall-openings`,
+     `slab-openings`, `roofs`, `windows-doors`, `layout` with their questions; `setup: "skip"` on
+     `include_proxies` and `include_non_physical`.
+  3. Preset check: a `setup` step id not in `setupSteps` is a problem; `"skip"` on a slot that
+     switches no item is a problem; a step with no question is a problem.
+  4. The flattened rule set already carries what parts 1a and 1b need (`enabled: {param}` on items,
+     `dependsOn` on slots); no other engine change.
+- **Acceptance:** the flattened "As modelled" lists six steps with the questions of F16's table;
+  the checklist derived from it (every top-level boolean slot that is some item's `enabled`, minus
+  `skip`) has 14 entries; changing a marker in the JSON changes the wizard with no code change; the
+  check reports a step id that doesn't exist.
 
 ### EN-012 Preset Excel templates
 - **Specs:** F10 §14, P24, engine-worker.md rpc `template-export` / `template-import`.

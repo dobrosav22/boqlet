@@ -135,7 +135,7 @@ Also editable as advanced documents: **federation settings** (discipline ownersh
 
 - [ ] A library editor copies "As modelled" as a patch, changes three Settings, previews on the Duplex and sees the changed lines next to the editor.
 - [ ] Publishing with problems is impossible. Publishing creates version n+1, and older versions are read-only.
-- [ ] A BoQ issued with version 1 still shows version-1 numbers after version 2 is published.
+- [ ] A BoQ version saved with preset version 1 still shows version-1 numbers after preset version 2 is published.
 - [ ] Importing an xlsx code list with 3 levels builds the hierarchy and reports duplicates.
 - [ ] Importing an xlsx with an "Opis" column fills the item texts; an item text with `{thickness}` shows "Reads as" with the preview model's value, and the published classification's lines carry the filled text in the sheet and the Excel.
 - [ ] A member without library rights can view and pick org presets but sees no edit actions, and the API returns `403` on edits.

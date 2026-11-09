@@ -60,30 +60,110 @@ with changed lines highlighted (the F10 preview, EN-005).
 
 ### 1. How you measure
 
-- Asks the **setup questions** of the starting rule set, in order: the slots marked
-  `setup` (EN-011). The rule set decides which questions are essential, so the list is data
-  (CLAUDE.md rule 3), not a list in the frontend. For "As modelled" about ten, for example:
-  wall unit (and the thickness above which walls go in m³), which openings are deducted from
-  walls and the size limit, the same for slabs, formwork as a separate item, excavation for
-  foundations (and working space), reinforcement estimates from concrete volume (kg/m³), room
-  finishes, preliminaries, lines per storey.
-- Each question uses the Settings tab's control (follow-up questions appear when they apply,
-  formula questions offer the ready-made choices). Each answer shows its effect in the
-  preview at once, e.g. "Walls, Exterior - Brick on Block: 267.16 m² → 112.40 m³". The preview
-  re-runs at most once per second (debounced). Running previews count as processing (BR-62).
-- "All settings…" opens the full Settings tab of the same draft in the Library, in a new tab.
+The questions come from the starting rule set's own data, never from a list in the frontend
+(CLAUDE.md rule 3, P42). A rule set's questions (slots) are of two kinds, and the wizard treats
+them differently:
+
+**1a. What your BoQ includes (derived automatically).** Every top-level yes/no question that
+switches BoQ items on or off (it is the `enabled` value of at least one item, calculated item or
+by-hand item) becomes one checkbox on a single checklist screen, grouped by the rule set's
+sections, labelled with the slot's `label` and its `question` as the help text, preselected with
+the starting rule set's answer. A slot marked `setup: "skip"` is left out (technical switches).
+Nothing has to be maintained for this screen: a new switch in a rule set appears in it by itself.
+
+**1b. Details for what you switched on (derived automatically).** For each switch the user
+turned on, its follow-up questions (`dependsOn`) follow, one screen per switch: working space and
+formula for excavation, allowance and formulas for formwork, kg per m³ for reinforcement
+estimates, thicknesses for blinding and hardcore, column deduction for room finishes, formulas
+for paint and skirting. A number follow-up whose current value is 0 has no suggested answer and
+must be filled in (a reinforcement estimate of 0 kg/m³ or a size limit of 0 is never what a
+person means).
+
+**1c. How the main items are measured (marked in the rule set).** Questions that change how
+the items present in almost every building model are measured: walls, wall and slab openings,
+roofs, windows and doors, and how lines are split. The rule set marks each with `setup: "<step
+id>"` and lists the screens in `setupSteps`, in order; questions sharing a step appear on one
+screen, each with its follow-ups underneath when they apply.
+
+Every screen uses the Settings tab's controls (choice labels, ready-made formula choices), the
+suggested answer is the starting rule set's current answer, and each answer shows its effect in
+the preview at once, e.g. "Walls, Exterior - Brick on Block: 267.16 m² → 112.40 m³" (re-run at
+most once per second; previews count as processing, BR-62). "All settings…" opens the full
+Settings tab of the same draft in the Library.
+
+A rule set with no `setupSteps` (a firm's own, not based on "As modelled") still gets 1a and 1b;
+1c then shows its sections with a link to each in the full editor. A patch inherits the markers of
+the rule set it is based on and may change them.
+
+#### Wizard content for "As modelled" (decided, P42)
+
+Derived from `presets/rules/as-modelled.json`: 61 questions in 13 sections, 37 of them
+top-level; 16 top-level yes/no questions switch BoQ items on or off (of its 30 items, 12
+calculated items and 3 by-hand items).
+
+**1a checklist** (derived; 14 switches after `skip`), with "As modelled"'s suggested answer:
+
+| Section | Switch (slot) | Switches on | Suggested |
+|---|---|---|---|
+| Earthworks and substructure | Excavation for footings (`excavation`) | excavation | off |
+| | Blinding under footings (`blinding`) | blinding | off |
+| | Hardcore under ground slabs (`hardcore`) | hardcore | off |
+| Concrete, formwork and reinforcement | Formwork as its own item (`formwork_separate`) | 3 formwork items | on |
+| | Reinforcement estimates (`rebar_estimates`) | 3 estimates | off |
+| Floors and slabs | Concrete in slabs as its own item (`slab_concrete_separate`) | slab concrete | on |
+| Finishes | Room-by-room finishes (`room_finishes`) | 4 room items | off |
+| | Paint to plasterboard walls (`paint_walls`) | paint | on |
+| | Paint to ceilings (`paint_ceilings`) | paint | off |
+| | Skirting (`skirting`) | skirting | off |
+| Services (MEP) | Building services (`include_mep`) | pipes, MEP items | on |
+| Preliminaries and sums | Preliminaries (`include_prelims`) | site setup, scaffolding | on |
+| | Provisional sums (`include_provisional`) | landscaping | on |
+| What is included | Loose furniture (`include_furniture`) | furniture | off |
+
+Marked `setup: "skip"`: `include_proxies` (unknown objects counted as items) and
+`include_non_physical` (markers and display objects): technical, the defaults are right for
+almost every firm, and they stay in the full Settings tab.
+
+**1c screens** (`setupSteps` in order; follow-ups appear under their parent):
+
+| Step | Questions | Why it is essential |
+|---|---|---|
+| `walls` "Walls" | `wall_unit` (+ `masonry_volume_from`), `wall_surface` | walls are in every model; m² vs m³ and which face are the commonest differences between practices |
+| `wall-openings` "Openings in walls" | `wall_opening_mode` (+ `wall_opening_threshold`, `opening_compare_by`, `wall_add_reveals`) | deduction rules for windows and doors change every wall line |
+| `slab-openings` "Openings in floors and roofs" | `slab_opening_mode` (+ `slab_opening_threshold`) | the same for every slab line |
+| `roofs` "Roofs" | `roof_surface` | slope vs plan changes every roof line |
+| `windows-doors` "Windows and doors" | `window_measure`, `door_measure` | count vs area changes units of every window and door line |
+| `layout` "How lines are split" | `lines_by_storey` | used by 29 of the 30 items: one line per type, or per type and storey |
+
+Not in the wizard: renovation scope and demolition (`renovation_scope`, `measure_demolition`,
+a follow-up of it), because they describe a project, not how a firm measures. Left to the full
+Settings tab (rarer, or with suggestions that suit almost everyone): wall
+recesses, columns through slabs, railings, stairs, steel weight and density, member lengths,
+pipe lengths and allowance, finishes split by type, roof build-up layers, slab surface.
+
+So a new firm sees one checklist, a detail screen for each thing it switched on, and six short
+screens; with "Use the suggested answers" the step takes about a minute.
 
 ### 2. Item numbers and texts
 
-- **Import** the firm's item list from Excel or CSV: the F10 §8 import, with the "Item text"
-  column (P14) recognised from headers such as "description", "opis", "Langtext". One sheet,
-  one row per item: number, short name, optional parent, optional item text with blanks like
-  `{thickness}`.
-- Or **skip**: no classification (lines stay grouped as "All lines"), or pick a system list.
-- **Which item for which line:** the "Codes per line" table (F10), one row per BoQ item of
-  the step-1 rule set. "Suggest codes" proposes items by matching names. The preview shows each
-  line with its item number and filled item text, so the user sees the result as it will look
-  in Excel.
+What a classification consists of decides the step: a **code list** (codes with their parent,
+short name and optional item text) and a **map** (rules saying which BoQ item gets which code).
+
+- **Item list:** import the firm's list from Excel or CSV (the F10 §8 import; columns for item
+  number, short name, parent, item text are recognised from their headers, e.g. "opis" or
+  "Langtext" for the text), or start from a copy of a system or org list, or skip (lines stay
+  grouped as "All lines" until a classification exists).
+- **Which item for which line:** one row per BoQ item of the step-1 rule set **that the step-1
+  answers switch on** (items, calculated items and by-hand items whose `enabled` is true or
+  unset). Rows are ordered: items with elements in the preview model first (with their element
+  count), then switched-on calculated and by-hand items, then the rest folded under "Not in this
+  model". "Suggest codes" proposes items by matching each row's label to the codes' short names;
+  the user accepts or picks. The wizard writes one map rule per row (`match: {ruleId}` → code).
+  Rows left without a code are allowed: the classification's `onUnmapped` is `"flag"`, so those
+  lines show under "Unclassified" without asking questions (changeable later in the Library).
+- **Item texts:** under each chosen code its item text, editable; with a preview model the text
+  is shown filled with a sample line's values.
+- The preview shows each line with its item number and filled text, as it will look in Excel.
 
 ### 3. Names
 
@@ -168,4 +248,6 @@ New: `GET /orgs/{orgId}/setup`, `PUT /orgs/{orgId}/setup`.
 - [ ] Leaving at step 2 and coming back the next day reopens step 2 with the answers of step 1 kept.
 - [ ] A free-plan org finishes the wizard without hitting `libraryOrgPresets`.
 - [ ] A new owner cannot reach the org dashboard before finishing; "Use the suggested answers" on every step finishes in under three minutes.
-- [ ] Changing which slots are `setup` in the system rule set changes the wizard's questions with no frontend change.
+- [ ] Changing which slots are `setup` in the system rule set, or adding a new item-switching yes/no slot, changes the wizard's screens with no frontend change.
+- [ ] Starting from "As modelled", the wizard shows the 14-switch checklist, a detail screen only for switches turned on, and the six measuring screens of the table above.
+- [ ] Turning on reinforcement estimates cannot be finished without entering kg per m³ for slabs, walls and footings.

@@ -909,6 +909,7 @@ paths:
               properties:
                 name: { type: string }
                 description: { type: string }
+                archived: { type: boolean, description: false restores an archived BoQ (F04 §6) }
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Boq" } } } }
   /boqs/{boqId}/archive:
@@ -1076,11 +1077,10 @@ paths:
           application/json:
             schema:
               type: object
-              required: [notModelledConfirmed]
               properties:
                 label: { type: string }
                 note: { type: string }
-                notModelledConfirmed: { type: boolean, const: true }
+                notModelledConfirmed: { type: boolean, description: "Required (true) when approval is off; with approval on it was given at submit (F09 §2, BR-12)" }
       responses:
         "200": { description: Saved (frozen export job started); the response is the saved version, content: { application/json: { schema: { $ref: "#/components/schemas/BoqRevision" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
