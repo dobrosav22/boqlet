@@ -1,4 +1,5 @@
-# Lint configuration for openapi.yaml: `npx @redocly/cli lint plan/05-api/openapi.yaml --config plan/05-api/redocly.yaml`
+# Lint configuration for openapi.yaml and openapi-pricing.yaml:
+# `npx @redocly/cli lint plan/05-api/openapi.yaml plan/05-api/openapi-pricing.yaml --config plan/05-api/redocly.yaml`
 extends:
   - recommended
 rules:

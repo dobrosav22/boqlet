@@ -49,6 +49,15 @@ question ids, keep the Duplex acceptance test green. Worker code holds **no engi
   question (non-blocking, id `orphan:{lineKey}`).
 - **Acceptance:** an override changes exactly one line and appears in the log and the xlsx;
   removing the line's rule gives an orphan question; Duplex test unchanged without overrides.
+- **Extended for full line edits (P20, F06 §6):** the decision answer carries the edited fields
+  `{quantity?, description?, unit?, codes?, excluded?, reason?}`. Quantity is applied **before**
+  derived rules, so derived lines follow it (their trace names the edited source); `codes` act as
+  the line's classification decision per system; description, unit and exclusion are applied to
+  the final line; `BoqLine.overridden` lists every edited field with the engine's value; an
+  excluded line keeps its row with `excluded: true`, is left out of group totals and goes to an
+  "Excluded lines" sheet in the xlsx. Unit without quantity is rejected by the check. Acceptance
+  adds: editing the Duplex foundation wall area changes its formwork line by the same factor; a
+  moved line lands in the new group in one system only.
 
 ### EN-004 Message codes and params
 - **Specs:** F15 §4.
@@ -67,15 +76,15 @@ question ids, keep the Duplex acceptance test green. Worker code holds **no engi
   changed lines only.
 
 ### EN-006 Spreadsheets
-- **Specs:** F12, F11 Excel round-trip, engine-worker.md.
-- **Do:** extend `export_xlsx` meta (project, BoQ, revision label, status/watermark, issue
-  info, groupBy system, locale number formats); `sheets/package.py` (protected sheet, hidden
-  lineKey column, rate and note unlocked, totals as formulas); `sheets/offer_import.py`
-  (openpyxl read-only, data-only; match by hidden lineKey, else by ref + description; report);
-  `sheets/comparison.py`. Job types `export_package`, `import_offer`, `export_comparison`.
-- **Acceptance:** package xlsx filled in by LibreOffice and by Excel (fixture files checked in)
-  import with 100% matches; corrupted cells reported by row/column; files open without repair
-  prompts.
+- **Specs:** F12 (incl. importing edits back), engine-worker.md.
+- **Do:** extend `export_xlsx` meta (project, BoQ, version label, status/watermark, save info,
+  groupBy system, position numbers, locale number formats) and expose the workbook data so a
+  module can add columns (`ExportDataService`, modules.md).
+  BoQ round-trip (P20): a hidden protected line-key column in the BoQ sheet;
+  `sheets/boq_import.py` and job `import_boq_edits` producing an `EditsImportReport`.
+- **Acceptance:** an exported BoQ edited in LibreOffice and in Excel (fixture files checked in)
+  imports with the expected edits; corrupted cells reported by row/column; files open without
+  repair prompts.
 
 ### EN-007 Platform manual items with codes
 - **Specs:** F06 §7, data-model ManualItem.
@@ -106,7 +115,6 @@ question ids, keep the Duplex acceptance test green. Worker code holds **no engi
   4. `export_xlsx`: Description = the grouping system's `text`, else the line text; "Lines"
      sheet gets "Measured as" and one item-text column per system with texts; the "not in the
      models" note above the table (P15) with the manual-line count.
-  5. Package lines (EN-006): `description` from the tender's `textSystem`.
 - **Acceptance:** with a copy of `acme-cost-codes` whose walls code has the text
   `External walls {thickness*100} cm, measured per m2`, the Duplex brick wall line carries
   `codes.acme.text = "External walls 41.7 cm, measured per m2"`; quantities are identical with
@@ -123,6 +131,31 @@ question ids, keep the Duplex acceptance test green. Worker code holds **no engi
 - **Acceptance:** the flattened "As modelled" lists its setup slots in order; changing one number in
   the JSON changes the order with no code change.
 
+### EN-012 Preset Excel templates
+- **Specs:** F10 §14, P24, engine-worker.md rpc `template-export` / `template-import`.
+- **Do:** `sheets/templates.py`: write a workbook per preset kind (rule set: Settings with data
+  validation lists from `options`/`optionLabels` and `min`/`max`, read-only BoQ items, Read me;
+  classification: Codes with item texts, Codes per line with a code list dropdown; dictionary:
+  Names with a term dropdown), hidden id columns for round-trip; read it back (read-only,
+  data-only) into a proposed doc, a list of changes against the given doc, and problems by
+  sheet/row/column; run the normal preset check on the proposed doc.
+- **Acceptance:** a template written and read back unchanged gives zero changes for every
+  shipped preset; three answers changed in LibreOffice give exactly three changes; an answer
+  outside the options is a problem with its cell.
+
+### EN-013 Structured trace steps ("How it is calculated")
+- **Specs:** F06 §5, P25.
+- **Do:** types: `BoqLine.trace.steps?: {kind: "start" | "add" | "deduct" | "factor" | "round" |
+  "derive" | "edit" | "result", code: string, params: Record<string, unknown>, value: number | null,
+  unit?: Unit, elements?: string[], param?: string}[]`, where `code` is a message code (EN-004)
+  and `param` names the rule-set slot a value came from. Measuring and rules emit the steps they
+  already compute (gross, deductions with threshold, factors, rounding, derived source, edit).
+  Steps must add up to the line quantity (within rounding). The xlsx "Calculation" sheet writes
+  them as sentences.
+- **Acceptance:** for every line of the Duplex run the steps add up to the quantity; the brick
+  wall line has start, deduct (with `param: "wall_opening_threshold"`) and result; derived lines
+  have a derive step naming their source line.
+
 ### EN-009 Queue transport
 - **Specs:** engine-worker.md "Queue transport", db-schema `jobs`.
 - **Do:** `python -m ifc_boq.worker --types parse,run,preview --pool standard` loop: claim with
@@ -131,3 +164,17 @@ question ids, keep the Duplex acceptance test green. Worker code holds **no engi
 - **Acceptance:** integration test with Postgres (testcontainers or docker compose): two
   workers, ten jobs, no double execution; killing a worker mid-job leads to re-queue by the
   API's sweeper (simulated) and success on retry.
+
+## Pricing module (removable, P36)
+
+### EN-P1 Pricing workbooks
+- **Specs:** F11, F20, engine-worker.md `pricing.*`.
+- **Do:** `engine/ifc_boq/sheets/pricing/`: offer request workbook (protected, hidden line keys,
+  rate and note open), offer import (match by hidden key, else by position number + text;
+  report), comparison workbook, priced BoQ (core BoQ layout + rate/amount + "Price sources"),
+  pricebook template and import (proposed items, changes, problems by cell). Registered as job
+  types `pricing.*` only when the folder is present.
+- **Acceptance:** request workbooks filled in LibreOffice and Excel import with 100% matches;
+  a pricebook template round-trips with zero changes; deleting the folder leaves every core
+  engine test passing.
+

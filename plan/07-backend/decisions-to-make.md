@@ -8,23 +8,26 @@ adapter). The others are backend-internal.
 ## D1. Authentication provider (required, P10)
 
 What the product needs: verified email; sign-up open to the public; passwordless or very low
-friction for **bidders**; invitation acceptance by email match; later enterprise SSO (SAML/OIDC
-per org) and MFA; EU data residency possible; cost at 2k users + 5k bidders.
+friction for **vendors** (pricing module); invitation acceptance by email match; later enterprise SSO (SAML/OIDC
+per org) and MFA; EU data residency possible; cost at 2k users + 5k vendors.
 
 | Option | For | Against |
 |---|---|---|
 | **Keycloak** (self-hosted) | Free, full control, SSO/SAML/MFA built in, data stays in our cloud | We run and upgrade it; theming effort; another service to secure |
-| **Auth0 / Okta CIC** | Mature, enterprise SSO, passwordless, good SDKs | Price grows with MAU (bidders count as users); vendor lock-in |
+| **Auth0 / Okta CIC** | Mature, enterprise SSO, passwordless, good SDKs | Price grows with MAU (vendors count as users); vendor lock-in |
 | **Clerk** | Fastest UI integration with Next.js, passwordless, orgs | US-centric; enterprise SSO in higher tiers; MAU pricing |
 | **AWS Cognito / Azure AD B2C / Google Identity Platform** | Cheap at scale, fits if that cloud is chosen | Rougher developer experience; ties to the cloud (P09 says neutral) |
 | **Spring Security, own users** | No vendor, no MAU cost | We build sign-up, verification, reset, passwordless, MFA and SSO ourselves; security burden |
 
 Recommendation: **Keycloak** if the team is comfortable running it (neutral, no MAU cost for
-bidders, SSO ready). Otherwise **Auth0**. Ask the owner.
+vendors, SSO ready). Otherwise **Auth0**. Ask the owner.
 
 Consequences to confirm with the answer: token vs cookie session (affects the frontend
-adapter), how bidders sign in (magic link?), where the sign-in UI lives (hosted page vs
-embedded).
+adapter), how vendors sign in (magic link?), where the sign-in UI lives (hosted
+page vs embedded), and how the backend's **single active session** (BR-54, P22) is bound to
+the provider's sign-in: a session id in an `HttpOnly` cookie set after authentication, or a
+`sid` claim. Prefer a provider whose sessions can be revoked by API, so a takeover also ends
+the provider session.
 
 ## D2. Java framework
 
@@ -74,6 +77,6 @@ containers in one EU region. **Ask, don't assume.**
 
 ## D9. Spreadsheet generation location (confirm)
 
-The plan puts all spreadsheet I/O in the Python worker (engine-worker.md: export_package,
+The plan puts all spreadsheet I/O in the Python worker (engine-worker.md: core workbooks and the pricing module's `pricing.*` jobs,
 import_offer, export_comparison) so there is one implementation for the mock and Java
 phases. The alternative is Apache POI in Java. Confirm the worker approach.

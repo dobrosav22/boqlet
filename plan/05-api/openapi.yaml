@@ -28,9 +28,11 @@ tags:
   - name: exports
   - name: jobs
   - name: notifications
-  - name: tenders
-  - name: bids
   - name: events
+  - name: sessions
+  - name: sharing
+  - name: public
+  - name: admin
 
 paths:
   # ───────────────────────────── me ─────────────────────────────
@@ -38,7 +40,7 @@ paths:
     get:
       tags: [me]
       operationId: getMe
-      summary: Current user, memberships, guest projects, open bid invitations count
+      summary: Current user, memberships, session and module extensions
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Me" } } } }
         "401": { $ref: "#/components/responses/Unauthenticated" }
@@ -257,15 +259,6 @@ paths:
         - { name: to, in: query, schema: { type: string, format: date-time } }
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuditPage" } } } }
-  /orgs/{orgId}/bidders:
-    parameters: [{ $ref: "#/components/parameters/OrgId" }]
-    get:
-      tags: [tenders]
-      operationId: listBidderContacts
-      parameters:
-        - { name: q, in: query, schema: { type: string } }
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/BidderContact" } } } } }
   /orgs/{orgId}/terms:
     parameters: [{ $ref: "#/components/parameters/OrgId" }]
     get:
@@ -421,17 +414,16 @@ paths:
     post:
       tags: [projects]
       operationId: addProjectMember
-      description: Add an org member by userId, or invite a guest by email (role guest).
+      description: Add an org member by userId (project members are org members only, P28).
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [role]
+              required: [userId, role]
               properties:
                 userId: { type: string, format: uuid }
-                email: { type: string, format: email }
                 role: { $ref: "#/components/schemas/ProjectRole" }
       responses:
         "201": { description: Added, content: { application/json: { schema: { $ref: "#/components/schemas/ProjectMember" } } } }
@@ -931,21 +923,45 @@ paths:
     get:
       tags: [boqs]
       operationId: listRevisions
+      description: The working version and every saved version. The next working version is created automatically when a version is saved (F09 §2).
       responses:
         "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/BoqRevision" } } } } }
+  /boqs/{boqId}/confirm:
+    parameters: [{ $ref: "#/components/parameters/BoqId" }]
     post:
       tags: [boqs]
-      operationId: startRevision
-      summary: Start the next revision from the latest issued one
+      operationId: confirmBoq
+      description: Mark the BoQ as done (F09 §5). Saves a final version first when the working version changed (same fields as saving a version).
       requestBody:
         content:
           application/json:
             schema:
               type: object
               properties:
-                useLatestModelVersions: { type: boolean, default: false }
+                label: { type: string }
+                note: { type: string }
+                notModelledConfirmed: { type: boolean }
       responses:
-        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/BoqRevision" } } } }
+        "200": { description: Confirmed, content: { application/json: { schema: { $ref: "#/components/schemas/Boq" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /boqs/{boqId}/reopen:
+    parameters: [{ $ref: "#/components/parameters/BoqId" }]
+    post:
+      tags: [boqs]
+      operationId: reopenBoq
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1 }
+      responses:
+        "200": { description: Reopened with a new working version, content: { application/json: { schema: { $ref: "#/components/schemas/Boq" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
   /revisions/{revisionId}:
     parameters: [{ $ref: "#/components/parameters/RevisionId" }]
@@ -1052,15 +1068,21 @@ paths:
     post:
       tags: [boqs]
       operationId: issueRevision
+      summary: Save version (P29)
+      description: Locks the working version as a saved version and opens the next working version. With `approvalRequired` the revision must be `approved`. Open blocking questions are allowed and recorded.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              required: [notModelledConfirmed]
               properties:
+                label: { type: string }
                 note: { type: string }
+                notModelledConfirmed: { type: boolean, const: true }
       responses:
-        "200": { description: Issued (frozen export job started), content: { application/json: { schema: { $ref: "#/components/schemas/BoqRevision" } } } }
+        "200": { description: Saved (frozen export job started); the response is the saved version, content: { application/json: { schema: { $ref: "#/components/schemas/BoqRevision" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Conflict" }
   /revisions/{revisionId}/reopen:
@@ -1107,18 +1129,12 @@ paths:
     post:
       tags: [adjustments]
       operationId: setOverride
-      summary: Create or replace the override of one line (by lineKey)
+      summary: Create or replace the edits of one line (by lineKey); see F06 §6
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [lineKey, quantity, reason]
-              properties:
-                lineKey: { type: string }
-                quantity: { type: [number, "null"] }
-                reason: { type: string, minLength: 1 }
+            schema: { $ref: "#/components/schemas/LineOverrideInput" }
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/LineOverride" } } } }
         "409": { $ref: "#/components/responses/Conflict" }
@@ -1415,468 +1431,72 @@ paths:
       responses:
         "204": { description: OK }
 
-  # ───────────────────────────── tenders (firm) ─────────────────────────────
-  /projects/{projectId}/tenders:
-    parameters: [{ $ref: "#/components/parameters/ProjectId" }]
+  # ───────────────────────────── sessions (F01 §10, BR-54) ─────────────────────────────
+  /sessions:
+    post:
+      tags: [sessions]
+      operationId: openSession
+      description: Called after the auth adapter signs the user in. `409 session_active` when another session of the account is active, unless `takeover` is true.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deviceLabel]
+              properties:
+                deviceLabel: { type: string }
+                takeover: { type: boolean, default: false }
+      responses:
+        "201": { description: Session opened, content: { application/json: { schema: { $ref: "#/components/schemas/Session" } } } }
+        "409": { description: Another session is active, content: { application/json: { schema: { $ref: "#/components/schemas/SessionConflict" } } } }
+  /sessions/current:
     get:
-      tags: [tenders]
-      operationId: listTenders
+      tags: [sessions]
+      operationId: getCurrentSession
       responses:
-        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Tender" } } } } }
-    post:
-      tags: [tenders]
-      operationId: createTender
-      requestBody:
-        required: true
-        content: { application/json: { schema: { $ref: "#/components/schemas/TenderCreate" } } }
-      responses:
-        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Tender" } } } }
-        "409": { $ref: "#/components/responses/Conflict" }
-  /tenders/{tenderId}:
-    parameters: [{ $ref: "#/components/parameters/TenderId" }]
-    get:
-      tags: [tenders]
-      operationId: getTender
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Tender" } } } }
-    patch:
-      tags: [tenders]
-      operationId: updateTender
-      requestBody:
-        required: true
-        content: { application/json: { schema: { $ref: "#/components/schemas/TenderUpdate" } } }
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Tender" } } } }
-        "409": { $ref: "#/components/responses/Conflict" }
-  /tenders/{tenderId}/open:
-    parameters: [{ $ref: "#/components/parameters/TenderId" }]
-    post:
-      tags: [tenders]
-      operationId: openTender
-      responses:
-        "200": { description: "Opened, invitations sent", content: { application/json: { schema: { $ref: "#/components/schemas/Tender" } } } }
-        "402": { $ref: "#/components/responses/LimitReached" }
-        "409": { $ref: "#/components/responses/Conflict" }
-  /tenders/{tenderId}/close:
-    parameters: [{ $ref: "#/components/parameters/TenderId" }]
-    post:
-      tags: [tenders]
-      operationId: closeTender
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                confirmIncomplete: { type: boolean }
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Tender" } } } }
-        "409": { $ref: "#/components/responses/Conflict" }
-  /tenders/{tenderId}/extend:
-    parameters: [{ $ref: "#/components/parameters/TenderId" }]
-    post:
-      tags: [tenders]
-      operationId: extendTender
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [deadline]
-              properties:
-                deadline: { type: string, format: date-time }
-                note: { type: string }
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Tender" } } } }
-        "409": { $ref: "#/components/responses/Conflict" }
-  /tenders/{tenderId}/cancel:
-    parameters: [{ $ref: "#/components/parameters/TenderId" }]
-    post:
-      tags: [tenders]
-      operationId: cancelTender
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                reason: { type: string }
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Tender" } } } }
-  /tenders/{tenderId}/attachments:
-    parameters: [{ $ref: "#/components/parameters/TenderId" }]
-    post:
-      tags: [tenders]
-      operationId: createTenderAttachment
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [fileName, sizeBytes]
-              properties:
-                fileName: { type: string }
-                sizeBytes: { type: integer }
-      responses:
-        "201":
-          description: Created; upload the file, then call complete
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [attachment, upload]
-                properties:
-                  attachment: { $ref: "#/components/schemas/TenderAttachment" }
-                  upload: { $ref: "#/components/schemas/UploadInstructions" }
-  /tender-attachments/{attachmentId}/complete:
-    parameters: [{ $ref: "#/components/parameters/AttachmentId" }]
-    post:
-      tags: [tenders]
-      operationId: completeTenderAttachment
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/TenderAttachment" } } } }
-  /tender-attachments/{attachmentId}:
-    parameters: [{ $ref: "#/components/parameters/AttachmentId" }]
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Session" } } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
     delete:
-      tags: [tenders]
-      operationId: deleteTenderAttachment
+      tags: [sessions]
+      operationId: closeCurrentSession
       responses:
-        "204": { description: Deleted }
-  /tenders/{tenderId}/packages:
-    parameters: [{ $ref: "#/components/parameters/TenderId" }]
-    get:
-      tags: [tenders]
-      operationId: listPackages
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/TenderPackage" } } } } }
-    post:
-      tags: [tenders]
-      operationId: createPackage
-      requestBody:
-        required: true
-        content: { application/json: { schema: { $ref: "#/components/schemas/PackageInput" } } }
-      responses:
-        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/TenderPackage" } } } }
-        "409": { $ref: "#/components/responses/Conflict" }
-  /tenders/{tenderId}/packages/preview-selection:
-    parameters: [{ $ref: "#/components/parameters/TenderId" }]
-    post:
-      tags: [tenders]
-      operationId: previewPackageSelection
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [selection]
-              properties:
-                selection: { $ref: "#/components/schemas/PackageSelection" }
-                excludePackageId: { type: string, format: uuid }
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/SelectionPreview" } } } }
-  /tenders/{tenderId}/packages/from-groups:
-    parameters: [{ $ref: "#/components/parameters/TenderId" }]
-    post:
-      tags: [tenders]
-      operationId: createPackagesFromGroups
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [system]
-              properties:
-                system: { type: string, description: classification id }
-                level: { type: integer, default: 1 }
-      responses:
-        "201": { description: Created, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/TenderPackage" } } } } }
-  /tenders/{tenderId}/unassigned-lines:
-    parameters: [{ $ref: "#/components/parameters/TenderId" }]
-    get:
-      tags: [tenders]
-      operationId: listUnassignedLines
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PackageLine" } } } } }
-  /packages/{packageId}:
-    parameters: [{ $ref: "#/components/parameters/PackageId" }]
-    get:
-      tags: [tenders]
-      operationId: getPackage
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/TenderPackage" } } } }
-    patch:
-      tags: [tenders]
-      operationId: updatePackage
-      requestBody:
-        required: true
-        content: { application/json: { schema: { $ref: "#/components/schemas/PackageInput" } } }
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/TenderPackage" } } } }
-        "409": { $ref: "#/components/responses/Conflict" }
-    delete:
-      tags: [tenders]
-      operationId: deletePackage
-      responses:
-        "204": { description: Deleted (draft) or cancelled (open) }
-  /packages/{packageId}/lines:
-    parameters: [{ $ref: "#/components/parameters/PackageId" }]
-    get:
-      tags: [tenders]
-      operationId: listPackageLines
-      parameters:
-        - { name: addendum, in: query, schema: { type: integer } }
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PackageLine" } } } } }
-  /packages/{packageId}/invitations:
-    parameters: [{ $ref: "#/components/parameters/PackageId" }]
-    get:
-      tags: [tenders]
-      operationId: listBidInvitations
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/BidInvitation" } } } } }
-    post:
-      tags: [tenders]
-      operationId: inviteBidders
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [bidders]
-              properties:
-                bidders:
-                  type: array
-                  items:
-                    type: object
-                    required: [email, companyName]
-                    properties:
-                      email: { type: string, format: email }
-                      companyName: { type: string }
-                      contactName: { type: string }
-      responses:
-        "201": { description: Created, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/BidInvitation" } } } } }
-        "402": { $ref: "#/components/responses/LimitReached" }
-  /bid-invitations/{invitationId}:
-    parameters: [{ $ref: "#/components/parameters/BidInvitationId" }]
-    delete:
-      tags: [tenders]
-      operationId: withdrawBidInvitation
-      responses:
-        "204": { description: Withdrawn }
-  /bid-invitations/{invitationId}/remind:
-    parameters: [{ $ref: "#/components/parameters/BidInvitationId" }]
-    post:
-      tags: [tenders]
-      operationId: remindBidder
-      responses:
-        "204": { description: Reminder sent }
-  /tenders/{tenderId}/addenda:
-    parameters: [{ $ref: "#/components/parameters/TenderId" }]
-    get:
-      tags: [tenders]
-      operationId: listAddenda
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/TenderAddendum" } } } } }
-    post:
-      tags: [tenders]
-      operationId: createAddendum
-      parameters:
-        - { name: dryRun, in: query, schema: { type: boolean } }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [note]
-              properties:
-                revisionId: { type: string, format: uuid, description: A newer issued revision of the same BoQ }
-                note: { type: string }
-                packageChanges:
-                  type: array
-                  items:
-                    type: object
-                    required: [packageId]
-                    properties:
-                      packageId: { type: string, format: uuid }
-                      selection: { $ref: "#/components/schemas/PackageSelection" }
-      responses:
-        "201": { description: Created (or preview with dryRun), content: { application/json: { schema: { $ref: "#/components/schemas/TenderAddendum" } } } }
-        "409": { $ref: "#/components/responses/Conflict" }
-  /tenders/{tenderId}/status-board:
-    parameters: [{ $ref: "#/components/parameters/TenderId" }]
-    get:
-      tags: [tenders]
-      operationId: getStatusBoard
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/StatusBoard" } } } }
-  /packages/{packageId}/comparison:
-    parameters: [{ $ref: "#/components/parameters/PackageId" }]
-    get:
-      tags: [tenders]
-      operationId: getComparison
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Comparison" } } } }
-        "409": { $ref: "#/components/responses/Conflict" }
-  /packages/{packageId}/comparison/export:
-    parameters: [{ $ref: "#/components/parameters/PackageId" }]
-    post:
-      tags: [exports]
-      operationId: exportComparison
-      responses:
-        "202": { $ref: "#/components/responses/JobAccepted" }
-        "409": { $ref: "#/components/responses/Conflict" }
-  /packages/{packageId}/award:
-    parameters: [{ $ref: "#/components/parameters/PackageId" }]
-    post:
-      tags: [tenders]
-      operationId: awardPackage
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [offerId]
-              properties:
-                offerId: { type: string, format: uuid }
-                note: { type: string }
-      responses:
-        "200": { description: Awarded, content: { application/json: { schema: { $ref: "#/components/schemas/TenderPackage" } } } }
-        "409": { $ref: "#/components/responses/Conflict" }
+        "204": { description: Signed out }
 
-  # ───────────────────────────── bids (bidder) ─────────────────────────────
-  /bid-tokens/{token}:
-    parameters: [{ $ref: "#/components/parameters/Token" }]
-    get:
-      tags: [bids]
-      operationId: previewBidInvitation
-      security: []
+  # ───────────────────────────── line edits in bulk, Excel round-trip (F06, F12) ─────────────────────────────
+  /boqs/{boqId}/overrides/batch:
+    parameters: [{ $ref: "#/components/parameters/BoqId" }]
+    post:
+      tags: [adjustments]
+      operationId: applyLineEdits
+      description: Apply several line edits and manual lines at once (bulk actions, Excel import review). All or nothing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                overrides: { type: array, items: { $ref: "#/components/schemas/LineOverrideInput" } }
+                removeOverrideLineKeys: { type: array, items: { type: string } }
+                manualItems: { type: array, items: { $ref: "#/components/schemas/ManualItemInput" } }
       responses:
         "200":
-          description: OK
+          description: Applied
           content:
             application/json:
               schema:
                 type: object
-                required: [firmName, tenderName, packageName, email, deadline, status]
                 properties:
-                  firmName: { type: string }
-                  tenderName: { type: string }
-                  packageName: { type: string }
-                  email: { type: string }
-                  deadline: { type: string, format: date-time }
-                  status: { $ref: "#/components/schemas/BidInvitationStatus" }
-  /bid-tokens/{token}/accept:
-    parameters: [{ $ref: "#/components/parameters/Token" }]
-    post:
-      tags: [bids]
-      operationId: acceptBidInvitation
-      responses:
-        "200": { description: Linked to the user, content: { application/json: { schema: { $ref: "#/components/schemas/BidSummary" } } } }
+                  overrides: { type: array, items: { $ref: "#/components/schemas/LineOverride" } }
+                  manualItems: { type: array, items: { $ref: "#/components/schemas/ManualItemRecord" } }
         "409": { $ref: "#/components/responses/Conflict" }
-  /bids:
-    get:
-      tags: [bids]
-      operationId: listMyBids
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/BidSummary" } } } } }
-  /bids/{invitationId}:
-    parameters: [{ $ref: "#/components/parameters/BidInvitationId" }]
-    get:
-      tags: [bids]
-      operationId: getBid
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/BidDetail" } } } }
-        "404": { $ref: "#/components/responses/NotFound" }
-  /bids/{invitationId}/lines:
-    parameters: [{ $ref: "#/components/parameters/BidInvitationId" }]
-    get:
-      tags: [bids]
-      operationId: getBidLines
-      responses:
-        "200": { description: Lines of the latest addendum, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PackageLine" } } } } }
-  /bids/{invitationId}/attachments/{attachmentId}:
-    parameters: [{ $ref: "#/components/parameters/BidInvitationId" }, { $ref: "#/components/parameters/AttachmentId" }]
-    get:
-      tags: [bids]
-      operationId: downloadBidAttachment
-      responses:
-        "302": { description: Redirect to a signed URL }
-  /bids/{invitationId}/decline:
-    parameters: [{ $ref: "#/components/parameters/BidInvitationId" }]
+  /revisions/{revisionId}/edits-import:
+    parameters: [{ $ref: "#/components/parameters/RevisionId" }]
     post:
-      tags: [bids]
-      operationId: declineBid
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                reason: { type: string }
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/BidSummary" } } } }
-        "409": { $ref: "#/components/responses/Conflict" }
-  /bids/{invitationId}/reconsider:
-    parameters: [{ $ref: "#/components/parameters/BidInvitationId" }]
-    post:
-      tags: [bids]
-      operationId: reconsiderBid
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/BidSummary" } } } }
-        "409": { $ref: "#/components/responses/Conflict" }
-  /bids/{invitationId}/offer:
-    parameters: [{ $ref: "#/components/parameters/BidInvitationId" }]
-    get:
-      tags: [bids]
-      operationId: getMyOffer
-      description: The current draft if one exists, else the submitted offer, else an empty draft.
-      responses:
-        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Offer" } } } }
-    put:
-      tags: [bids]
-      operationId: saveOfferDraft
-      requestBody:
-        required: true
-        content: { application/json: { schema: { $ref: "#/components/schemas/OfferSave" } } }
-      responses:
-        "200": { description: Saved draft with computed amounts, content: { application/json: { schema: { $ref: "#/components/schemas/Offer" } } } }
-        "409": { $ref: "#/components/responses/Conflict" }
-  /bids/{invitationId}/offer/submit:
-    parameters: [{ $ref: "#/components/parameters/BidInvitationId" }]
-    post:
-      tags: [bids]
-      operationId: submitOffer
-      responses:
-        "200": { description: Submitted, content: { application/json: { schema: { $ref: "#/components/schemas/Offer" } } } }
-        "400": { $ref: "#/components/responses/BadRequest" }
-        "409": { $ref: "#/components/responses/Conflict" }
-  /bids/{invitationId}/offer/withdraw:
-    parameters: [{ $ref: "#/components/parameters/BidInvitationId" }]
-    post:
-      tags: [bids]
-      operationId: withdrawOffer
-      responses:
-        "200": { description: Withdrawn, content: { application/json: { schema: { $ref: "#/components/schemas/Offer" } } } }
-        "409": { $ref: "#/components/responses/Conflict" }
-  /bids/{invitationId}/package.xlsx:
-    parameters: [{ $ref: "#/components/parameters/BidInvitationId" }]
-    get:
-      tags: [bids]
-      operationId: downloadPackageXlsx
-      responses:
-        "302": { description: "Redirect to a signed URL (generated on first request, then cached per addendum)" }
-  /bids/{invitationId}/offer/import:
-    parameters: [{ $ref: "#/components/parameters/BidInvitationId" }]
-    post:
-      tags: [bids]
-      operationId: importOfferXlsx
+      tags: [exports]
+      operationId: importBoqEdits
+      description: Upload an edited BoQ Excel (F12). Starts an `import_boq_edits` job whose output is an `EditsImportReport`; nothing is applied until the user applies the reviewed edits through `applyLineEdits`.
       requestBody:
         required: true
         content:
@@ -1889,6 +1509,333 @@ paths:
       responses:
         "202": { $ref: "#/components/responses/JobAccepted" }
         "409": { $ref: "#/components/responses/Conflict" }
+
+  /jobs/{jobId}/edits-import-report:
+    parameters: [{ $ref: "#/components/parameters/JobId" }]
+    get:
+      tags: [exports]
+      operationId: getEditsImportReport
+      description: The review list of a finished `import_boq_edits` job.
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/EditsImportReport" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  # ───────────────────────────── preset Excel templates (F10 §14) ─────────────────────────────
+  /presets/{presetId}/template.xlsx:
+    parameters: [{ $ref: "#/components/parameters/PresetId" }]
+    get:
+      tags: [library]
+      operationId: downloadPresetTemplate
+      parameters:
+        - { name: source, in: query, schema: { type: string, enum: [draft, latest, empty], default: draft } }
+      responses:
+        "302": { description: Redirect to a signed URL of the generated workbook }
+  /presets/{presetId}/template-import:
+    parameters: [{ $ref: "#/components/parameters/PresetId" }]
+    post:
+      tags: [library]
+      operationId: importPresetTemplate
+      description: Read a filled-in template. Returns the proposed draft, the changes against the current draft and the problems; saves nothing.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "200": { description: Proposed draft, content: { application/json: { schema: { $ref: "#/components/schemas/TemplateImportResult" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  # ───────────────────────────── share links (F18) ─────────────────────────────
+  /boqs/{boqId}/share-links:
+    parameters: [{ $ref: "#/components/parameters/BoqId" }]
+    get:
+      tags: [sharing]
+      operationId: listShareLinks
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ShareLink" } } } } }
+    post:
+      tags: [sharing]
+      operationId: createShareLink
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ShareLinkCreate" } } }
+      responses:
+        "201": { description: Created; the only response that contains the full URL with its token, content: { application/json: { schema: { $ref: "#/components/schemas/ShareLinkCreated" } } } }
+        "402": { $ref: "#/components/responses/LimitReached" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /share-links/{shareLinkId}:
+    parameters: [{ $ref: "#/components/parameters/ShareLinkId" }]
+    patch:
+      tags: [sharing]
+      operationId: updateShareLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label: { type: string }
+                include: { $ref: "#/components/schemas/ShareInclude" }
+                expiresAt: { type: [string, "null"], format: date-time }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ShareLink" } } } }
+    delete:
+      tags: [sharing]
+      operationId: revokeShareLink
+      responses:
+        "204": { description: Revoked }
+  /orgs/{orgId}/share-links:
+    parameters: [{ $ref: "#/components/parameters/OrgId" }]
+    get:
+      tags: [sharing]
+      operationId: listOrgShareLinks
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ShareLink" } } } } }
+  /public/shares/{token}:
+    parameters: [{ $ref: "#/components/parameters/Token" }]
+    get:
+      tags: [public]
+      operationId: getPublicShare
+      security: []
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/PublicShare" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /public/shares/{token}/lines:
+    parameters: [{ $ref: "#/components/parameters/Token" }]
+    get:
+      tags: [public]
+      operationId: listPublicShareLines
+      security: []
+      parameters:
+        - { $ref: "#/components/parameters/Cursor" }
+        - { name: q, in: query, schema: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/LinesPage" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /public/shares/{token}/lines/by-key:
+    parameters: [{ $ref: "#/components/parameters/Token" }]
+    get:
+      tags: [public]
+      operationId: getPublicShareLine
+      security: []
+      parameters:
+        - { name: key, in: query, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK (only when the link includes line detail), content: { application/json: { schema: { $ref: "#/components/schemas/LineDetail" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /public/shares/{token}/scene:
+    parameters: [{ $ref: "#/components/parameters/Token" }]
+    get:
+      tags: [public]
+      operationId: getPublicShareScene
+      security: []
+      responses:
+        "200": { description: OK (only when the link includes the viewer), content: { application/json: { schema: { $ref: "#/components/schemas/SceneIndex" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /public/shares/{token}/geometry/{versionId}:
+    parameters: [{ $ref: "#/components/parameters/Token" }, { $ref: "#/components/parameters/VersionId" }]
+    get:
+      tags: [public]
+      operationId: getPublicShareGeometry
+      security: []
+      responses:
+        "302": { description: Redirect to a short-lived signed URL of geometry.glb }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /public/shares/{token}/export:
+    parameters: [{ $ref: "#/components/parameters/Token" }]
+    get:
+      tags: [public]
+      operationId: getPublicShareExport
+      security: []
+      responses:
+        "302": { description: Redirect to a short-lived signed URL of the Excel (only when included) }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ───────────────────────────── platform admin (F19) ─────────────────────────────
+  /admin/overview:
+    get:
+      tags: [admin]
+      operationId: adminOverview
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOverview" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/funnel:
+    get:
+      tags: [admin]
+      operationId: adminFunnel
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdminFunnel" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/orgs:
+    get:
+      tags: [admin]
+      operationId: adminListOrgs
+      parameters:
+        - { $ref: "#/components/parameters/Cursor" }
+        - { $ref: "#/components/parameters/Limit" }
+        - { name: plan, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: tag, in: query, schema: { type: string } }
+        - { name: signal, in: query, schema: { type: string, enum: [hit_limit, inactive_30d, trial_ending_7d, stuck_in_setup] } }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: sort, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/AdminOrgRow" } }
+                  nextCursor: { type: [string, "null"] }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/orgs.csv:
+    get:
+      tags: [admin]
+      operationId: adminExportOrgs
+      responses:
+        "200": { description: CSV of the orgs table, content: { text/csv: { schema: { type: string } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/orgs/{orgId}:
+    parameters: [{ $ref: "#/components/parameters/OrgId" }]
+    get:
+      tags: [admin]
+      operationId: adminGetOrg
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrgDetail" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [admin]
+      operationId: adminUpdateOrg
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                tags: { type: array, items: { type: string } }
+                status: { type: string, enum: [active, suspended] }
+                reason: { type: string, minLength: 1 }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrgDetail" } } } }
+  /admin/orgs/{orgId}/subscription:
+    parameters: [{ $ref: "#/components/parameters/OrgId" }]
+    put:
+      tags: [admin]
+      operationId: adminSetSubscription
+      description: Change plan or trial through the `manual` billing provider (F14). Audited, visible in the org's audit log.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                planId: { type: string }
+                trialEndsAt: { type: [string, "null"], format: date-time }
+                reason: { type: string, minLength: 1 }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrgDetail" } } } }
+  /admin/orgs/{orgId}/entitlement-overrides:
+    parameters: [{ $ref: "#/components/parameters/OrgId" }]
+    put:
+      tags: [admin]
+      operationId: adminSetEntitlementOverrides
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [overrides, reason]
+              properties:
+                overrides: { type: object, additionalProperties: true, description: "entitlement name → value; null removes the override" }
+                reason: { type: string, minLength: 1 }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrgDetail" } } } }
+  /admin/orgs/{orgId}/notes:
+    parameters: [{ $ref: "#/components/parameters/OrgId" }]
+    get:
+      tags: [admin]
+      operationId: adminListNotes
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminNote" } } } } }
+    post:
+      tags: [admin]
+      operationId: adminAddNote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string, minLength: 1 }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/AdminNote" } } } }
+  /admin/users:
+    get:
+      tags: [admin]
+      operationId: adminListUsers
+      parameters:
+        - { $ref: "#/components/parameters/Cursor" }
+        - { $ref: "#/components/parameters/Limit" }
+        - { name: q, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/AdminUserRow" } }
+                  nextCursor: { type: [string, "null"] }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/users/{userId}/session:
+    parameters: [{ $ref: "#/components/parameters/UserId" }]
+    delete:
+      tags: [admin]
+      operationId: adminEndUserSession
+      responses:
+        "204": { description: The user's active session ended }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/health:
+    get:
+      tags: [admin]
+      operationId: adminHealth
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  failedJobsPerDay: { type: array, items: { type: object, properties: { date: { type: string, format: date }, count: { type: integer } } } }
+                  jobDurationsMs: { type: object, additionalProperties: { type: object, properties: { p50: { type: number }, p95: { type: number } } } }
+                  billingWebhookFailures: { type: integer }
+                  emailBounces: { type: integer }
+        "404": { $ref: "#/components/responses/NotFound" }
 
 components:
   securitySchemes:
@@ -1917,10 +1864,7 @@ components:
     ExportId: { name: exportId, in: path, required: true, schema: { type: string, format: uuid } }
     JobId: { name: jobId, in: path, required: true, schema: { type: string, format: uuid } }
     NotificationId: { name: notificationId, in: path, required: true, schema: { type: string, format: uuid } }
-    TenderId: { name: tenderId, in: path, required: true, schema: { type: string, format: uuid } }
-    PackageId: { name: packageId, in: path, required: true, schema: { type: string, format: uuid } }
-    BidInvitationId: { name: invitationId, in: path, required: true, schema: { type: string, format: uuid } }
-    AttachmentId: { name: attachmentId, in: path, required: true, schema: { type: string, format: uuid } }
+    ShareLinkId: { name: shareLinkId, in: path, required: true, schema: { type: string, format: uuid } }
     Cursor: { name: cursor, in: query, schema: { type: string } }
     Limit: { name: limit, in: query, schema: { type: integer, default: 100, maximum: 1000 } }
 
@@ -1948,6 +1892,238 @@ components:
       content: { application/json: { schema: { $ref: "#/components/schemas/Job" } } }
 
   schemas:
+    # ── sessions (F01 §10) ──
+    Session:
+      type: object
+      required: [id, status, deviceLabel, lastSeenAt]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [active, ended, replaced, expired] }
+        deviceLabel: { type: string }
+        place: { type: string }
+        lastSeenAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+    SessionConflict:
+      allOf:
+        - $ref: "#/components/schemas/Error"
+        - type: object
+          required: [activeSession]
+          properties:
+            activeSession: { $ref: "#/components/schemas/Session" }
+
+    # ── line edits import, preset templates ──
+    EditsImportReport:
+      type: object
+      description: Output of an `import_boq_edits` job (F12). Proposals only.
+      required: [overrides, manualItems, problems]
+      properties:
+        overrides:
+          type: array
+          items:
+            type: object
+            required: [edit, change]
+            properties:
+              edit: { $ref: "#/components/schemas/LineOverrideInput" }
+              change: { type: string, enum: [quantity, description, unit, moved, excluded, mixed] }
+              row: { type: integer }
+        manualItems:
+          type: array
+          items:
+            type: object
+            properties:
+              item: { $ref: "#/components/schemas/ManualItemInput" }
+              row: { type: integer }
+        problems:
+          type: array
+          items:
+            type: object
+            required: [row, message]
+            properties:
+              sheet: { type: string }
+              row: { type: integer }
+              column: { type: string }
+              message: { type: string }
+    TemplateImportResult:
+      type: object
+      required: [doc, changes, problems]
+      properties:
+        doc: { type: object, additionalProperties: true, description: The proposed draft document (engine shape of the preset kind) }
+        changes:
+          type: array
+          items:
+            type: object
+            required: [what, summary]
+            properties:
+              what: { type: string, enum: [answer, code, item_text, code_mapping, name, other] }
+              summary: { type: string }
+              before: {}
+              after: {}
+        problems:
+          type: array
+          items:
+            type: object
+            required: [message]
+            properties:
+              sheet: { type: string }
+              row: { type: integer }
+              column: { type: string }
+              message: { type: string }
+
+    # ── share links (F18) ──
+    ShareInclude:
+      type: object
+      properties:
+        lineDetail: { type: boolean, default: true }
+        viewer: { type: boolean, default: true }
+        log: { type: boolean, default: false }
+        excel: { type: boolean, default: false }
+        groupBy: { type: string, description: classification id }
+    ShareLinkCreate:
+      type: object
+      required: [mode]
+      properties:
+        mode: { type: string, enum: [pinned, latest_issued] }
+        revisionId: { type: string, format: uuid, description: for pinned links; its current run is pinned }
+        include: { $ref: "#/components/schemas/ShareInclude" }
+        label: { type: string }
+        expiresAt: { type: [string, "null"], format: date-time }
+    ShareLink:
+      type: object
+      required: [id, boqId, mode, include, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        boqId: { type: string, format: uuid }
+        mode: { type: string, enum: [pinned, latest_issued] }
+        runId: { type: [string, "null"], format: uuid }
+        include: { $ref: "#/components/schemas/ShareInclude" }
+        label: { type: string }
+        status: { type: string, enum: [active, revoked, expired, suspended] }
+        expiresAt: { type: [string, "null"], format: date-time }
+        views: { type: integer }
+        lastViewedAt: { type: [string, "null"], format: date-time }
+        createdBy: { $ref: "#/components/schemas/UserRef" }
+        createdAt: { type: string, format: date-time }
+    ShareLinkCreated:
+      allOf:
+        - $ref: "#/components/schemas/ShareLink"
+        - type: object
+          required: [url]
+          properties:
+            url: { type: string, description: "Full public URL with the token. Shown once: the token is stored hashed." }
+    PublicShare:
+      type: object
+      description: What a public visitor sees (BR-56). No member names, decisions, questions, vendors or prices.
+      required: [firmName, projectName, boqName, revisionLabel, revisionStatus, runAt, include]
+      properties:
+        firmName: { type: string }
+        projectName: { type: string }
+        boqName: { type: string }
+        revisionLabel: { type: string }
+        revisionStatus: { type: string, enum: [draft, in_review, approved, issued] }
+        runAt: { type: string, format: date-time }
+        include: { $ref: "#/components/schemas/ShareInclude" }
+        modelVersionIds: { type: array, items: { type: string, format: uuid }, description: for the viewer when included }
+        madeWithBadge: { type: boolean }
+
+    # ── platform admin (F19) ──
+    AdminOverview:
+      type: object
+      properties:
+        period: { type: object, properties: { from: { type: string, format: date }, to: { type: string, format: date } } }
+        tiles:
+          type: object
+          description: "name → {value, previous, series[]}: signUps, newOrgs, activeOrgs, payingOrgs, revenue, seatsUsed, seatsAvailable, activeProjects, modelsParsed, runs, processingMinutes, exports, savedVersions, confirmedBoqs, shareLinkViews; modules add theirs (admin.metrics)"
+          additionalProperties:
+            type: object
+            properties:
+              value: { type: [number, "null"] }
+              previous: { type: [number, "null"] }
+              series: { type: array, items: { type: number } }
+        orgsByPlan: { type: object, additionalProperties: { type: integer } }
+    AdminFunnel:
+      type: object
+      properties:
+        steps:
+          type: array
+          items:
+            type: object
+            required: [step, orgs]
+            properties:
+              step: { type: string, enum: [signed_up, org_created, setup_done, first_model_ready, first_boq, first_saved_version, first_export_or_share] }
+              orgs: { type: integer }
+              conversionPct: { type: number }
+              medianHoursFromPrevious: { type: [number, "null"] }
+        cohorts:
+          type: array
+          items:
+            type: object
+            properties:
+              week: { type: string }
+              counts: { type: array, items: { type: integer } }
+    AdminOrgRow:
+      type: object
+      required: [id, name, planId, status]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        country: { type: string }
+        planId: { type: string }
+        status: { type: string }
+        subscriptionStatus: { type: string }
+        trialEndsAt: { type: [string, "null"], format: date-time }
+        seats: { type: object, properties: { used: { type: integer }, max: { type: [integer, "null"] } } }
+        activeProjects: { type: object, properties: { used: { type: integer }, max: { type: [integer, "null"] } } }
+        processingMinutes: { type: object, properties: { used: { type: number }, max: { type: [number, "null"] } } }
+        limitHits30d: { type: integer }
+        lastActivityAt: { type: [string, "null"], format: date-time }
+        ownerEmail: { type: string }
+        tags: { type: array, items: { type: string } }
+        createdAt: { type: string, format: date-time }
+    AdminOrgDetail:
+      allOf:
+        - $ref: "#/components/schemas/AdminOrgRow"
+        - type: object
+          description: Metadata and counts only (BR-57).
+          properties:
+            settings: { $ref: "#/components/schemas/OrgSettings" }
+            entitlements: { type: object, additionalProperties: true }
+            overrides: { type: object, additionalProperties: true }
+            planHistory: { type: array, items: { type: object, properties: { planId: { type: string }, at: { type: string, format: date-time }, by: { type: string } } } }
+            members:
+              type: array
+              items:
+                type: object
+                properties:
+                  userId: { type: string, format: uuid }
+                  name: { type: string }
+                  email: { type: string }
+                  role: { $ref: "#/components/schemas/OrgRole" }
+                  lastActiveAt: { type: [string, "null"], format: date-time }
+                  activeSession: { type: boolean }
+            counts: { type: object, additionalProperties: { type: integer }, description: "projectsActive, projectsArchived, models, versions, boqs, confirmedBoqs, runs, exports, shareLinks; plus module counters" }
+            usageByMonth: { type: array, items: { type: object, properties: { month: { type: string }, kind: { type: string }, minutes: { type: number } } } }
+            limitEvents: { type: array, items: { type: object, properties: { limit: { type: string }, current: { type: number }, max: { type: number }, action: { type: string }, at: { type: string, format: date-time } } } }
+            setup: { $ref: "#/components/schemas/OrgSetup" }
+    AdminUserRow:
+      type: object
+      required: [id, name, email]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string }
+        orgs: { type: array, items: { type: object, properties: { orgId: { type: string, format: uuid }, orgName: { type: string }, role: { $ref: "#/components/schemas/OrgRole" } } } }
+        lastSignInAt: { type: [string, "null"], format: date-time }
+        activeSession: { $ref: "#/components/schemas/Session" }
+        createdAt: { type: string, format: date-time }
+    AdminNote:
+      type: object
+      required: [id, text, author, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        text: { type: string }
+        author: { $ref: "#/components/schemas/UserRef" }
+        createdAt: { type: string, format: date-time }
+
     # ── common ──
     Error:
       type: object
@@ -2009,10 +2185,10 @@ components:
         email: { type: string }
         name: { type: string }
         locale: { type: string }
-        company: { type: string, description: Set for bidders }
+        platformRole: { type: string, enum: [admin], description: Operators of the product only (F19) }
     Me:
       type: object
-      required: [user, memberships, guestProjects, openBidInvitations]
+      required: [user, memberships]
       properties:
         user: { $ref: "#/components/schemas/User" }
         memberships:
@@ -2023,17 +2199,11 @@ components:
             properties:
               org: { $ref: "#/components/schemas/Org" }
               role: { $ref: "#/components/schemas/OrgRole" }
-        guestProjects:
-          type: array
-          items:
-            type: object
-            required: [orgSlug, orgName, projectId, projectName]
-            properties:
-              orgSlug: { type: string }
-              orgName: { type: string }
-              projectId: { type: string, format: uuid }
-              projectName: { type: string }
-        openBidInvitations: { type: integer }
+        session: { $ref: "#/components/schemas/Session" }
+        modules:
+          type: object
+          description: Fields added by installed modules under their key (e.g. `pricing`); empty when none are installed (P36).
+          additionalProperties: { type: object, additionalProperties: true }
     OrgRole: { type: string, enum: [owner, admin, library_editor, member] }
     Org:
       type: object
@@ -2051,7 +2221,7 @@ components:
       description: Setup wizard progress (F16). The drafts it created are ordinary presets.
       required: [status, step, updatedAt]
       properties:
-        status: { type: string, enum: [in_progress, done, dismissed] }
+        status: { type: string, enum: [in_progress, done] }
         step: { type: string, enum: [start, measure, items, names, review] }
         modelVersionId: { type: string, format: uuid, description: the model version the preview runs on }
         ruleSetPresetId: { type: string, format: uuid }
@@ -2063,7 +2233,7 @@ components:
     OrgSetupUpdate:
       type: object
       properties:
-        status: { type: string, enum: [in_progress, done, dismissed] }
+        status: { type: string, enum: [in_progress, done] }
         step: { type: string, enum: [start, measure, items, names, review] }
         modelVersionId: { type: [string, "null"], format: uuid }
         ruleSetPresetId: { type: string, format: uuid }
@@ -2077,6 +2247,16 @@ components:
         defaultCurrency: { type: string }
         defaultUnitSystem: { type: string, enum: [metric, imperial] }
         defaultCountry: { type: string }
+        publicLinksAllowed: { type: boolean, default: true }
+        approvalRequired: { type: boolean, default: false, description: "Saving a version needs review and approval (F09 §4, P29)" }
+        numberFormat:
+          type: object
+          description: Overrides the locale's separators (P35)
+          properties:
+            decimal: { type: string, enum: [".", ","] }
+            thousands: { type: string, enum: [",", ".", " ", "'", ""] }
+        dateFormat: { type: string, description: "e.g. dd.MM.yyyy (P35)" }
+        defaultLanguage: { type: string, default: en }
     OrgCreate:
       type: object
       required: [name, slug]
@@ -2113,12 +2293,14 @@ components:
       properties:
         email:
           type: object
-          description: "Category → on/off. Categories: jobs, reviews, tenders, bids, membership, limits"
+          description: "Category → on/off. Core categories: jobs, versions, reviews, membership, limits; modules add theirs (e.g. pricing)"
           additionalProperties: { type: boolean }
 
     # ── billing ──
     Entitlements:
       type: object
+      description: Core limits and features; modules add their own keys (e.g. pricingModule, openOfferRequests).
+      additionalProperties: true
       properties:
         seats: { type: integer }
         activeProjects: { type: integer }
@@ -2126,10 +2308,9 @@ components:
         maxModelsPerBoq: { type: integer }
         processingMinutesPerMonth: { type: integer }
         libraryOrgPresets: { type: integer }
-        openTenders: { type: integer }
-        biddersPerPackage: { type: integer }
         auditLogRetentionDays: { type: integer }
-        fourEyesApproval: { type: boolean }
+        approvalWorkflow: { type: boolean }
+        shareLinks: { type: boolean }
         exportWatermark: { type: boolean }
     Plan:
       type: object
@@ -2150,7 +2331,6 @@ components:
             seats: { type: integer }
             activeProjects: { type: integer }
             processingMinutesThisMonth: { type: number }
-            openTenders: { type: integer }
     UsageResponse:
       type: object
       required: [month, processingMinutes, byProject, byKind]
@@ -2180,7 +2360,7 @@ components:
         plans: { type: array, items: { $ref: "#/components/schemas/Plan" } }
 
     # ── projects ──
-    ProjectRole: { type: string, enum: [lead, estimator, approver, viewer, guest] }
+    ProjectRole: { type: string, enum: [lead, estimator, approver, viewer] }
     ProjectDefaults:
       type: object
       properties:
@@ -2225,7 +2405,7 @@ components:
                 boqs: { type: integer }
                 blockingQuestions: { type: integer }
                 revisionsInReview: { type: integer }
-                openTenders: { type: integer }
+                confirmedBoqs: { type: integer }
             lastActivityAt: { type: string, format: date-time }
     ProjectCreate:
       type: object
@@ -2261,17 +2441,16 @@ components:
         defaults: { $ref: "#/components/schemas/ProjectDefaults" }
     ProjectMember:
       type: object
-      required: [user, role, status]
+      required: [user, role]
       properties:
         user: { $ref: "#/components/schemas/User" }
         role: { $ref: "#/components/schemas/ProjectRole" }
-        status: { type: string, enum: [active, invited] }
         addedBy: { $ref: "#/components/schemas/UserRef" }
     AttentionItem:
       type: object
       required: [kind, projectId, projectName, title, url]
       properties:
-        kind: { type: string, enum: [review_requested, needs_input, tender_closing, job_failed, changes_requested] }
+        kind: { type: string, description: "Core kinds: review_requested, needs_input, new_model_version, job_failed, changes_requested; modules add theirs" }
         projectId: { type: string, format: uuid }
         projectName: { type: string }
         title: { type: string, description: i18n params are in `params`; title is a fallback }
@@ -2284,7 +2463,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         actor: { $ref: "#/components/schemas/UserRef" }
-        actorKind: { type: string, enum: [user, system, bidder] }
+        actorKind: { type: string, enum: [user, system, vendor, platform_admin] }
         action: { type: string }
         entityType: { type: string }
         entityId: { type: string }
@@ -2647,6 +2826,7 @@ components:
         issuedBy: { $ref: "#/components/schemas/UserRef" }
         issuedAt: { type: string, format: date-time }
         issueNote: { type: string }
+        openQuestionsAtSave: { type: [integer, "null"] }
         frozen:
           type: object
           properties:
@@ -2661,6 +2841,9 @@ components:
         projectId: { type: string, format: uuid }
         name: { type: string }
         description: { type: string }
+        status: { type: string, enum: [working, confirmed], description: P29 }
+        confirmedBy: { $ref: "#/components/schemas/UserRef" }
+        confirmedAt: { type: [string, "null"], format: date-time }
         currentRevision: { $ref: "#/components/schemas/BoqRevision" }
         latestIssuedRevisionId: { type: [string, "null"], format: uuid }
         newModelVersionsAvailable: { type: boolean }
@@ -2669,14 +2852,32 @@ components:
         updatedAt: { type: string, format: date-time }
 
     # ── adjustments ──
+    LineOverrideInput:
+      type: object
+      description: "A line edit (F06 §6, P20). Omitted fields are not edited. `unit` needs `quantity` (409 unit_needs_quantity); `quantity` and `excluded` need a reason."
+      required: [lineKey]
+      properties:
+        lineKey: { type: string }
+        quantity: { type: [number, "null"], description: null = force flagged }
+        description: { type: string }
+        unit: { type: string }
+        codes: { type: object, additionalProperties: { type: string }, description: "classification id → code: moves the line to that section" }
+        sortAfter: { type: [string, "null"], description: line key it follows within its section; null = first }
+        excluded: { type: boolean }
+        reason: { type: string }
     LineOverride:
       type: object
-      required: [id, boqId, lineKey, quantity, reason, createdAt]
+      required: [id, boqId, lineKey, createdAt]
       properties:
         id: { type: string, format: uuid }
         boqId: { type: string, format: uuid }
         lineKey: { type: string }
         quantity: { type: [number, "null"] }
+        description: { type: string }
+        unit: { type: string }
+        codes: { type: object, additionalProperties: { type: string } }
+        sortAfter: { type: [string, "null"] }
+        excluded: { type: boolean }
         reason: { type: string }
         createdBy: { $ref: "#/components/schemas/UserRef" }
         createdAt: { type: string, format: date-time }
@@ -2756,6 +2957,7 @@ components:
           required: [sortIndex]
           properties:
             sortIndex: { type: integer }
+            positionNo: { type: string, description: "Position number in its section, e.g. 5.3 (P30); frozen in saved versions" }
             overridden:
               type: object
               properties:
@@ -2902,7 +3104,7 @@ components:
       required: [id, kind, fileName, createdAt]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [boq_xlsx, issued_boq_xlsx, changes_xlsx, package_xlsx, comparison_xlsx] }
+        kind: { type: string, description: "Core kinds: boq_xlsx, issued_boq_xlsx, changes_xlsx, preset_template_xlsx; modules add their own (e.g. pricing.estimate_xlsx)" }
         subjectType: { type: string }
         subjectId: { type: string }
         fileName: { type: string }
@@ -2910,7 +3112,7 @@ components:
         jobId: { type: string, format: uuid }
         createdBy: { $ref: "#/components/schemas/UserRef" }
         createdAt: { type: string, format: date-time }
-    JobType: { type: string, enum: [parse, run, preview, diff, export_xlsx, export_package, export_comparison, import_offer] }
+    JobType: { type: string, description: "Core types: parse, run, preview, diff, export_xlsx, import_boq_edits, names; modules add pricing.* and the like" }
     JobStatus: { type: string, enum: [queued, running, succeeded, failed, cancelled] }
     Job:
       type: object
@@ -2953,339 +3155,3 @@ components:
         url: { type: string }
         readAt: { type: [string, "null"], format: date-time }
         createdAt: { type: string, format: date-time }
-
-    # ── tenders ──
-    TenderStatus: { type: string, enum: [draft, open, closed, awarded, cancelled] }
-    TenderAttachment:
-      type: object
-      required: [id, fileName, sizeBytes, status]
-      properties:
-        id: { type: string, format: uuid }
-        fileName: { type: string }
-        sizeBytes: { type: integer }
-        status: { type: string, enum: [uploading, ready] }
-        uploadedBy: { $ref: "#/components/schemas/UserRef" }
-        uploadedAt: { type: string, format: date-time }
-    Tender:
-      type: object
-      required: [id, projectId, revisionId, name, currency, deadline, timezone, sealed, status, permissions]
-      properties:
-        id: { type: string, format: uuid }
-        projectId: { type: string, format: uuid }
-        boqId: { type: string, format: uuid }
-        revisionId: { type: string, format: uuid }
-        revisionLabel: { type: string }
-        name: { type: string }
-        currency: { type: string }
-        deadline: { type: string, format: date-time }
-        timezone: { type: string }
-        instructions: { type: string }
-        attachments: { type: array, items: { $ref: "#/components/schemas/TenderAttachment" } }
-        sealed: { type: boolean }
-        allowPartial: { type: boolean }
-        deviationThresholdPct: { type: number }
-        sharedWithGuests: { type: boolean }
-        textSystem: { type: string, description: "Classification id whose item numbers and item texts bidders see (P14). Default: the revision's first classification." }
-        status: { $ref: "#/components/schemas/TenderStatus" }
-        currentAddendum: { type: integer }
-        counts:
-          type: object
-          properties:
-            packages: { type: integer }
-            invitations: { type: integer }
-            submitted: { type: integer }
-            declined: { type: integer }
-        openedAt: { type: string, format: date-time }
-        closedAt: { type: string, format: date-time }
-        permissions: { $ref: "#/components/schemas/Permissions" }
-    TenderCreate:
-      type: object
-      required: [revisionId, name, deadline, timezone]
-      properties:
-        revisionId: { type: string, format: uuid }
-        name: { type: string }
-        currency: { type: string }
-        deadline: { type: string, format: date-time }
-        timezone: { type: string }
-        instructions: { type: string }
-        sealed: { type: boolean, default: true }
-        allowPartial: { type: boolean, default: false }
-        deviationThresholdPct: { type: number, default: 30 }
-        sharedWithGuests: { type: boolean, default: false }
-        textSystem: { type: string, description: "Classification id whose item numbers and item texts bidders see (P14). Default: the revision's first classification." }
-    TenderUpdate:
-      type: object
-      properties:
-        textSystem: { type: string, description: Only while the tender is a draft. }
-        name: { type: string }
-        currency: { type: string }
-        deadline: { type: string, format: date-time }
-        timezone: { type: string }
-        instructions: { type: string }
-        sealed: { type: boolean }
-        allowPartial: { type: boolean }
-        deviationThresholdPct: { type: number }
-        sharedWithGuests: { type: boolean }
-    PackageSelection:
-      type: object
-      properties:
-        byCode:
-          type: array
-          items:
-            type: object
-            required: [system, codes]
-            properties:
-              system: { type: string }
-              codes: { type: array, items: { type: string }, description: Code or code-path prefix }
-        byFamily: { type: array, items: { type: string } }
-        lineKeys: { type: array, items: { type: string } }
-        excludeLineKeys: { type: array, items: { type: string } }
-    PackageInput:
-      type: object
-      properties:
-        name: { type: string }
-        code: { type: string }
-        selection: { $ref: "#/components/schemas/PackageSelection" }
-    TenderPackage:
-      type: object
-      required: [id, tenderId, name, selection, status, lineCount]
-      properties:
-        id: { type: string, format: uuid }
-        tenderId: { type: string, format: uuid }
-        name: { type: string }
-        code: { type: string }
-        selection: { $ref: "#/components/schemas/PackageSelection" }
-        status: { type: string, enum: [open, awarded, cancelled] }
-        lineCount: { type: integer }
-        awardedOfferId: { type: [string, "null"], format: uuid }
-        awardNote: { type: string }
-    PackageLine:
-      type: object
-      required: [lineKey, sortIndex, description, unit, quantity]
-      properties:
-        id: { type: string, format: uuid }
-        lineKey: { type: string }
-        sortIndex: { type: integer }
-        code: { type: string, description: Item number in the tender's textSystem. }
-        groupPath: { type: array, items: { type: object, properties: { code: { type: string }, title: { type: string } } } }
-        description: { type: string, description: "The filled item text in the tender's textSystem, or the rule set's line text when the code has none (P14)." }
-        unit: { type: string }
-        quantity: { type: [number, "null"] }
-        source: { type: string }
-        notes: { type: array, items: { type: string } }
-        changedInAddendum: { type: string, enum: [added, changed, unchanged] }
-    SelectionPreview:
-      type: object
-      required: [lines, conflicts]
-      properties:
-        lines: { type: array, items: { $ref: "#/components/schemas/PackageLine" } }
-        conflicts:
-          type: array
-          items:
-            type: object
-            required: [lineKey, packageId, packageName]
-            properties:
-              lineKey: { type: string }
-              packageId: { type: string, format: uuid }
-              packageName: { type: string }
-    BidInvitationStatus: { type: string, enum: [invited, viewed, declined, submitted] }
-    BidInvitation:
-      type: object
-      required: [id, packageId, email, companyName, status]
-      properties:
-        id: { type: string, format: uuid }
-        packageId: { type: string, format: uuid }
-        email: { type: string }
-        companyName: { type: string }
-        contactName: { type: string }
-        status: { $ref: "#/components/schemas/BidInvitationStatus" }
-        declineReason: { type: string }
-        lastActivityAt: { type: string, format: date-time }
-        submittedAt: { type: [string, "null"], format: date-time }
-    BidderContact:
-      type: object
-      required: [email, companyName]
-      properties:
-        email: { type: string }
-        companyName: { type: string }
-        contactName: { type: string }
-        lastInvitedAt: { type: string, format: date-time }
-        tenders: { type: integer }
-    TenderAddendum:
-      type: object
-      required: [number, note, affectedPackageIds]
-      properties:
-        id: { type: string, format: uuid }
-        number: { type: integer }
-        revisionId: { type: string, format: uuid }
-        note: { type: string }
-        affectedPackageIds: { type: array, items: { type: string, format: uuid } }
-        lineChanges:
-          type: object
-          description: "packageId → {added, removed, changed} counts"
-          additionalProperties:
-            type: object
-            properties:
-              added: { type: integer }
-              removed: { type: integer }
-              changed: { type: integer }
-        blockingProblems: { type: array, items: { type: string }, description: "e.g. a package with 0 lines (dryRun)" }
-        createdBy: { $ref: "#/components/schemas/UserRef" }
-        createdAt: { type: string, format: date-time }
-    StatusBoard:
-      type: object
-      required: [packages]
-      properties:
-        packages:
-          type: array
-          items:
-            type: object
-            required: [packageId, packageName, invitations]
-            properties:
-              packageId: { type: string, format: uuid }
-              packageName: { type: string }
-              invitations:
-                type: array
-                items:
-                  allOf:
-                    - $ref: "#/components/schemas/BidInvitation"
-                    - type: object
-                      properties:
-                        total: { type: [string, "null"], description: Decimal string; null while sealed }
-    Comparison:
-      type: object
-      required: [packageId, currency, sealedUntilClose, bidders, rows, totals]
-      properties:
-        packageId: { type: string, format: uuid }
-        currency: { type: string }
-        addendum: { type: integer }
-        sealedUntilClose: { type: boolean }
-        deviationThresholdPct: { type: number }
-        bidders:
-          type: array
-          items:
-            type: object
-            required: [offerId, invitationId, companyName]
-            properties:
-              offerId: { type: string, format: uuid }
-              invitationId: { type: string, format: uuid }
-              companyName: { type: string }
-              submittedAt: { type: string, format: date-time }
-              validUntil: { type: [string, "null"], format: date }
-              qualifications: { type: string }
-              notes: { type: string }
-              source: { type: string, enum: [portal, excel] }
-              complete: { type: boolean }
-        rows:
-          type: array
-          items:
-            type: object
-            required: [lineKey, description, unit, quantity, cells]
-            properties:
-              lineKey: { type: string }
-              code: { type: string }
-              description: { type: string }
-              unit: { type: string }
-              quantity: { type: [number, "null"] }
-              lowestRate: { type: [string, "null"] }
-              medianRate: { type: [string, "null"] }
-              cells:
-                type: array
-                description: One per bidder, same order as `bidders`
-                items:
-                  type: object
-                  properties:
-                    rate: { type: [string, "null"], description: Decimal string }
-                    amount: { type: [string, "null"], description: Decimal string }
-                    note: { type: string }
-                    flags: { type: array, items: { type: string, enum: [missing, lowest, high_deviation, low_deviation] } }
-        totals:
-          type: array
-          description: One per bidder, decimal strings, with rank
-          items:
-            type: object
-            properties:
-              total: { type: string }
-              rank: { type: integer }
-              missingRates: { type: integer }
-
-    # ── bids (bidder view) ──
-    BidSummary:
-      type: object
-      required: [invitationId, firmName, tenderName, packageName, deadline, tenderStatus, status]
-      properties:
-        invitationId: { type: string, format: uuid }
-        firmName: { type: string }
-        tenderName: { type: string }
-        packageName: { type: string }
-        deadline: { type: string, format: date-time }
-        timezone: { type: string }
-        tenderStatus: { $ref: "#/components/schemas/TenderStatus" }
-        status: { $ref: "#/components/schemas/BidInvitationStatus" }
-        outcome: { type: [string, "null"], enum: [awarded, not_awarded, null] }
-        needsResubmit: { type: boolean }
-    BidDetail:
-      allOf:
-        - $ref: "#/components/schemas/BidSummary"
-        - type: object
-          required: [currency, instructions, attachments, addendum]
-          properties:
-            currency: { type: string }
-            instructions: { type: string }
-            attachments: { type: array, items: { $ref: "#/components/schemas/TenderAttachment" } }
-            addendum: { type: integer }
-            addendumNote: { type: string }
-            allowPartial: { type: boolean }
-    OfferLine:
-      type: object
-      required: [lineKey, rate]
-      properties:
-        lineKey: { type: string }
-        rate: { type: [string, "null"], description: "Decimal string, up to 4 decimals" }
-        amount: { type: [string, "null"], description: Computed by the backend (BR-47) }
-        note: { type: string }
-        carriedFromAddendum: { type: [integer, "null"] }
-    Offer:
-      type: object
-      required: [id, status, addendum, lines, total]
-      properties:
-        id: { type: string, format: uuid }
-        status: { type: string, enum: [draft, submitted, withdrawn, superseded] }
-        addendum: { type: integer }
-        lines: { type: array, items: { $ref: "#/components/schemas/OfferLine" } }
-        total: { type: string }
-        notes: { type: string }
-        qualifications: { type: string }
-        validUntil: { type: [string, "null"], format: date }
-        source: { type: string, enum: [portal, excel] }
-        submittedAt: { type: [string, "null"], format: date-time }
-        missingRates: { type: integer }
-        lastImportReport:
-          type: object
-          properties:
-            matched: { type: integer }
-            unknownRows: { type: array, items: { type: integer } }
-            invalid:
-              type: array
-              items:
-                type: object
-                properties:
-                  row: { type: integer }
-                  column: { type: string }
-                  value: { type: string }
-            missing: { type: array, items: { type: string } }
-    OfferSave:
-      type: object
-      properties:
-        lines:
-          type: array
-          items:
-            type: object
-            required: [lineKey]
-            properties:
-              lineKey: { type: string }
-              rate: { type: [string, "null"] }
-              note: { type: string }
-        notes: { type: string }
-        qualifications: { type: string }
-        validUntil: { type: [string, "null"], format: date }

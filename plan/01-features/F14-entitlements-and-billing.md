@@ -14,15 +14,18 @@ Plan (config) ──► Subscription (org) ──► Entitlements (effective lim
    (Paddle / Stripe / manual)                                          UsageEvent rows
 ```
 
-- **Plans** are configuration (seeded table or config file): id, name, entitlements, public.
+- **Plans** are configuration (seeded table or config file): id, name, entitlements, public,
+  default (the tier a new org starts on). The commercial model is undecided (P17), so a plan
+  may limit seats, active projects, both, or neither; missing limits are unlimited.
   Placeholder values are in `00-product/05-plans-and-limits.md`.
 - **Subscription** per org: planId, status, trial, period end, provider refs, overrides.
 - **Effective entitlements** = plan entitlements + overrides. `GET /orgs/{orgId}/entitlements`
   returns `{limits: {...}, usage: {...}, features: {...}}` for the UI.
 - **Enforcement** happens in one backend service (`EntitlementService.check(org, limit, delta)`),
   called before: invite member, create project / unarchive, upload version, create run /
-  preview, create preset, open tender, add bidder invitation. Failure → `402 limit_reached`
-  (BR-60).
+  preview, create preset, create a share link; modules register their own checks (pricing:
+  send an offer request, invite vendors to a request). Failure → `402 limit_reached` (BR-60), and a `LimitEvent` row for the admin
+  console (F19).
 - **Usage events** are written by job completion (BR-62). Monthly processing minutes are
   aggregated from them.
 

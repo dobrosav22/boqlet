@@ -11,48 +11,51 @@
 
 | Kind | To | In-app | Email (default) |
 |---|---|---|---|
-| `job.succeeded` / `job.failed` (parse, run, preview, export) | the job's creator | toast + bell | parse/run failed: yes; others: no |
+| `job.succeeded` / `job.failed` (parse, run, preview, export, import) | the job's creator | toast + bell | parse/run failed: yes; others: no |
 | `model_version.ready` | uploader | ✓ | yes if parse took > 2 min |
 | `boq.new_version_available` | estimators and leads of the project | ✓ | no |
 | `run.needs_input` | run creator | ✓ | no (they are usually looking) |
-| `revision.review_requested` | chosen reviewers | ✓ | yes |
-| `revision.changes_requested` | submitter | ✓ | yes |
-| `revision.approved` | submitter | ✓ | yes |
-| `revision.issued` | project members | ✓ | yes |
-| `revision.review_withdrawn` | reviewers | ✓ | no |
+| `version.saved` | project members | ✓ | no |
+| `boq.confirmed` / `boq.reopened` | project members | ✓ | yes |
+| `revision.review_requested` (approval on) | chosen reviewers | ✓ | yes |
+| `revision.changes_requested` / `revision.approved` (approval on) | submitter | ✓ | yes |
+| `revision.review_withdrawn` (approval on) | reviewers | ✓ | no |
 | `member.invited` (org) | invitee (email only) | — | yes |
 | `project_member.added` | the user | ✓ | yes |
-| `tender.offer_submitted` | tender creator + project leads | ✓ (total only if unsealed) | no |
-| `tender.bidder_declined` | tender creator | ✓ | no |
-| `tender.deadline_soon` (24 h, with not-submitted count) | tender creator | ✓ | yes |
-| `tender.closed` | tender creator + leads | ✓ | yes |
-| `bid.invited` | bidder | ✓ | yes |
-| `bid.reminder` | bidder | ✓ | yes |
-| `bid.addendum` | affected bidders | ✓ | yes |
-| `bid.deadline_soon` (24 h, not submitted) | bidder | ✓ | yes |
-| `bid.awarded` / `bid.not_awarded` | package bidders | ✓ | yes |
+| `session.revoked` | the replaced session (SSE only) | signed-out message | no |
+| `vendor.invited` | vendor (email only) | — | yes |
+| `vendor.linked` | the inviting member | ✓ | no |
+| `offer_request.offer_submitted` | request sender + project leads | ✓ (with total) | no |
+| `offer_request.vendor_declined` | request sender | ✓ | no |
+| `offer_request.deadline_soon` (24 h, with not-answered count) | request sender | ✓ | yes |
+| `offer_request.closed` | request sender | ✓ | no |
+| `offer_invitation.invited` | vendor | ✓ | yes |
+| `offer_invitation.reminder` | vendor | ✓ | yes |
+| `offer_invitation.updated` | vendor | ✓ | yes |
+| `offer_invitation.deadline_soon` (24 h, not submitted) | vendor | ✓ | yes |
+| `offer_invitation.closed` | vendor | ✓ | no |
 | `limit.near` (80% of a limit) / `limit.reached` | owner, admins | ✓ | yes |
 
 ## Behaviour
 
 - Notification rows: `{kind, params, entity, url}`. The frontend renders the text from i18n
-  messages by `kind` with `params` (P07). The backend never stores rendered English text
-  except in sent emails.
-- Emails are rendered by the backend from templates per kind (i18n-ready, English only in v1),
-  with one clear call to action linking into the app. Sent through an email provider adapter
-  (decision in 07-backend).
-- **Batching:** several `tender.offer_submitted` within 10 minutes merge into one bell item.
-- **Sealed tenders:** no amounts in any notification before close (BR-44).
+  messages by `kind` with `params` (P07, P35). The backend never stores rendered text except in
+  sent emails, which are rendered in the recipient's language.
+- Emails are rendered by the backend from templates per kind and language, with one clear call
+  to action linking into the app. Sent through an email provider adapter (decision in 07-backend).
+- **Batching:** several `offer_request.offer_submitted` within 10 minutes merge into one bell item.
+- Vendor and offer events exist only while the pricing module is on (P32).
 
 ## API
 
 `GET /notifications` (paged, `unreadOnly`), `POST /notifications/{id}/read`,
 `POST /notifications/read-all`, `GET /me/notification-preferences`,
 `PUT /me/notification-preferences`, SSE `GET /events` (event types: `job.progress`,
-`job.finished`, `notification.created`, `entity.changed`).
+`job.finished`, `notification.created`, `entity.changed`, `boq.line_edited`, `boq.presence`,
+`session.revoked`).
 
 ## Acceptance criteria
 
 - [ ] A run finishing in another tab shows a toast and updates the open BoQ page within 2 s.
-- [ ] A review request reaches the reviewer by bell and email with a working deep link.
-- [ ] Turning off email for "Tenders" stops tender emails and keeps bell notifications.
+- [ ] A vendor gets the offer request by bell and email with a working deep link.
+- [ ] Turning off email for "Offers" stops offer emails and keeps bell notifications.

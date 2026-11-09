@@ -40,11 +40,11 @@ them identically. Contract tests check them (08-delivery/testing.md).
 ## Requests and responses
 
 - JSON, UTF-8, `camelCase` fields. Timestamps ISO 8601 UTC with `Z`. Dates `YYYY-MM-DD`.
-- **Money and rates are decimal strings** (`"1234.50"`) in tender endpoints (BR-47). Quantities
+- **Money and rates are decimal strings** (`"1234.50"`) in the pricing module's endpoints (BR-47). Quantities
   are JSON numbers as the engine emits them (already rounded by the rule set).
 - `PATCH` is a JSON merge patch (only the fields sent change). `PUT` replaces.
 - Unknown fields in requests are rejected with `400 unknown_field` (catches client typos).
-- Responses carry a `permissions` object on projects, revisions, presets and tenders (UI hints
+- Responses carry a `permissions` object on projects, BoQs, revisions and presets, and on module resources (UI hints
   only; the server enforces anyway).
 
 ## Errors
@@ -59,7 +59,7 @@ The UI translates by `code` (with `details` as params). It shows `message` only 
 | 402 | plan limit | `limit_reached` (+ `limit`, `current`, `max`) |
 | 403 | role not allowed | `forbidden` (+ `required`), `four_eyes` |
 | 404 | missing or not visible | `not_found` |
-| 409 | blocked by state | `invalid_transition`, `revision_locked`, `project_archived`, `deadline_passed`, `line_in_other_package`, `draft_conflict`, `slug_taken`, `already_member`, `last_owner`, `not_ready`, `model_not_ready`, `sealed_until_close` |
+| 409 | blocked by state | `invalid_transition`, `revision_locked`, `project_archived`, `deadline_passed`, `boq_confirmed`, `unit_needs_quantity`, `draft_conflict`, `slug_taken`, `already_member`, `last_owner`, `not_ready`, `model_not_ready` |
 | 413 | upload too large | `too_large` |
 | 422 | engine refused a document | `preset_invalid` (+ `problems[]`) |
 | 429 | rate limit | `rate_limited` (+ `Retry-After`) |
@@ -69,7 +69,7 @@ The UI translates by `code` (with `details` as params). It shows `message` only 
 
 Cursor-based: `?cursor=&limit=` → `{ "items": [...], "nextCursor": "opaque" | null }`. Cursors
 are opaque strings. Default limit 100, maximum 1000 (lines: up to 20,000 per page, see
-`listLines`). Small bounded lists (members, models, packages) return plain arrays.
+`listLines`). Small bounded lists (members, models, versions) return plain arrays.
 
 ## Concurrency
 
@@ -83,7 +83,7 @@ are opaque strings. Default limit 100, maximum 1000 (lines: up to 20,000 per pag
 
 `POST` endpoints that create jobs or send emails accept `Idempotency-Key` (UUID). The same key
 within 24 h returns the first response. The frontend sets it for generate, export, open
-tender, invite, submit offer.
+share link, save version; in the pricing module: send offer request, submit offer.
 
 ## Long-running work
 
@@ -123,3 +123,9 @@ Heartbeat comments every 25 s. Clients treat events as hints to refetch.
 
 Headers `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` on limited endpoints
 (security.md lists them).
+
+## Modules
+
+A module's endpoints live in their own OpenAPI file (`openapi-pricing.yaml`) under a path prefix
+(`/pricing/`), follow every convention here, and may `$ref` core schemas. Core schemas never ref
+a module (P36, `04-architecture/modules.md`).

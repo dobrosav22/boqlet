@@ -12,7 +12,7 @@
    │ API: apps/mock-api (phase 1)           │   │ Object storage (S3 API)      │
    │      services/api Java (phase 2)       │◄─►│ IFC, parsed.json, glb, npz,  │
    │ auth, orgs, projects, models, BoQs,    │   │ results, exports, attachments│
-   │ library, decisions, tenders, jobs,     │   └──────────────▲───────────────┘
+   │ library, decisions, jobs, [modules],   │   └──────────────▲───────────────┘
    │ notifications, entitlements, audit     │                  │
    └──────┬───────────────┬─────────────────┘                  │
           │ SQL           │ jobs (table) + rpc (HTTP)           │
@@ -32,7 +32,7 @@
 | Component | Owns | Never |
 |---|---|---|
 | **Next.js app** | Screens, interaction, client state, optimistic UI, i18n rendering, 3D display | Computes quantities or evaluates formulas (BR-01); talks to the engine or storage except through signed URLs the API hands out; holds secrets |
-| **API** (mock, then Java) | Identity mapping, tenancy, permissions, all entities in `03-domain`, state machines, entitlements, usage, audit, notifications, email, billing adapter, job orchestration, ingesting engine results into rows, tender arithmetic (BR-47) | Measures, applies rules, evaluates formulas, parses IFC, reads spreadsheets |
+| **API** (mock, then Java) | Identity mapping, tenancy, permissions, all entities in `03-domain`, state machines, entitlements, usage, audit, notifications, email, billing adapter, job orchestration, ingesting engine results into rows; modules (pricing: its own arithmetic, BR-47), see modules.md | Measures, applies rules, evaluates formulas, parses IFC, reads spreadsheets |
 | **Engine worker** | Everything that reads IFC, applies rules, writes or reads spreadsheets: job types in `engine-worker.md` | Knows about users, orgs, permissions, plans; writes to any table except its own job row |
 | **Storage** | Large immutable blobs | Holds anything that needs querying |
 | **Postgres** | Queryable state, the job table | Holds IFC or big JSON blobs (store keys instead) |

@@ -2,28 +2,27 @@
 
 ## Purpose
 
-Designs change. When a new model version arrives, produce the next BoQ revision quickly,
+Designs change. When a new model version arrives, bring the working version up to date quickly,
 answer only what is new, and show exactly what changed and why.
 
 ## Stories
 
-- As an estimator, after issuing Rev A I start Rev B, swap in the new Architecture version,
-  regenerate, answer the two new questions and see the change report against Rev A.
-- As an approver, I review Rev B by reading the change report first.
+- As an estimator, after saving version A I swap the new Architecture version into the working
+  version, regenerate, answer the two new questions and see the change report against version A.
+- As an approver (when approval is on), I review version B by reading the change report first.
 - As an estimator, I compare any two runs (e.g. rule set X vs Y on the same models) to see the
   effect of a preset choice.
 
 ## Behaviour
 
 1. **New version available:** when a model used by a BoQ's current revision has a newer ready
-   version, the BoQ shows a badge. In a `draft` revision: "Use v4" swaps it in the inputs
-   (pending change). In an issued revision: "Start Rev B with v4" creates the revision and
-   swaps in one step.
-2. **Start new revision** (`POST /boqs/{boqId}/revisions`): only when the current revision is
-   `issued`. Copies inputs, `basedOnRevisionId` = issued revision. Adjustments (overrides,
-   manual items) live on the BoQ and carry over automatically.
+   version, the BoQ shows a badge; "Use v4" swaps it into the working version's inputs
+   (pending change). A confirmed BoQ shows the badge with "Reopen to update".
+2. **The next working version is automatic** (F09 §2): saving a version opens the next one with
+   the same inputs, `basedOnRevisionId` = the saved one. Line edits and manual lines live on the
+   BoQ and carry over.
 3. **Change report** (Changes tab): compares the revision's current run with the frozen run of
-   `basedOnRevisionId` (or, for Rev A, offers comparison with any earlier run). Uses
+   `basedOnRevisionId` (or, before the first save, offers comparison with any earlier run). Uses
    `POST /runs/{runId}/compare {againstRunId}`: the engine `diff` job (EN-002), result cached
    as `RunDiff`.
 4. **Report content:**
@@ -55,13 +54,13 @@ answer only what is new, and show exactly what changed and why.
 
 ## API
 
-`POST /boqs/{boqId}/revisions`, `PATCH /revisions/{revisionId}`,
+`PATCH /revisions/{revisionId}`,
 `POST /runs/{runId}/compare`, `GET /diffs/{diffId}`, `GET /diffs/{diffId}/lines`,
 `GET /diffs/{diffId}/elements`, `GET /revisions/{revisionId}/runs`.
 
 ## Acceptance criteria
 
-- [ ] Start Rev B from an issued Rev A with a modified model version (fixture: Duplex with one wall deleted and one door changed): the report lists exactly the affected lines and elements.
-- [ ] Rev B regenerates without asking any question already answered for Rev A.
-- [ ] Overrides from Rev A are present in Rev B and listed when their lines changed.
+- [ ] After saving version A, swapping in a modified model version (fixture: Duplex with one wall deleted and one door changed) gives a report that lists exactly the affected lines and elements.
+- [ ] The working version regenerates without asking any question already answered for version A.
+- [ ] Line edits made before version A are still applied after it and listed when their lines changed.
 - [ ] The change report opens in under 3 s for the Duplex (cached diff in under 500 ms).

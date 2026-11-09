@@ -8,7 +8,8 @@ run. The result is either complete or needs input.
 ## Stories
 
 - As an estimator, I create a BoQ: name it, pick which models (and versions) go in, the rule
-  set, the classifications and the dictionaries. Defaults come from the project.
+  set, the classifications and the dictionaries. The project's defaults are preselected, and
+  I can pick any other preset the org has for this BoQ (P19).
 - As an estimator, I press Generate and see progress. In seconds (after the first parse) I see
   the sheet, or a "needs input" state with the questions to answer.
 - As an estimator, I change one input (another rule set, an extra code list) and regenerate to
@@ -17,9 +18,13 @@ run. The result is either complete or needs input.
 
 ## Behaviour
 
-1. **Create BoQ:** name (required), description. Creates revision A (`draft`) with inputs
+1. **Create BoQ:** name (required), description. Creates the working version (a `draft` revision) with inputs
    prefilled from project defaults and every model's latest `ready` version (each model can be
    unticked). Checks `maxModelsPerBoq`.
+   **From a model:** when a model version becomes ready, its page and the notification offer
+   "Generate a BoQ": a short dialog with the project's presets preselected and pickers to
+   choose others (rule set, classifications) before the first run. Presets are chosen per
+   BoQ, never per upload: parsing a model doesn't depend on them.
 2. **Setup panel** (revision inputs; editable only in `draft`):
    - **Models:** list of project models with checkbox, version picker (default latest ready),
      discipline (from the model), scope summary with "edit for this BoQ". A "new version

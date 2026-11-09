@@ -29,11 +29,12 @@ in docs/10.
 | Viewer: Duplex interactive | ≤ 3 s warm |
 | Viewer: 50k elements | ≤ 15 s to interactive; picking ≤ 100 ms |
 | Live update latency (job finished → UI) | ≤ 2 s |
-| Bidder page load (500 lines) | ≤ 2 s |
+| (Pricing module) vendor request page load (500 lines) | ≤ 2 s |
+| Live edit visible to other users of the BoQ (P31) | ≤ 1 s |
 
 ## Capacity (v1 planning numbers)
 
-- 200 orgs, 2,000 users, 5,000 bidders.
+- 200 orgs, 2,000 users, 5,000 vendors (pricing module).
 - 50 concurrent active users, 10 concurrent parse jobs, 30 runs/min peak.
 - Storage: ~5 GB per active project per year (versions + artifacts + results).
 
@@ -46,12 +47,12 @@ in docs/10.
 ## Browser support
 
 Latest two versions of Chrome, Edge, Firefox, Safari. Desktop first (≥ 1280 px). Read-only
-views (issued BoQ, bidder page) usable at ≥ 768 px. Bidder pricing works at ≥ 1024 px. WebGL2
+views (saved BoQ version, share page, vendor request page) usable at ≥ 768 px. Vendor pricing works at ≥ 1024 px. WebGL2
 required for the viewer (fallback message otherwise).
 
 ## Accessibility
 
-WCAG 2.2 AA for the app shell, forms, sheet and bidder pages: keyboard reachable, visible
+WCAG 2.2 AA for the app shell, forms, sheet, share page and vendor pages: keyboard reachable, visible
 focus, labels, contrast, no colour-only signals (flags in comparison and coverage use icons or
 patterns as well). The 3D viewer is exempt but has keyboard shortcuts and a non-3D element list.
 

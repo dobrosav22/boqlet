@@ -17,6 +17,11 @@ Dockerfile; CI job.
 ### BE-002 Identity (auth integration per D1)
 Token or session validation, just-in-time users, `GET/PATCH /me`, notification preferences.
 
+### BE-027 Sessions (F01 §10, BR-54)
+`sessions` table, `POST /sessions` with takeover, `GET/DELETE /sessions/current`, a request
+filter rejecting non-active sessions with `401 session_replaced`, idle expiry, `session.revoked`
+on SSE (with BE-014), provider session revocation where available, audit `session.replaced`.
+
 ### BE-003 Orgs, members, invitations (F01)
 Including slug rules, last-owner rule, invitation emails through the notifications module
 (stub email adapter until BE-020). `GET/PUT /orgs/{orgId}/setup` (F16): one `Org.setup` JSON
@@ -27,7 +32,7 @@ Plans seed, subscriptions (free on org creation), `EntitlementService.check`, `4
 `GET /orgs/{orgId}/entitlements`, usage events table and `GET /orgs/{orgId}/usage`.
 
 ### BE-005 Projects (F02)
-Projects, members, guests, defaults, project dictionary creation, archive/unarchive, attention
+Projects, members (org members only, P28), defaults, project dictionary creation, archive/unarchive, attention
 list, project audit endpoint.
 
 ### BE-006 Storage and models (F03)
@@ -45,12 +50,17 @@ code-list read/build proxies, usage, archive; system presets seeded from `preset
 migration-time loader.
 
 ### BE-009 Decisions and adjustments (F05, F06 §6–7)
+Line edits with every field of `LineOverrideInput` (unit needs quantity, reasons where required),
+`/overrides/batch` (all or nothing), ordering by `sortAfter` when serving lines.
 Decisions upsert with dryRun (affected revisions), clear, promote (publishes a dictionary
 version), overrides, manual items; revision reopen rules (BR-23).
 
-### BE-010 BoQs and revisions (F04, F09)
-BoQ create (revision A with defaults), inputs, pending changes, state machine (submit,
-request changes, approve, issue with frozen export, reopen), new revision, comments.
+### BE-010 BoQs and versions (F04, F09)
+BoQ create (working version with defaults), inputs, pending changes, save version (frozen
+export, position numbers, next working version in one transaction), BoQ confirm/reopen
+(`409 boq_confirmed`), optional approval (submit, request changes, approve, four-eyes, review
+withdrawn), comments; position numbers on line queries (BR-28); `boq.line_edited` and presence
+events (BR-29); core events `run.completed`, `version.saved`, `boq.confirmed`, `boq.reopened`.
 
 ### BE-011 Runs and ingestion (F04, F06, F07)
 Run job input builder (engine-worker.md), ingestion with COPY into `run_*` tables, lines
@@ -59,7 +69,8 @@ warnings, log paging, element lines, coverage.
 
 ### BE-012 Diffs and exports (F08, F12)
 Compare (cached diff or diff job), diff lines/elements paging, export jobs, downloads,
-issued frozen export, CSV exports (decisions, audit).
+issued frozen export, CSV exports (decisions, audit), BoQ edits import job and its report,
+preset template download/import through the engine rpc (F10 §14).
 
 ### BE-013 Queue transport
 Switch job execution to the Postgres queue (EN-009 workers): `LISTEN job_finished`, sweeper
@@ -73,21 +84,24 @@ delivery (D5), heartbeats; emits `job.progress`, `job.finished`, `entity.changed
 ### BE-015 Notifications (in-app)
 Notification rows for every kind in F13, batching, `GET /notifications`, read endpoints.
 
-### BE-016 Tenders core (F11 firm §1–5)
-Tenders, attachments, packages with selection resolution and `tender_line_assignments`
-(BR-41), preview-selection, from-groups, invitations (token hash, emails), open (package-line
-snapshot, `code` and `description` from `textSystem`, P14), status board (sealed-aware), remind, extend, close, cancel, scheduler for deadlines.
+### BE-029 Share links (F18)
+`share_links`, create (token shown once, hash stored), list, edit, revoke, org list, org setting
+`publicLinksAllowed`; public endpoints without auth (token resolution, includes, pinned vs
+latest issued, signed URLs), rate limits, view counting, audit; automated check that public
+responses carry no forbidden fields (BR-56).
 
-### BE-017 Addenda (F11 §5)
-Addendum with dryRun, re-snapshot, supersede offers, carry rates, notifications.
+### BE-030 Platform admin (F19)
+`platform_role`, `/admin/*` behind a dedicated guard returning `404`, `limit_events` written by
+`EntitlementService`, `admin_notes`, org tags and suspension, plan/trial/overrides through the
+manual billing provider, ending a user's session, nightly aggregates for overview and funnel
+(first occurrence per org from audit events), CSV export; audit with `actorKind:
+"platform_admin"`; a test that no admin query selects content columns (BR-57).
 
-### BE-018 Comparison and award (F11 §6–7)
-Comparison query with `BigDecimal`, flags, sealed enforcement (`409 sealed_until_close`),
-export job, award with notifications.
-
-### BE-019 Bidder endpoints (F11 bidder)
-Token preview/accept, `/bids/*`, offer drafts with ETag, submit validation (BR rules), withdraw,
-decline/reconsider, package xlsx (export_package job, cached per addendum), offer import job.
+### BE-031 Extension interfaces and core events (P36, modules.md)
+Interfaces and registries (notification kinds, audit actions, entitlement keys, admin metrics,
+`me` extensions, scheduled tasks, account kinds), read services (`BoqReadService`,
+`ExportDataService`, `IdentityService`), in-process core events published after commit; an
+ArchUnit test that no core package depends on a module package; the core-only CI job.
 
 ### BE-020 Email
 Email adapter (D6), templates per notification kind (i18n-ready), outbox table with retries,
@@ -101,7 +115,8 @@ idempotency, subscription sync job.
 Leader election (advisory lock) and the scheduled tasks list (storage-jobs-realtime.md).
 
 ### BE-023 Security isolation suite
-Automated cross-tenant, role and bidder access tests over **every** endpoint (v1 criterion 8).
+Automated cross-tenant and role access tests over **every** core endpoint (v1 criterion 8);
+the pricing module adds vendor and module-off cases for its endpoints (BE-P4).
 
 ### BE-024 Retention and deletion
 Org deletion job (BR-52), old-run row pruning with rehydration from `result_key`, export
@@ -112,3 +127,31 @@ Structured logs, OpenTelemetry, metrics and alerts from deployment.md, backups a
 
 ### BE-026 Staging acceptance
 Run all v1 acceptance criteria on staging; record results in `plan/README.md` status.
+
+## Pricing module (removable, P36): backend module `pricing`
+
+A separate Gradle/Maven module and Flyway location (schema `pricing`). Start after M7 or in
+parallel once BE-031 exists. Implements `openapi-pricing.yaml`.
+
+### BE-P1 Vendors (F17)
+Vendor profiles, links with invitations, accept, leave, shared price list per link, module
+settings, module-off handling (`404` per org), entitlement `pricingModule`.
+
+### BE-P2 Pricebooks and estimates (F20)
+Pricebooks and items with history, batch edits, Excel template and import through the engine
+(`pricing.import_pricebook`), price search (own + shared lists, unit filter, full text),
+remembered matches, estimates (fill remembered, set/clear rates, exchange rates, totals with
+`BigDecimal`), snapshot on `version.saved`, estimate export (`pricing.export_estimate` using
+`ExportDataService`).
+
+### BE-P3 Offer requests and offers (F11)
+Send (selection resolution through `BoqReadService`, frozen lines, invitations), updates on
+`run.completed` (re-freeze, supersede, carry rates), remind, close/extend/cancel, scheduler
+tasks (deadlines, reminders), comparison (median, lowest, flags, estimate column), vendor
+endpoints (offer drafts with ETag, fill from pricebook, submit, withdraw, decline, Excel
+export/import jobs), notifications and audit actions registered through BE-031.
+
+### BE-P4 Module isolation
+Vendor and cross-org tests over every `/pricing/*` endpoint (BR-46, BR-55); module-off and
+module-absent runs: the core contract suite passes with the module removed (BR-41).
+

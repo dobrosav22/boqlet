@@ -28,6 +28,10 @@ which lines it feeds. Spot what is not measured.
    - *Code group*: colour by top-level group of the chosen classification.
    - *Source*: measured / derived-from / overridden.
    - *Model*: colour per discipline.
+   - *Changes* (revisions, F08): added, changed and unchanged elements against the compared
+     run; removed elements drawn as ghosts from the earlier version when its geometry is
+     available.
+   - *Edited*: elements whose lines carry an edit (F06 §6).
 6. **Tools (v1):** orbit/pan/zoom, fit to selection, storey filter (show one storey), section
    box (one box, axis-aligned), isolate selection, hide selection, reset. No measuring tools in v1.
 7. **Entry points:** the Viewer tab in the BoQ workspace (split with the sheet on wide screens),
@@ -36,6 +40,21 @@ which lines it feeds. Spot what is not measured.
 8. **Performance:** load glb progressively per model. Show element count and load progress.
    Above 200k elements, merge meshes per material for display and keep picking by an id
    buffer (see `06-frontend/architecture.md`).
+
+9. **Editing with the model** (P25). The 3D view is part of the work, not a separate tab:
+   - On screens 1280 px and wider, the BoQ workspace opens **sheet and model side by side**
+     (resizable; the model can be collapsed). Selection is shared both ways.
+   - **One filter bar drives both**: storey, model, IFC class, type, material (dictionary
+     term), code group, source, edited, excluded, changed since a revision. Filtering narrows
+     the sheet's lines and shows only their elements in the model (others ghosted).
+   - **Groups:** selecting a section row highlights all elements of its lines; the legend of
+     the *Code group* mode is clickable the same way.
+   - **Pick in the model:** click, shift-click or box-select elements → a panel lists "N
+     lines from M elements" with the bulk actions of F06 §6 (move, exclude, request prices)
+     and a filter "only these lines".
+   - **Revisions:** in the Changes tab (F08) the model opens in *Changes* mode; clicking a
+     changed element shows its lines before and after with Δ.
+   - Keyboard: Esc clears the selection, F frames it, H hides it, I isolates it.
 
 ## Reuse
 
@@ -57,4 +76,6 @@ colour mode; compact arrays).
 - [ ] Clicking any element lists every line it contributes to, with its share.
 - [ ] Coverage mode shows unmatched elements in a distinct colour, and their count equals the `unmatched` question occurrences.
 - [ ] A two-model run shows both models, each toggleable.
+- [ ] Filtering the sheet by storey and code group shows only those lines and only their elements in the model; box-selecting elements lists their lines with the bulk actions.
+- [ ] In the Changes tab, the Duplex v1 → v2 elements are coloured added / changed, and clicking one shows its lines before and after.
 - [ ] The Duplex viewer is interactive within 3 s of opening the tab on a warm cache.

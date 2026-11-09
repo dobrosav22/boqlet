@@ -5,10 +5,8 @@
 | Export | Content | Produced by | Trigger |
 |---|---|---|---|
 | **BoQ Excel** (per run) | Sheet grouped by a chosen classification: ref, description, unit, quantity, source, notes; subtotals; a "Lines" sheet with every column; a "Trace" sheet (line → elements); a "Questions" sheet; cover sheet: project, BoQ, revision, run time, presets and versions, status (DRAFT watermark unless issued; free-plan watermark per entitlements) | engine `export_xlsx.export` (extended: EN-006) | `POST /runs/{runId}/exports` |
-| **Issued BoQ Excel** | Same, with revision label, issue date, issuer, issue note; frozen at issue (BR-25) | engine | at issue |
+| **Saved version Excel** | Same, with version label, save date, who saved it, note; frozen when saved (BR-25) | engine | at issue |
 | **Change report Excel** | Line changes with before/after/Δ/Δ%/causes; element changes | engine | `POST /diffs/{diffId}/export` |
-| **Package Excel** (bidder) | Firm, tender, package, deadline; lines with hidden line ids, protected cells except rate and note columns; totals as formulas for convenience (backend recomputes on import) | engine (EN-006) or backend (Apache POI); see 07-backend | bidder download |
-| **Comparison Excel** | Lines × bidders: rate, amount; lowest, median; flags as cell colours; totals; qualifications sheet | backend or engine | `POST /packages/{packageId}/comparison/export` |
 | **Decisions CSV** | Project decisions table | backend | decisions page |
 | **Audit CSV** | Filtered audit events | backend | audit page |
 
@@ -22,7 +20,7 @@
   the models only. Work not modelled as objects is included only where derived or added by
   hand (N manual lines)." Translated through the export's message catalogue.
 
-- Exports are **jobs** (`export_xlsx`, `export_package`, `export_comparison`), usually done in
+- Exports are **jobs** (`export_xlsx`; modules add their own, e.g. `pricing.*`), usually done in
   seconds. The UI shows a spinner, then downloads via `GET /exports/{exportId}/download`
   (302 to a signed URL). Small CSVs stream directly.
 - Every export records `Export {id, kind, subjectId, fileName, storageKey, createdBy, createdAt}`
@@ -32,6 +30,28 @@
   translated through the export's message catalogue (English in v1, P07).
 - Units: as in the run (metric or imperial per project).
 
+## Editing in Excel and importing back (P20)
+
+The BoQ Excel can be edited and uploaded back, so people who prefer Excel lose nothing on the
+next revision.
+
+- The BoQ sheet carries each line's key in a hidden, protected column; the workbook is
+  otherwise free to edit.
+- **Import edits** (BoQ workspace › Exports, draft revisions, estimator+): upload the edited
+  file → `import_boq_edits` job (engine, EN-006) → a review list: quantity, description and
+  unit changes per line, lines moved to another section (a row moved under another group
+  heading or its Ref changed), lines deleted (proposed as exclusions), new rows without a key
+  (proposed as manual lines under the group they sit in), rows it couldn't read. The user
+  ticks what to apply and gives a reason where F06 §6 requires one. Applied changes become
+  line edits and manual lines like any made in the sheet.
+- Rate and Amount columns are ignored on import (no prices in the BoQ, P04).
+- A file exported from another BoQ, or from a run whose line keys no longer exist, is reported
+  line by line ("line not in this BoQ"), never applied blindly.
+
+Pricing module exports (priced BoQ, offer comparison, offer request workbook, pricebook
+template) belong to the module (F20 §5); the core export offers module code the BoQ workbook
+data through `ExportDataService` and knows nothing about prices.
+
 ## Later
 
 GAEB DA XML, ÖNORM A 2063, CSV of lines, IfcCostSchedule, PDF print layout.
@@ -40,12 +60,13 @@ GAEB DA XML, ÖNORM A 2063, CSV of lines, IfcCostSchedule, PDF print layout.
 
 `POST /runs/{runId}/exports`, `GET /revisions/{revisionId}/exports`, `GET /exports/{exportId}`,
 `GET /exports/{exportId}/download`, `POST /diffs/{diffId}/export`,
-`POST /packages/{packageId}/comparison/export`, `GET /bids/{invitationId}/package.xlsx`,
-`GET /projects/{projectId}/decisions.csv`, `GET /projects/{projectId}/audit.csv`.
+`GET /projects/{projectId}/decisions.csv`, `GET /projects/{projectId}/audit.csv`,
+`POST /revisions/{revisionId}/edits-import`, `GET /jobs/{jobId}/edits-import-report`,
+`POST /boqs/{boqId}/overrides/batch` (apply the reviewed edits).
 
 ## Acceptance criteria
 
 - [ ] A Duplex run's Excel opens in Excel and LibreOffice without repair prompts, and its totals match the sheet.
 - [ ] With a classification that has item texts, the BoQ sheet's Description column holds the filled texts, and the "Lines" sheet holds both texts.
 - [ ] A draft export carries a DRAFT watermark. The issued export doesn't, and is frozen.
-- [ ] The package Excel round-trips through the bidder import (F11).
+- [ ] A Duplex BoQ Excel with one quantity changed, one row moved to another section, one row deleted and one row added imports as exactly one quantity edit, one move, one proposed exclusion and one proposed manual line.

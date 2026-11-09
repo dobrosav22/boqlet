@@ -23,8 +23,13 @@ later be edited in the Library like any preset.
 
 ## When it appears
 
-1. **After onboarding** (FL-1): the dashboard's empty state offers "Set up how your firm
-   measures" next to "Create your first project" and "Try with a sample project".
+1. **On first start, required** (P18, FL-1): right after creating the org, the owner goes
+   straight into the wizard, and the org's dashboard opens only when it is finished. Signing
+   out and back in returns to the step they left. Because it is required, it must be quick:
+   every question comes with a suggested answer, and **"Use the suggested answers"** on each
+   step finishes the whole wizard in under three minutes. Members invited later never see it;
+   if they arrive before it is finished, they can work with the system presets and see "Your
+   firm's setup isn't finished yet".
 2. **From the Library home** (F10 §1): a "Guided setup" button, always available. Running it
    again creates new drafts. It never overwrites published versions.
 3. **When a BoQ is generated with system presets only** (S12 sheet): a one-line hint "These
@@ -106,8 +111,19 @@ with changed lines highlighted (the F10 preview, EN-005).
 
 Progress is kept in `Org.setup` (data model): status, step, preview model, the ids of the three
 drafts. Leaving keeps the drafts. They are ordinary Library drafts (autosaved, F10 §3). Coming
-back opens the step where the user left. "Dismiss setup" hides the dashboard card. Finishing
-sets `completedAt`.
+back opens the step where the user left. Finishing sets `completedAt`. There is no
+"dismiss": the fastest way out is the suggested answers.
+
+### Designed for someone who has never seen the product
+
+- One question per screen in step 1, in the user's terms ("How do you measure masonry walls:
+  in m² or in m³?"), a one-line explanation, a small worked example, and the suggested answer
+  preselected. The preview shows what the answer changes, on the model, in numbers.
+- Never more than three choices visible at once; advanced options behind "More".
+- A progress bar with steps and time left ("about 4 minutes"). Back and forward never lose
+  answers.
+- Plain words only: no "slot", "patch", "classification map" or IFC class names on screen.
+- Tested with people new to the product before release (v1 criterion 12).
 
 ## Later (not in v1): start from your last BoQ
 
@@ -151,4 +167,5 @@ New: `GET /orgs/{orgId}/setup`, `PUT /orgs/{orgId}/setup`.
 - [ ] After "Publish all", a new project's BoQ uses the three presets without further choices and its Excel shows the item numbers and filled item texts.
 - [ ] Leaving at step 2 and coming back the next day reopens step 2 with the answers of step 1 kept.
 - [ ] A free-plan org finishes the wizard without hitting `libraryOrgPresets`.
+- [ ] A new owner cannot reach the org dashboard before finishing; "Use the suggested answers" on every step finishes in under three minutes.
 - [ ] Changing which slots are `setup` in the system rule set changes the wizard's questions with no frontend change.

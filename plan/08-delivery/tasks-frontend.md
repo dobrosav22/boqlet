@@ -7,11 +7,14 @@ Every task adds or extends Playwright e2e coverage of its flow against the mock 
 ## M0 Contract and scaffolding
 
 ### FE-001 Contract package
-- Move `plan/05-api/openapi.yaml` to `packages/api/openapi.yaml` (fix `$ref` prefix to
+- Move `plan/05-api/openapi.yaml` to `packages/api/openapi.yaml` and `plan/05-api/openapi-pricing.yaml`
+  to `packages/pricing-api/openapi-pricing.yaml` (its client is generated into the module package,
+  never into the core client) (fix `$ref` prefix to
   `../types/schema/`), leave a pointer in `plan/05-api/`. Add `redocly.yaml`, `npm run api:lint`,
   `npm run api:gen` (openapi-typescript → `packages/api/src/schema.d.ts`), and the
   `openapi-fetch` client factory exported from `@ifc-boq/api`.
-- Confirm with the owner: styling choice (Tailwind + Radix recommended), Next.js version.
+- Styling is decided (P23): shadcn/ui on Tailwind + Radix, one self-hosted monospace font
+  (JetBrains Mono unless the owner prefers another, design-system.md). Confirm the Next.js version.
 - **Accept:** lint passes; types generated; CI step fails on contract drift.
 
 ### FE-002 Next app skeleton
@@ -37,7 +40,7 @@ Every task adds or extends Playwright e2e coverage of its flow against the mock 
 
 ## M1 Core loop
 
-### FE-005 Onboarding, orgs, members (F01)
+### FE-005 Onboarding, orgs, members, sessions (F01)
 Screens S01–S04, S21, S22. Mock: org endpoints, invitations, outbox emails.
 **Accept:** F01 acceptance criteria against the mock.
 
@@ -58,23 +61,43 @@ with progress, needs-input state, pending-changes indicator.
 ### FE-009 BoQ sheet (F06 §1–5, 8–11)
 Virtualised grouped table, group-by switch, columns, filters, line detail panel with trace
 (readable formula via the ported `readable.ts`), warnings bar, log tab.
-**Accept:** F06 criteria 1, 2, 5.
+**Accept:** F06 criteria 1, 2, 11.
 
 ### FE-010 Questions and decisions (F05)
 S12b with answer controls per `AnswerType`, bulk answer, dryRun warning, "N answers not applied
 – Regenerate", term picker; S13 decisions page; promote (library editors).
 **Accept:** F05 criteria 1, 3, 4 (5 after M2).
 
-### FE-011 Overrides and manual lines (F06 §6–7)
-Override dialog, struck-through engine value, manual line form (formula check via
-`/presets/check`), edit/delete. Depends on EN-003, EN-007.
-**Accept:** F06 criteria 3, 4.
+### FE-011 Line edits and manual lines (F06 §6–7)
+Inline editable cells (quantity, description, unit) with edit markers, engine value on hover,
+restore per field; drag to reorder and to move between sections; Ref change moves; exclude with
+reason and the "Excluded" filter; bulk actions on a selection; undo of the last 20 edits;
+manual line between any rows (formula check via `/presets/check`). Depends on EN-003 (extended),
+EN-007.
+**Accept:** F06 criteria 3, 4, 6.
+
+### FE-043 Single session (F01 §10)
+`POST /sessions` after sign-in in the auth adapter; S31 takeover screen; `session.revoked` SSE
+handler and `401 session_replaced` interceptor showing the signed-out message. Mock: sessions
+table, takeover, SSE event.
+**Accept:** F01 criterion 5, v1 criterion 16.
+
+### FE-044 How it is calculated (F06 §5)
+Step list from `trace.steps` in plain words (message catalogue), expandable to elements, links
+from rule-set values to their Settings question, derived chain, edit step. Depends on EN-013.
+**Accept:** F06 criterion 5.
+
+### FE-045 Sheet and model together (F07 §9)
+Default split layout ≥ 1280 px (resizable panels), one filter bar for sheet and viewer, group
+row → elements, box/shift selection in the model → lines panel with bulk actions, Changes and
+Edited colour modes, keyboard shortcuts.
+**Accept:** F07 criteria 5, 6.
 
 ### FE-042 Not in the models (F06 §12, F09 §1)
 Sheet notice with counts by source and "Add line", collapsible per user; same text as the
 empty state of empty groups and in the "Add line" help; submit dialog checkbox (M3, with
 with FE-024, the submit dialog). Strings from the message catalogue.
-**Accept:** F06 criterion 7; submitting without the tick is impossible.
+**Accept:** F06 criterion 8; submitting without the tick is impossible.
 
 ### FE-012 Viewer (F07)
 Port `SceneView.ts`/`links.ts`; multi-model load; line ↔ element; element panel; colour modes
@@ -121,12 +144,18 @@ Publish dialog with change note, preview panel (job, SSE, compact sheet + change
 published). Depends on EN-005.
 **Accept (M2):** F10 criteria; v1 criterion 7 against the mock.
 
+### FE-046 Clone, guided creation, Excel templates (F10 §2, §14)
+"Clone" with independent copy / based on it; guided mode for new rule sets and classifications
+(reuse the wizard steps of FE-041); template download and upload with the change review and
+problems by cell. Depends on EN-012.
+**Accept:** F10 criteria 7, 8.
+
 ### FE-040 Item texts (F10 §8, §13; F06 §2, §5)
 Code list tab: "Item text" box under each code with insert buttons and "Reads as" (port the
 rule-set line text field); import mapping labels the description column "Item text"; Codes per
 line shows each row's sample text. Sheet: Description from `codes[groupBy].text` with fallback,
 three-line clamp, detail shows the item text and "Measured as". Depends on EN-010.
-**Accept:** F10 criterion 5; F06 criterion 6.
+**Accept:** F10 criterion 5; F06 criterion 7.
 
 ### FE-041 Setup wizard (F16)
 S30 `/{org}/setup`: step list, start step (model picker incl. sample Duplex, start-from preset),
@@ -136,23 +165,26 @@ and "Publish all" (publish, star, optional project defaults), resume from `Org.s
 card and Library button, hint on sheets generated with system presets only; mock endpoints
 `GET/PUT /orgs/{orgId}/setup`. Depends on EN-011, FE-017…FE-021.
 **Accept:** F16 criteria (the 15-minute one walked through by hand, v1 criterion 12).
+Required on first start (P18): onboarding routes the owner into S30 and the dashboard stays
+closed until done; "Use the suggested answers" per step.
 
-## M3 Revisions, workflow, exports
+## M3 Versions, exports, sharing
 
-### FE-022 New versions and revisions (F08 §1–2)
-"New version available" badges; use newer version in a draft; start revision from issued.
+### FE-022 New model versions (F08 §1–2)
+"New version available" badges; "Use v4" in the working version; "Reopen to update" on a confirmed BoQ.
 
 ### FE-023 Change report (F08 §3–7)
 Changes tab with summary, lines and elements tables, filters, viewer "changes" colour mode,
 change report export. Depends on EN-002.
 
-### FE-024 Review, approve, issue (F09)
-Submit dialog with reviewers and the "not in the models" confirmation (FE-042), review screen
-(change report first), line comments, request changes, approve, issue dialog, reopen warnings,
-issued read-only mode.
+### FE-024 Versions, confirmation, optional approval (F09)
+Save version dialog (label, note, "not in the models" tick, open-questions warning), Versions tab
+(S12h), saved-version read-only mode, Confirm / Reopen BoQ; with `approvalRequired`: submit with
+reviewers, review screen (change report first), line comments, request changes, approve, save,
+four-eyes, withdrawn-review warnings. Org settings toggles.
 
 ### FE-025 Exports tab and frozen exports (F12)
-S12g; issued exports; decisions CSV, audit CSV.
+S12g; saved-version exports; decisions CSV, audit CSV.
 
 ### FE-026 Activity and audit (F09 audit)
 S18, S25 with filters.
@@ -160,22 +192,80 @@ S18, S25 with filters.
 ### FE-027 Notifications complete (F13)
 All kinds rendered via i18n; email preference categories.
 
-### FE-028 Revision e2e
-Playwright: FL-3 with Duplex v1 → v2 (EN-008), assert the change report and no repeated questions.
+### FE-028 Versions e2e
+Playwright: FL-3 with Duplex v1 → v2 (EN-008), assert the change report and no repeated questions;
+save, confirm, reopen; approval on and off.
 **Accept (M3):** v1 criteria 3, 4, 5 against the mock.
 
-## M4 Tendering
+## M4 Sharing, admin console, extension points
 
-### FE-029 Tender create and settings (F11 §1, incl. "item texts from" `textSystem`)
-### FE-030 Packages builder (F11 §2): selection by codes/families/lines, preview-selection with conflicts, from-groups quick start, unassigned lines panel
-### FE-031 Bidders and opening (F11 §3–4): invitations per package, address book, open with validation
-### FE-032 While open (F11 §5): status board (sealed-aware), remind, addendum dialog with dryRun preview, extend, close
-### FE-033 Comparison and award (F11 §6–7): comparison grid (virtualised), flags, normalise view toggle, export, award dialog
-### FE-034 Bidder area (F11 bidder §1–3, 5–6): `/bid-invite/[token]`, `/bids`, `/bids/[id]` with rate entry, autosave, totals with `big.js`, submit/withdraw/decline, addendum banner
-### FE-035 Excel round-trip (F11 bidder §4): download package, upload priced file, import report review. Depends on EN-006
-### FE-036 Tender e2e
-Playwright: FL-4 + FL-5 with three bidders (browser, Excel, decline), sealed checks, award.
-**Accept (M4):** v1 criterion 6 against the mock.
+### FE-048 Share links (F18)
+Share dialog and list in the BoQ workspace; org list in settings; public page S35 (sheet, line
+detail, viewer, Excel as included; DRAFT watermark; expired/revoked page). Mock: public
+endpoints with token hashing.
+**Accept:** F18 criteria, v1 criterion 15.
+
+### FE-049 Excel edits import (F12)
+Upload in Exports, job progress, review list with ticks and reasons, apply via
+`/overrides/batch`. Depends on EN-006 (BoQ round-trip).
+**Accept:** F12 criterion 4, v1 criterion 13.
+
+### FE-050 Platform admin console (F19)
+S36 with its own layout: overview tiles, funnel, orgs table with signals and CSV, org detail
+with notes, tags, plan/trial/overrides/suspend (reason dialogs), users, vendors, health. Mock:
+`/admin/*` computed from the seed, Pat as platform admin.
+**Accept:** F19 criteria against the mock.
+
+### FE-051 Extension registries (core, P36, modules.md)
+Typed registries for `nav.orgItems`, `boq.workspaceTabs`, `sheet.selectionActions`,
+`sheet.lineBadges`, `settings.orgSections`, `project.overviewCards`, `area.routes`,
+`notifications.kinds`; `src/modules.ts` as the only module import, behind `MODULE_PRICING`; lint
+rule against other imports; a test module that registers one of each in tests.
+**Accept:** the app builds and every core e2e passes with no module registered.
+
+### FE-052 Position numbers and live co-editing (F06 §13–14)
+`positionNo` column, renumbering after edits; presence avatars and line markers, `boq.line_edited`
+applied without reload, conflict toast on the same line, per-user undo.
+**Accept:** F06 criteria 9, 10.
+
+## Pricing module (removable, P36): `packages/pricing-ui`
+
+Built after M3 against the mock's pricing plugin. Nothing in M0–M4 depends on it.
+
+### FE-P1 Module skeleton
+Package, `register.ts` (routes, tabs, actions, badges, nav, settings section, i18n namespace
+`pricing`), generated client from `openapi-pricing.yaml`, `/vendor` area layout and vendor
+sign-in routing, module-off behaviour (nothing rendered, `404` pages).
+**Accept:** with `MODULE_PRICING` off the build has no pricing code (bundle check).
+
+### FE-P2 Vendors (F17)
+S32 directory with shared lists, S33 invitation, S34 vendor firms and profile (choose list per firm).
+**Accept:** F17 criteria.
+
+### FE-P3 Pricebooks (F20 §1)
+S37 editor (virtualised table, bulk edit, history), Excel template download and import review,
+copy; for firms and vendors.
+**Accept:** F20 criterion 1.
+
+### FE-P4 Pricing tab and estimate (F20 §2–4)
+S38: fill remembered, pick a price (search across own and shared lists, unit filter), type,
+sources and dates, stale flags, exchange rates, totals, export.
+**Accept:** F20 criteria 2–5.
+
+### FE-P5 Offer requests, firm side (F11 firm §1–3)
+"Request offers" selection action (sheet and model), dialog, S14/S15 list and request page,
+status per vendor, send update, close/extend/cancel, comparison grid with estimate column, use
+rates.
+**Accept:** F11 criteria 1, 3, 4.
+
+### FE-P6 Vendor request page (F11 vendor §1–6)
+S28/S29: requests list, request page with fill from pricebook, pick, type, autosave, submit,
+withdraw, decline, Excel round-trip, update banner.
+**Accept:** F11 criteria 2, 5.
+
+### FE-P7 Pricing e2e
+Playwright: FL-4 and FL-5 end to end; module switched off for an org hides everything.
+**Accept:** v1 criterion 6 (if the module ships), F17 criterion 3.
 
 ## M8 Hardening (frontend)
 

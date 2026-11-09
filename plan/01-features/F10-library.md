@@ -31,8 +31,17 @@ Also editable as advanced documents: **federation settings** (discipline ownersh
    opens the setup wizard (F16), which creates and fills a rule set, a classification and a
    company dictionary through these same editors.
 2. **Create:** kind + name + start from (empty / copy of an existing version / patch on a rule
-   set version / import code list). Checks `libraryOrgPresets` (402). Creates a preset with
-   a draft version.
+   set version / import code list / an Excel template, §14). Checks `libraryOrgPresets` (402).
+   Creates a preset with a draft version.
+   - **Clone** (P19): every preset, system or org, has "Clone" in its header. For a rule set
+     the user picks **Independent copy** (a full copy, unaffected by later changes to the
+     original) or **Based on it** (a patch: only the differences are stored, and the clone
+     follows the original's future versions). Classifications and dictionaries are copied.
+     The clone opens as a draft named "{name} (copy)".
+   - **Guided creation** (P24): a new rule set or classification opens in **guided mode**: the
+     setup wizard's step for that kind (F16 steps 1 and 2), one question at a time with the live
+     preview, then "Open in the full editor" for everything else. Guided mode can be reopened
+     on any draft. The full editor stays the place for every detail.
 3. **Edit draft:** the PoC editors:
    - rule set: Settings (slot questions by section), BoQ items (item sentences, forms), Advanced
      (questions setup, JSON); readable formulas;
@@ -63,7 +72,7 @@ Also editable as advanced documents: **federation settings** (discipline ownersh
 9. **Where used:** `GET /presets/{presetId}/usage` → BoQ revisions (project, BoQ, revision,
    status, version used). Rename of ids across documents works as in the PoC (docs/11
    "Renaming across documents") within the org.
-10. **Archive:** hides from pickers. Runs and issued revisions keep their snapshots.
+10. **Archive:** hides from pickers. Runs and saved versions keep their snapshots.
 11. **Permissions:** org presets: library editors and admins edit; members view and pick.
     Project presets: project lead and estimators edit.
 12. **Licensing guardrails** (BR-53): no upload of standards documents for extraction; the
@@ -71,8 +80,8 @@ Also editable as advanced documents: **federation settings** (discipline ownersh
     rule-set creation explains "bring your own licence" (D30–D31). The same applies to item
     texts: a firm may import texts it holds a licence for (a commercial text library); system
     presets ship none.
-13. **Item texts** (P14, BR-11): in a real BoQ the item's written description is what bidders
-    price ("Laying external walls {thickness} cm thick in hollow clay blocks, 1:2:6 mortar.
+13. **Item texts** (P14, BR-11): in a real BoQ the item's written description is what is
+    priced ("Laying external walls {thickness} cm thick in hollow clay blocks, 1:2:6 mortar.
     Measured per m³."). It is the code's `description` field in the code list, written once
     by the firm and reused on every project:
     - **Code list tab:** each code row shows its short name and, under it, an **Item text**
@@ -86,6 +95,22 @@ Also editable as advanced documents: **federation settings** (discipline ownersh
       rule-set line texts). A blank that a particular line has no value for is not a problem
       here; the run leaves it visible and warns (EN-010).
     - Codes without an item text are fine: their lines keep the rule set's line text.
+14. **Excel templates** (P24): every rule set, classification and dictionary can be
+    downloaded as an Excel workbook, filled in or changed in Excel, and uploaded back.
+    - **Rule set:** a "Settings" sheet with one row per question (section, question,
+      explanation, unit, the current answer in a yellow column with a dropdown of allowed
+      answers, the default); a read-only "BoQ items" sheet listing what each item measures
+      and which answers it uses; a "Read me" sheet.
+    - **Classification:** a "Codes" sheet (code, short name, parent, item text) and a
+      "Codes per line" sheet (BoQ item → code, with a dropdown of codes).
+    - **Dictionary:** a "Names" sheet (name or pattern, match kind, meaning with a dropdown of
+      terms).
+    - A blank template ("Download empty template") is offered on Create.
+    - **Upload back** (`POST /presets/{presetId}/template-import`): the engine reads the file
+      (read-only, data-only, security.md) and returns the proposed draft, the changes against
+      the current draft ("12 answers changed, 3 codes added, 1 item text changed") and the
+      problems by sheet, row and column. The user reviews and applies; nothing is saved before
+      that. Rows the engine can't read are listed, never dropped silently.
 
 ## Edge cases
 
@@ -102,6 +127,7 @@ Also editable as advanced documents: **federation settings** (discipline ownersh
 `GET /presets/{presetId}/versions`, `GET /preset-versions/{versionId}`,
 `PUT /presets/{presetId}/draft`, `DELETE /presets/{presetId}/draft`,
 `POST /presets/{presetId}/publish`, `POST /presets/check`, `POST /presets/{presetId}/preview`,
+`GET /presets/{presetId}/template.xlsx`, `POST /presets/{presetId}/template-import`,
 `GET /presets/{presetId}/usage`, `GET /orgs/{orgId}/terms`, `POST /model-versions/{versionId}/names`,
 `POST /codelists/read`, `POST /codelists/build`.
 
@@ -113,3 +139,5 @@ Also editable as advanced documents: **federation settings** (discipline ownersh
 - [ ] Importing an xlsx code list with 3 levels builds the hierarchy and reports duplicates.
 - [ ] Importing an xlsx with an "Opis" column fills the item texts; an item text with `{thickness}` shows "Reads as" with the preview model's value, and the published classification's lines carry the filled text in the sheet and the Excel.
 - [ ] A member without library rights can view and pick org presets but sees no edit actions, and the API returns `403` on edits.
+- [ ] Cloning "As modelled" as "Based on it" stores only changed answers, and a later system version of "As modelled" shows up in the clone; "Independent copy" does not change.
+- [ ] A rule set downloaded as Excel, with three answers changed in Excel and uploaded back, shows exactly those three changes for review, and a wrong answer in a row is reported with its sheet, row and column.

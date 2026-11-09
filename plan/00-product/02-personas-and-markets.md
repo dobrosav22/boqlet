@@ -11,7 +11,7 @@
 
 **v1 is designed for design-led markets first (P01).** QS firms use exactly the same flows; only
 onboarding wording differs. In both, the **tenant is the firm that produces the BoQ**, and
-contractors are invited bidders. The product's defaults stay international: no country's
+contractors are **vendors** in the optional pricing module. The product's defaults stay international: no country's
 standard is the default (D04).
 
 ## Personas
@@ -23,8 +23,8 @@ Produces design documents and, at tender stage, the BoQ for its own projects. Pa
 
 | Person | Role in the app | Wants | Pain today |
 |---|---|---|---|
-| **Ana, project lead / architect** | Project lead | Set up the project, see progress, approve and issue | BoQ is the last bottleneck before tender; numbers she can't check |
-| **Marko, BoQ preparer** (engineer, technician or in-house estimator) | Estimator | Upload models, generate the BoQ, answer questions, fix lines, prepare tenders | Days of take-off per revision; finding what changed by hand |
+| **Ana, project lead / architect** | Project lead | Set up the project, see progress, save versions, confirm the BoQ | BoQ is the last bottleneck before tender; numbers she can't check |
+| **Marko, BoQ preparer** (engineer, technician or in-house estimator) | Estimator | Upload models, generate the BoQ, answer questions, edit lines, price the BoQ and ask vendors for offers (pricing module) | Days of take-off per revision; finding what changed by hand |
 | **Ivana, office standards lead** | Library editor | Encode the office's measuring rules, code lists and name dictionary once, for every project | Every person measures slightly differently; rules live in heads and old spreadsheets |
 | **Studio owner** | Org owner | Seats, billing, who sees which project | Paying for tools nobody uses |
 
@@ -34,24 +34,26 @@ Same roles as P-A. Differences: receives models from designers instead of author
 fixes gaps by answering questions; often works to a published standard (NRM-style, client
 rulebooks) and to client templates. Uses comparison between presets more.
 
-### P-C. Client / investor: guest
+### P-C. Client / investor: no account
 
-The building owner or their project manager. Invited as a **guest** to one project. Sees issued
-BoQ revisions and tender comparisons when shared. Approves nothing in the app in v1 (sign-off
+The building owner or their project manager. Has **no account** (P28): the firm sends a public
+read-only **share link** (F18) to a BoQ version. Approves nothing in the app in v1 (sign-off
 stays with the preparing firm; see 09 for a possible client approval step).
 
-### P-D. Contractor / subcontractor: bidder
+### P-D. Contractor / subcontractor / supplier: vendor (pricing module)
 
-A builder or trade subcontractor (concrete, masonry, drywall, finishes, MEP). Receives tender
-invitations from many firms. Enters rates per line, adds notes and qualifications, submits
-before the deadline. Uses no model and no rules. Pays nothing. **Must be able to price without
-friction**, or the firm goes back to sending Excel. So there is an Excel download/upload
-round-trip for the package (F11).
+A builder, trade subcontractor or supplier (concrete, masonry, drywall, finishes, MEP). Keeps
+a **pricebook** and chooses which price list each linked firm sees (F17, F20). Receives offer
+requests from many firms, fills them from the pricebook (remembered matches, manual picks),
+adds notes and qualifications, submits. Uses no model and no rules. Pays nothing. **Must be able
+to price without friction**, or the firm goes back to sending Excel, so every request also
+round-trips through Excel (F11).
 
 ## How a project runs (the job the product does)
 
 ```text
-Design development ──► model versions (v1 … vN) ──► BoQ revisions (A, B, C) ──► tender ──► award
+Design development ──► model versions (v1 … vN) ──► BoQ: working, saved versions (A, B, C) ──► confirmed
+                                                      └─(pricing module)─► estimate, offers from vendors
        │                     │                          │                       │
    authoring tool        upload to app             review, approve,        packages to
    (Revit, Archicad…)    parse, questions          issue (locked)          contractors, offers,
@@ -59,8 +61,8 @@ Design development ──► model versions (v1 … vN) ──► BoQ revisions 
 ```
 
 Typical rhythm: weeks to months of design with a new model version every few days or weeks; the
-BoQ is produced at fixed milestones (cost check, permit, tender); a tender lasts 2–6 weeks, with
-addenda when the design changes during it.
+BoQ is saved as a version at milestones (cost check, permit, tender) and confirmed when done.
+The product's part ends there; tendering and construction happen outside it.
 
 ## Jobs to be done, by persona
 
@@ -70,8 +72,9 @@ addenda when the design changes during it.
 | Estimator | Tell the app what our odd material names mean, once | F05, F10 |
 | Estimator | See what changed since the last issue and why | F08 |
 | Estimator | Check a suspicious number in seconds | F06, F07 |
-| Project lead | Approve and issue a BoQ I can defend | F09 |
+| Project lead | Save versions and confirm a BoQ I can defend; switch on approval when the firm wants it | F09 |
 | Library editor | Encode our rules and codes so every project uses them | F10 |
-| Estimator / lead | Send packages to contractors and compare offers | F11 |
-| Bidder | Price a package quickly, in the browser or in Excel | F11 |
+
+| Vendor (pricing module) | Keep my prices in a pricebook; answer offer requests from it in minutes | F17, F20, F11 |
+| Estimator (pricing module) | Price the BoQ from our pricebook and vendors' lists; compare vendor offers | F20, F11 |
 | Owner | Manage seats, plan, usage | F01, F14 |

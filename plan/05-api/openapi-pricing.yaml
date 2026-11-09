@@ -1,0 +1,1192 @@
+openapi: 3.1.0
+info:
+  title: IFC BoQ platform API — pricing module
+  version: 1.0.0-draft
+  description: |
+    The optional, removable pricing module (P32–P36): vendors (F17), pricebooks and estimates
+    (F20), offer requests and offers (F11). Every path is under `/pricing/`. This file may
+    reference core components in `openapi.yaml`; the core file never references this one
+    (04-architecture/modules.md). With the module off for an org, every endpoint answers
+    `404` for that org. Conventions are those of `conventions.md`.
+servers:
+  - url: /api/v1
+security:
+  - bearer: []
+tags:
+  - name: pricing-vendors
+  - name: pricing-pricebooks
+  - name: pricing-estimates
+  - name: pricing-offers
+  - name: pricing-vendor-area
+
+paths:
+  # ───────────────────────────── module settings ─────────────────────────────
+  /pricing/orgs/{orgId}/settings:
+    parameters: [{ $ref: "./openapi.yaml#/components/parameters/OrgId" }]
+    get:
+      tags: [pricing-vendors]
+      operationId: getPricingSettings
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ModuleSettings" } } } }
+        "404": { $ref: "./openapi.yaml#/components/responses/NotFound" }
+    put:
+      tags: [pricing-vendors]
+      operationId: putPricingSettings
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ModuleSettings" } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ModuleSettings" } } } }
+        "403": { $ref: "./openapi.yaml#/components/responses/Forbidden" }
+  /pricing/me:
+    get:
+      tags: [pricing-vendor-area]
+      operationId: getPricingMe
+      description: What the module knows about the caller (also merged into core `GET /me` under `modules.pricing`).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [vendor]
+                properties:
+                  vendor: { type: boolean }
+                  linkedFirms: { type: integer }
+                  openRequests: { type: integer }
+
+  # ───────────────────────────── vendors (F17) ─────────────────────────────
+  /pricing/orgs/{orgId}/vendors:
+    parameters: [{ $ref: "./openapi.yaml#/components/parameters/OrgId" }]
+    get:
+      tags: [pricing-vendors]
+      operationId: listVendors
+      parameters:
+        - { name: trade, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [invited, active, removed] } }
+        - { name: q, in: query, schema: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/VendorLink" } } } } }
+    post:
+      tags: [pricing-vendors]
+      operationId: inviteVendor
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorInvite" } } }
+      responses:
+        "201": { description: Invited, content: { application/json: { schema: { $ref: "#/components/schemas/VendorLink" } } } }
+        "403": { $ref: "./openapi.yaml#/components/responses/Forbidden" }
+        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+  /pricing/vendor-links/{vendorLinkId}:
+    parameters: [{ $ref: "#/components/parameters/VendorLinkId" }]
+    get:
+      tags: [pricing-vendors]
+      operationId: getVendorLink
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/VendorLink" } } } }
+        "404": { $ref: "./openapi.yaml#/components/responses/NotFound" }
+    patch:
+      tags: [pricing-vendors]
+      operationId: updateVendorLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                companyName: { type: string }
+                contactName: { type: string }
+                trades: { type: array, items: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/VendorLink" } } } }
+    delete:
+      tags: [pricing-vendors]
+      operationId: removeVendorLink
+      responses:
+        "204": { description: Removed }
+        "403": { $ref: "./openapi.yaml#/components/responses/Forbidden" }
+  /pricing/vendor-links/{vendorLinkId}/resend:
+    parameters: [{ $ref: "#/components/parameters/VendorLinkId" }]
+    post:
+      tags: [pricing-vendors]
+      operationId: resendVendorInvitation
+      responses:
+        "200": { description: Sent, content: { application/json: { schema: { $ref: "#/components/schemas/VendorLink" } } } }
+  /pricing/vendor-invitations/{token}:
+    parameters: [{ $ref: "./openapi.yaml#/components/parameters/Token" }]
+    get:
+      tags: [pricing-vendors]
+      operationId: previewVendorInvitation
+      security: []
+      responses:
+        "200":
+          description: Invitation preview
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [orgName, email, status]
+                properties:
+                  orgName: { type: string }
+                  email: { type: string }
+                  companyName: { type: string }
+                  status: { type: string, enum: [invited, active, removed] }
+        "404": { $ref: "./openapi.yaml#/components/responses/NotFound" }
+  /pricing/vendor-invitations/{token}/accept:
+    parameters: [{ $ref: "./openapi.yaml#/components/parameters/Token" }]
+    post:
+      tags: [pricing-vendors]
+      operationId: acceptVendorInvitation
+      responses:
+        "200": { description: Linked, content: { application/json: { schema: { $ref: "#/components/schemas/VendorLink" } } } }
+        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+
+  # ───────────────────────────── vendor area: profile and firms ─────────────────────────────
+  /pricing/vendor/profile:
+    get:
+      tags: [pricing-vendor-area]
+      operationId: getVendorProfile
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/VendorProfile" } } } }
+    patch:
+      tags: [pricing-vendor-area]
+      operationId: updateVendorProfile
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/VendorProfile" } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/VendorProfile" } } } }
+  /pricing/vendor/firms:
+    get:
+      tags: [pricing-vendor-area]
+      operationId: listVendorFirms
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/VendorFirm" } } } } }
+  /pricing/vendor/firms/{vendorLinkId}:
+    parameters: [{ $ref: "#/components/parameters/VendorLinkId" }]
+    patch:
+      tags: [pricing-vendor-area]
+      operationId: setSharedPricebook
+      description: Choose which of the vendor's pricebooks this firm sees (null = none).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sharedPricebookId]
+              properties:
+                sharedPricebookId: { type: [string, "null"], format: uuid }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/VendorFirm" } } } }
+    delete:
+      tags: [pricing-vendor-area]
+      operationId: leaveFirm
+      responses:
+        "204": { description: Left the firm's directory }
+
+  # ───────────────────────────── pricebooks (F20) ─────────────────────────────
+  /pricing/orgs/{orgId}/pricebooks:
+    parameters: [{ $ref: "./openapi.yaml#/components/parameters/OrgId" }]
+    get:
+      tags: [pricing-pricebooks]
+      operationId: listOrgPricebooks
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Pricebook" } } } } }
+    post:
+      tags: [pricing-pricebooks]
+      operationId: createOrgPricebook
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/PricebookCreate" } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Pricebook" } } } }
+  /pricing/vendor/pricebooks:
+    get:
+      tags: [pricing-vendor-area]
+      operationId: listVendorPricebooks
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Pricebook" } } } } }
+    post:
+      tags: [pricing-vendor-area]
+      operationId: createVendorPricebook
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/PricebookCreate" } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Pricebook" } } } }
+  /pricing/pricebooks/{pricebookId}:
+    parameters: [{ $ref: "#/components/parameters/PricebookId" }]
+    get:
+      tags: [pricing-pricebooks]
+      operationId: getPricebook
+      description: Owner (org members, or the vendor) or a firm the vendor shares this list with (read-only).
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Pricebook" } } } }
+        "404": { $ref: "./openapi.yaml#/components/responses/NotFound" }
+    patch:
+      tags: [pricing-pricebooks]
+      operationId: updatePricebook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Pricebook" } } } }
+    delete:
+      tags: [pricing-pricebooks]
+      operationId: deletePricebook
+      responses:
+        "204": { description: Deleted }
+  /pricing/pricebooks/{pricebookId}/copy:
+    parameters: [{ $ref: "#/components/parameters/PricebookId" }]
+    post:
+      tags: [pricing-pricebooks]
+      operationId: copyPricebook
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+      responses:
+        "201": { description: Copied, content: { application/json: { schema: { $ref: "#/components/schemas/Pricebook" } } } }
+  /pricing/pricebooks/{pricebookId}/items:
+    parameters: [{ $ref: "#/components/parameters/PricebookId" }]
+    get:
+      tags: [pricing-pricebooks]
+      operationId: listPricebookItems
+      parameters:
+        - { $ref: "./openapi.yaml#/components/parameters/Cursor" }
+        - { $ref: "./openapi.yaml#/components/parameters/Limit" }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: unit, in: query, schema: { type: string } }
+        - { name: trade, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/PricebookItem" } }
+                  nextCursor: { type: [string, "null"] }
+  /pricing/pricebooks/{pricebookId}/items/batch:
+    parameters: [{ $ref: "#/components/parameters/PricebookId" }]
+    post:
+      tags: [pricing-pricebooks]
+      operationId: batchPricebookItems
+      description: Add, change and delete items in one call (editor saves, bulk edits, applying an import).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                upsert: { type: array, items: { $ref: "#/components/schemas/PricebookItemInput" } }
+                delete: { type: array, items: { type: string, format: uuid } }
+      responses:
+        "200": { description: Applied, content: { application/json: { schema: { $ref: "#/components/schemas/Pricebook" } } } }
+        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+  /pricing/pricebooks/{pricebookId}/template.xlsx:
+    parameters: [{ $ref: "#/components/parameters/PricebookId" }]
+    get:
+      tags: [pricing-pricebooks]
+      operationId: downloadPricebookTemplate
+      parameters:
+        - { name: empty, in: query, schema: { type: boolean, default: false } }
+      responses:
+        "302": { description: Redirect to a signed URL of the workbook }
+  /pricing/pricebooks/{pricebookId}/import:
+    parameters: [{ $ref: "#/components/parameters/PricebookId" }]
+    post:
+      tags: [pricing-pricebooks]
+      operationId: importPricebook
+      description: Read a filled workbook; returns proposed changes and problems; saves nothing (apply with `batchPricebookItems`).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "200": { description: Proposed changes, content: { application/json: { schema: { $ref: "#/components/schemas/PricebookImportResult" } } } }
+        "400": { $ref: "./openapi.yaml#/components/responses/BadRequest" }
+  /pricing/orgs/{orgId}/price-search:
+    parameters: [{ $ref: "./openapi.yaml#/components/parameters/OrgId" }]
+    get:
+      tags: [pricing-estimates]
+      operationId: searchPricesForOrg
+      description: Search the org's pricebooks and every price list its vendors share with it.
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: unit, in: query, schema: { type: string } }
+        - { name: trade, in: query, schema: { type: string } }
+        - { $ref: "./openapi.yaml#/components/parameters/Limit" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PriceSearchResult" } } } } }
+  /pricing/vendor/price-search:
+    get:
+      tags: [pricing-vendor-area]
+      operationId: searchPricesForVendor
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: unit, in: query, schema: { type: string } }
+        - { name: trade, in: query, schema: { type: string } }
+        - { $ref: "./openapi.yaml#/components/parameters/Limit" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PriceSearchResult" } } } } }
+  /pricing/orgs/{orgId}/price-matches:
+    parameters: [{ $ref: "./openapi.yaml#/components/parameters/OrgId" }]
+    get:
+      tags: [pricing-estimates]
+      operationId: listOrgPriceMatches
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PriceMatch" } } } } }
+  /pricing/vendor/price-matches:
+    get:
+      tags: [pricing-vendor-area]
+      operationId: listVendorPriceMatches
+      parameters:
+        - { name: forOrgId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PriceMatch" } } } } }
+  /pricing/price-matches/{matchId}:
+    parameters: [{ $ref: "#/components/parameters/MatchId" }]
+    delete:
+      tags: [pricing-estimates]
+      operationId: deletePriceMatch
+      responses:
+        "204": { description: Removed }
+
+  # ───────────────────────────── estimates (F20 §2) ─────────────────────────────
+  /pricing/boqs/{boqId}/estimate:
+    parameters: [{ $ref: "./openapi.yaml#/components/parameters/BoqId" }]
+    get:
+      tags: [pricing-estimates]
+      operationId: getEstimate
+      parameters:
+        - { name: revisionId, in: query, description: a saved version's frozen estimate; default the working one, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Estimate" } } } }
+    put:
+      tags: [pricing-estimates]
+      operationId: putEstimateSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                taxPct: { type: [string, "null"] }
+                exchangeRates: { type: object, additionalProperties: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Estimate" } } } }
+        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+  /pricing/boqs/{boqId}/estimate/lines/batch:
+    parameters: [{ $ref: "./openapi.yaml#/components/parameters/BoqId" }]
+    post:
+      tags: [pricing-estimates]
+      operationId: setEstimateLines
+      description: Set or clear rates; a pick from a pricebook item also stores a remembered match (BR-44).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lines]
+              properties:
+                lines: { type: array, items: { $ref: "#/components/schemas/EstimateLineInput" } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Estimate" } } } }
+        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+  /pricing/boqs/{boqId}/estimate/fill-remembered:
+    parameters: [{ $ref: "./openapi.yaml#/components/parameters/BoqId" }]
+    post:
+      tags: [pricing-estimates]
+      operationId: fillRememberedPrices
+      responses:
+        "200":
+          description: Filled
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [filled, estimate]
+                properties:
+                  filled: { type: integer }
+                  estimate: { $ref: "#/components/schemas/Estimate" }
+  /pricing/boqs/{boqId}/estimate/export:
+    parameters: [{ $ref: "./openapi.yaml#/components/parameters/BoqId" }]
+    post:
+      tags: [pricing-estimates]
+      operationId: exportEstimate
+      responses:
+        "202": { $ref: "./openapi.yaml#/components/responses/JobAccepted" }
+
+  # ───────────────────────────── offer requests, firm side (F11) ─────────────────────────────
+  /pricing/boqs/{boqId}/offer-requests:
+    parameters: [{ $ref: "./openapi.yaml#/components/parameters/BoqId" }]
+    post:
+      tags: [pricing-offers]
+      operationId: sendOfferRequest
+      description: Freeze the selected lines of the BoQ's current run and send them to the chosen vendors. `409 revision_not_saved` when the org allows only saved versions.
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/OfferRequestCreate" } } }
+      responses:
+        "201": { description: Sent, content: { application/json: { schema: { $ref: "#/components/schemas/OfferRequest" } } } }
+        "402": { $ref: "./openapi.yaml#/components/responses/LimitReached" }
+        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+  /pricing/projects/{projectId}/offer-requests:
+    parameters: [{ $ref: "./openapi.yaml#/components/parameters/ProjectId" }]
+    get:
+      tags: [pricing-offers]
+      operationId: listOfferRequests
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [open, closed, cancelled] } }
+        - { name: boqId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/OfferRequest" } } } } }
+  /pricing/offer-requests/{offerRequestId}:
+    parameters: [{ $ref: "#/components/parameters/OfferRequestId" }]
+    get:
+      tags: [pricing-offers]
+      operationId: getOfferRequest
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/OfferRequest" } } } }
+        "404": { $ref: "./openapi.yaml#/components/responses/NotFound" }
+    patch:
+      tags: [pricing-offers]
+      operationId: updateOfferRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                message: { type: string }
+                deviationThresholdPct: { type: number }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/OfferRequest" } } } }
+  /pricing/offer-requests/{offerRequestId}/updates:
+    parameters: [{ $ref: "#/components/parameters/OfferRequestId" }]
+    post:
+      tags: [pricing-offers]
+      operationId: sendOfferRequestUpdate
+      description: Re-freeze the lines from the BoQ's current run (update n+1), supersede offers, carry rates (BR-43). `dryRun` returns the line changes only.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: { type: string }
+                dryRun: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Sent (or the preview of changes)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [update, changes]
+                properties:
+                  update: { type: integer }
+                  changes:
+                    type: object
+                    properties:
+                      added: { type: array, items: { type: string } }
+                      removed: { type: array, items: { type: string } }
+                      changed: { type: array, items: { type: string } }
+        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+  /pricing/offer-requests/{offerRequestId}/close:
+    parameters: [{ $ref: "#/components/parameters/OfferRequestId" }]
+    post:
+      tags: [pricing-offers]
+      operationId: closeOfferRequest
+      responses:
+        "200": { description: Closed, content: { application/json: { schema: { $ref: "#/components/schemas/OfferRequest" } } } }
+  /pricing/offer-requests/{offerRequestId}/extend:
+    parameters: [{ $ref: "#/components/parameters/OfferRequestId" }]
+    post:
+      tags: [pricing-offers]
+      operationId: extendOfferRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deadline]
+              properties:
+                deadline: { type: string, format: date-time }
+                timezone: { type: string }
+      responses:
+        "200": { description: Extended (reopened if closed), content: { application/json: { schema: { $ref: "#/components/schemas/OfferRequest" } } } }
+  /pricing/offer-requests/{offerRequestId}/cancel:
+    parameters: [{ $ref: "#/components/parameters/OfferRequestId" }]
+    post:
+      tags: [pricing-offers]
+      operationId: cancelOfferRequest
+      responses:
+        "200": { description: Cancelled, content: { application/json: { schema: { $ref: "#/components/schemas/OfferRequest" } } } }
+  /pricing/offer-requests/{offerRequestId}/lines:
+    parameters: [{ $ref: "#/components/parameters/OfferRequestId" }]
+    get:
+      tags: [pricing-offers]
+      operationId: listOfferRequestLines
+      parameters:
+        - { name: update, in: query, description: default the current update, schema: { type: integer } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/OfferRequestLine" } } } } }
+  /pricing/offer-requests/{offerRequestId}/invitations:
+    parameters: [{ $ref: "#/components/parameters/OfferRequestId" }]
+    get:
+      tags: [pricing-offers]
+      operationId: listOfferInvitations
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/OfferInvitation" } } } } }
+    post:
+      tags: [pricing-offers]
+      operationId: addOfferInvitations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vendors]
+              properties:
+                vendors: { type: array, items: { $ref: "#/components/schemas/VendorChoice" } }
+      responses:
+        "200": { description: Invited, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/OfferInvitation" } } } } }
+        "402": { $ref: "./openapi.yaml#/components/responses/LimitReached" }
+  /pricing/offer-invitations/{invitationId}:
+    parameters: [{ $ref: "#/components/parameters/OfferInvitationId" }]
+    delete:
+      tags: [pricing-offers]
+      operationId: revokeOfferInvitation
+      responses:
+        "204": { description: Revoked }
+  /pricing/offer-invitations/{invitationId}/remind:
+    parameters: [{ $ref: "#/components/parameters/OfferInvitationId" }]
+    post:
+      tags: [pricing-offers]
+      operationId: remindVendor
+      responses:
+        "204": { description: Reminder sent }
+  /pricing/offer-requests/{offerRequestId}/attachments:
+    parameters: [{ $ref: "#/components/parameters/OfferRequestId" }]
+    post:
+      tags: [pricing-offers]
+      operationId: addOfferRequestAttachment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fileName, sizeBytes]
+              properties:
+                fileName: { type: string }
+                sizeBytes: { type: integer }
+      responses:
+        "201":
+          description: Upload instructions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [attachment, upload]
+                properties:
+                  attachment: { $ref: "#/components/schemas/Attachment" }
+                  upload: { $ref: "./openapi.yaml#/components/schemas/UploadInstructions" }
+  /pricing/offer-requests/{offerRequestId}/comparison:
+    parameters: [{ $ref: "#/components/parameters/OfferRequestId" }]
+    get:
+      tags: [pricing-offers]
+      operationId: getOfferComparison
+      parameters:
+        - { name: fillMissingWithMedian, in: query, schema: { type: boolean, default: false } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Comparison" } } } }
+  /pricing/offer-requests/{offerRequestId}/comparison/export:
+    parameters: [{ $ref: "#/components/parameters/OfferRequestId" }]
+    post:
+      tags: [pricing-offers]
+      operationId: exportOfferComparison
+      responses:
+        "202": { $ref: "./openapi.yaml#/components/responses/JobAccepted" }
+
+  # ───────────────────────────── offer requests, vendor side (F11) ─────────────────────────────
+  /pricing/vendor/requests:
+    get:
+      tags: [pricing-vendor-area]
+      operationId: listMyRequests
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/VendorRequestSummary" } } } } }
+  /pricing/vendor/requests/{invitationId}:
+    parameters: [{ $ref: "#/components/parameters/OfferInvitationId" }]
+    get:
+      tags: [pricing-vendor-area]
+      operationId: getMyRequest
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/VendorRequestDetail" } } } }
+        "404": { $ref: "./openapi.yaml#/components/responses/NotFound" }
+  /pricing/vendor/requests/{invitationId}/lines:
+    parameters: [{ $ref: "#/components/parameters/OfferInvitationId" }]
+    get:
+      tags: [pricing-vendor-area]
+      operationId: listMyRequestLines
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/OfferRequestLine" } } } } }
+  /pricing/vendor/requests/{invitationId}/decline:
+    parameters: [{ $ref: "#/components/parameters/OfferInvitationId" }]
+    post:
+      tags: [pricing-vendor-area]
+      operationId: declineRequest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        "200": { description: Declined, content: { application/json: { schema: { $ref: "#/components/schemas/VendorRequestSummary" } } } }
+  /pricing/vendor/requests/{invitationId}/offer:
+    parameters: [{ $ref: "#/components/parameters/OfferInvitationId" }]
+    get:
+      tags: [pricing-vendor-area]
+      operationId: getMyOffer
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Offer" } } } }
+    put:
+      tags: [pricing-vendor-area]
+      operationId: saveMyOffer
+      description: Autosave the draft (ETag in If-Match).
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/OfferSave" } } }
+      responses:
+        "200": { description: Saved, content: { application/json: { schema: { $ref: "#/components/schemas/Offer" } } } }
+        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+  /pricing/vendor/requests/{invitationId}/offer/fill:
+    parameters: [{ $ref: "#/components/parameters/OfferInvitationId" }]
+    post:
+      tags: [pricing-vendor-area]
+      operationId: fillMyOfferFromPricebook
+      description: Prefill rates from the vendor's remembered matches for this firm; picks for other lines go through `saveMyOffer` with `pricebookItemId` (remembered).
+      responses:
+        "200":
+          description: Filled
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [filled, offer]
+                properties:
+                  filled: { type: integer }
+                  offer: { $ref: "#/components/schemas/Offer" }
+  /pricing/vendor/requests/{invitationId}/offer/submit:
+    parameters: [{ $ref: "#/components/parameters/OfferInvitationId" }]
+    post:
+      tags: [pricing-vendor-area]
+      operationId: submitMyOffer
+      responses:
+        "200": { description: Submitted, content: { application/json: { schema: { $ref: "#/components/schemas/Offer" } } } }
+        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+  /pricing/vendor/requests/{invitationId}/offer/withdraw:
+    parameters: [{ $ref: "#/components/parameters/OfferInvitationId" }]
+    post:
+      tags: [pricing-vendor-area]
+      operationId: withdrawMyOffer
+      responses:
+        "200": { description: Withdrawn, content: { application/json: { schema: { $ref: "#/components/schemas/Offer" } } } }
+        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+  /pricing/vendor/requests/{invitationId}/request.xlsx:
+    parameters: [{ $ref: "#/components/parameters/OfferInvitationId" }]
+    get:
+      tags: [pricing-vendor-area]
+      operationId: downloadRequestWorkbook
+      responses:
+        "302": { description: Redirect to a signed URL of the workbook }
+  /pricing/vendor/requests/{invitationId}/offer/import:
+    parameters: [{ $ref: "#/components/parameters/OfferInvitationId" }]
+    post:
+      tags: [pricing-vendor-area]
+      operationId: importMyOffer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "202": { $ref: "./openapi.yaml#/components/responses/JobAccepted" }
+
+  # ───────────────────────────── admin metrics for the core console ─────────────────────────────
+  /pricing/admin/vendors:
+    get:
+      tags: [pricing-vendors]
+      operationId: adminListVendors
+      description: Platform admins only (F19, BR-57); `404` for anyone else.
+      parameters:
+        - { $ref: "./openapi.yaml#/components/parameters/Cursor" }
+        - { $ref: "./openapi.yaml#/components/parameters/Limit" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [userId, name, company, orgsLinked]
+                  properties:
+                    userId: { type: string, format: uuid }
+                    name: { type: string }
+                    email: { type: string }
+                    company: { type: string }
+                    orgsLinked: { type: integer }
+                    pricebooks: { type: integer }
+                    requestsReceived: { type: integer }
+                    offersSubmitted: { type: integer }
+                    lastActiveAt: { type: [string, "null"], format: date-time }
+        "404": { $ref: "./openapi.yaml#/components/responses/NotFound" }
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: Same as the core API.
+
+  parameters:
+    VendorLinkId: { name: vendorLinkId, in: path, required: true, schema: { type: string, format: uuid } }
+    PricebookId: { name: pricebookId, in: path, required: true, schema: { type: string, format: uuid } }
+    MatchId: { name: matchId, in: path, required: true, schema: { type: string, format: uuid } }
+    OfferRequestId: { name: offerRequestId, in: path, required: true, schema: { type: string, format: uuid } }
+    OfferInvitationId: { name: invitationId, in: path, required: true, schema: { type: string, format: uuid } }
+
+  schemas:
+    ModuleSettings:
+      type: object
+      properties:
+        membersCanInviteVendors: { type: boolean, default: true }
+        membersCanEditPricebooks: { type: boolean, default: false }
+        offersFromSavedVersionsOnly: { type: boolean, default: false }
+        stalePriceMonths: { type: integer, default: 12 }
+    VendorProfile:
+      type: object
+      required: [company]
+      properties:
+        company: { type: string }
+        trades: { type: array, items: { type: string } }
+        phone: { type: string }
+    VendorInvite:
+      type: object
+      required: [email, companyName]
+      properties:
+        email: { type: string, format: email }
+        companyName: { type: string }
+        contactName: { type: string }
+        trades: { type: array, items: { type: string } }
+    VendorLink:
+      type: object
+      required: [id, email, companyName, status]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        companyName: { type: string }
+        contactName: { type: string }
+        trades: { type: array, items: { type: string } }
+        status: { type: string, enum: [invited, active, removed] }
+        vendor: { $ref: "./openapi.yaml#/components/schemas/UserRef" }
+        sharedPricebook:
+          description: The list this vendor shares with this org (read access), or null.
+          oneOf:
+            - $ref: "#/components/schemas/Pricebook"
+            - type: "null"
+        invitedBy: { $ref: "./openapi.yaml#/components/schemas/UserRef" }
+        acceptedAt: { type: [string, "null"], format: date-time }
+        stats:
+          type: object
+          properties:
+            requestsSent: { type: integer }
+            offersReceived: { type: integer }
+            lastActivityAt: { type: [string, "null"], format: date-time }
+    VendorFirm:
+      type: object
+      description: A firm the vendor is linked to, as the vendor sees it.
+      required: [vendorLinkId, orgName, status]
+      properties:
+        vendorLinkId: { type: string, format: uuid }
+        orgName: { type: string }
+        status: { type: string, enum: [invited, active, removed, paused] }
+        sharedPricebookId: { type: [string, "null"], format: uuid }
+        since: { type: string, format: date-time }
+        requestsReceived: { type: integer }
+    VendorChoice:
+      type: object
+      description: An existing vendor link, or a new vendor invited inline.
+      properties:
+        vendorLinkId: { type: string, format: uuid }
+        invite: { $ref: "#/components/schemas/VendorInvite" }
+
+    Pricebook:
+      type: object
+      required: [id, ownerKind, name, currency, itemCount]
+      properties:
+        id: { type: string, format: uuid }
+        ownerKind: { type: string, enum: [org, vendor] }
+        ownerName: { type: string }
+        name: { type: string }
+        description: { type: string }
+        currency: { type: string }
+        itemCount: { type: integer }
+        updatedAt: { type: string, format: date-time }
+        readOnly: { type: boolean, description: true for a vendor's list seen by a firm }
+    PricebookCreate:
+      type: object
+      required: [name, currency]
+      properties:
+        name: { type: string }
+        currency: { type: string }
+        description: { type: string }
+    PricebookItemInput:
+      type: object
+      required: [description, unit, rate]
+      properties:
+        id: { type: string, format: uuid, description: absent = new item }
+        ref: { type: string }
+        description: { type: string }
+        unit: { type: string }
+        rate: { type: string, description: decimal string }
+        trade: { type: string }
+        tags: { type: array, items: { type: string } }
+        priceDate: { type: string, format: date }
+        notes: { type: string }
+    PricebookItem:
+      allOf:
+        - $ref: "#/components/schemas/PricebookItemInput"
+        - type: object
+          required: [id, priceDate]
+          properties:
+            history: { type: array, items: { type: object, properties: { rate: { type: string }, priceDate: { type: string, format: date }, changedAt: { type: string, format: date-time } } } }
+    PricebookImportResult:
+      type: object
+      required: [upsert, delete, problems]
+      properties:
+        upsert: { type: array, items: { $ref: "#/components/schemas/PricebookItemInput" } }
+        delete: { type: array, items: { type: string, format: uuid } }
+        summary: { type: object, properties: { added: { type: integer }, changed: { type: integer }, removed: { type: integer } } }
+        problems:
+          type: array
+          items:
+            type: object
+            required: [row, message]
+            properties:
+              row: { type: integer }
+              column: { type: string }
+              message: { type: string }
+    PriceSearchResult:
+      type: object
+      required: [pricebookId, pricebookName, ownerKind, item]
+      properties:
+        pricebookId: { type: string, format: uuid }
+        pricebookName: { type: string }
+        ownerKind: { type: string, enum: [org, vendor] }
+        ownerName: { type: string }
+        currency: { type: string }
+        item: { $ref: "#/components/schemas/PricebookItem" }
+        stale: { type: boolean }
+    PriceMatch:
+      type: object
+      required: [id, key, pricebookItemId]
+      properties:
+        id: { type: string, format: uuid }
+        key:
+          type: object
+          properties:
+            itemCode: { type: string }
+            classificationId: { type: string }
+            text: { type: string }
+            unit: { type: string }
+        forOrgId: { type: [string, "null"], format: uuid, description: vendor matches are per firm }
+        pricebookItemId: { type: string, format: uuid }
+        pointsNowhere: { type: boolean, description: the item was deleted }
+        updatedAt: { type: string, format: date-time }
+
+    PriceSource:
+      type: object
+      required: [kind]
+      properties:
+        kind: { type: string, enum: [pricebook, offer, manual] }
+        pricebookItemId: { type: string, format: uuid }
+        pricebookName: { type: string }
+        itemRef: { type: string }
+        offerId: { type: string, format: uuid }
+        vendorName: { type: string }
+        remembered: { type: boolean }
+    EstimateLine:
+      type: object
+      required: [lineKey, positionNo, description, unit, quantity]
+      properties:
+        lineKey: { type: string }
+        positionNo: { type: string }
+        description: { type: string }
+        unit: { type: string }
+        quantity: { type: [number, "null"] }
+        rate: { type: [string, "null"] }
+        amount: { type: [string, "null"] }
+        source: { $ref: "#/components/schemas/PriceSource" }
+        priceDate: { type: [string, "null"], format: date }
+        stale: { type: boolean }
+        unitMismatch: { type: boolean }
+        note: { type: string }
+    EstimateLineInput:
+      type: object
+      required: [lineKey]
+      properties:
+        lineKey: { type: string }
+        rate: { type: [string, "null"], description: null clears the line }
+        pricebookItemId: { type: string, format: uuid, description: a pick; also remembered }
+        offerId: { type: string, format: uuid, description: use this offer's rate for the line }
+        confirmUnitMismatch: { type: boolean }
+        note: { type: string }
+    Estimate:
+      type: object
+      required: [boqId, currency, lines, totals]
+      properties:
+        boqId: { type: string, format: uuid }
+        revisionId: { type: [string, "null"], format: uuid, description: set for a saved version's frozen estimate }
+        currency: { type: string }
+        taxPct: { type: [string, "null"] }
+        exchangeRates: { type: object, additionalProperties: { type: string } }
+        lines: { type: array, items: { $ref: "#/components/schemas/EstimateLine" } }
+        totals:
+          type: object
+          properties:
+            bySection: { type: object, additionalProperties: { type: string } }
+            net: { type: string }
+            gross: { type: [string, "null"] }
+            unpricedLines: { type: integer }
+
+    Attachment:
+      type: object
+      required: [id, fileName, sizeBytes]
+      properties:
+        id: { type: string, format: uuid }
+        fileName: { type: string }
+        sizeBytes: { type: integer }
+        status: { type: string, enum: [uploading, ready] }
+    Selection:
+      type: object
+      properties:
+        wholeBoq: { type: boolean }
+        byCode: { type: array, items: { type: object, required: [system, codes], properties: { system: { type: string }, codes: { type: array, items: { type: string } } } } }
+        lineKeys: { type: array, items: { type: string } }
+        elementGuids: { type: array, items: { type: string } }
+        excludeLineKeys: { type: array, items: { type: string } }
+    OfferRequestCreate:
+      type: object
+      required: [selection, vendors]
+      properties:
+        name: { type: string }
+        message: { type: string }
+        selection: { $ref: "#/components/schemas/Selection" }
+        vendors: { type: array, minItems: 1, items: { $ref: "#/components/schemas/VendorChoice" } }
+        deadline: { type: [string, "null"], format: date-time }
+        timezone: { type: string }
+        textSystem: { type: string }
+        currency: { type: string }
+        allowPartial: { type: boolean, default: true }
+    OfferRequest:
+      type: object
+      required: [id, projectId, boqId, name, status, currentUpdate, currency]
+      properties:
+        id: { type: string, format: uuid }
+        projectId: { type: string, format: uuid }
+        boqId: { type: string, format: uuid }
+        revisionId: { type: string, format: uuid }
+        runId: { type: string, format: uuid }
+        boqChangedSinceSent: { type: boolean }
+        name: { type: string }
+        message: { type: string }
+        attachments: { type: array, items: { $ref: "#/components/schemas/Attachment" } }
+        deadline: { type: [string, "null"], format: date-time }
+        timezone: { type: string }
+        currency: { type: string }
+        textSystem: { type: string }
+        allowPartial: { type: boolean }
+        deviationThresholdPct: { type: number }
+        selection: { $ref: "#/components/schemas/Selection" }
+        currentUpdate: { type: integer }
+        status: { type: string, enum: [open, closed, cancelled] }
+        counts: { type: object, properties: { lines: { type: integer }, invited: { type: integer }, submitted: { type: integer }, declined: { type: integer } } }
+        createdBy: { $ref: "./openapi.yaml#/components/schemas/UserRef" }
+        createdAt: { type: string, format: date-time }
+        permissions: { $ref: "./openapi.yaml#/components/schemas/Permissions" }
+    OfferRequestLine:
+      type: object
+      required: [lineKey, positionNo, description, unit, quantity]
+      properties:
+        lineKey: { type: string }
+        positionNo: { type: string }
+        code: { type: string, description: item number in the request's textSystem }
+        groupPath: { type: array, items: { type: object, properties: { code: { type: string }, title: { type: string } } } }
+        description: { type: string, description: "the filled item text, or the line text" }
+        unit: { type: string }
+        quantity: { type: [number, "null"] }
+        source: { type: string }
+        notes: { type: array, items: { type: string } }
+        changedInUpdate: { type: string, enum: [added, changed, unchanged] }
+    OfferInvitation:
+      type: object
+      required: [id, vendorLinkId, companyName, status]
+      properties:
+        id: { type: string, format: uuid }
+        vendorLinkId: { type: string, format: uuid }
+        companyName: { type: string }
+        status: { type: string, enum: [invited, viewed, declined, submitted] }
+        declineReason: { type: string }
+        submittedAt: { type: [string, "null"], format: date-time }
+        total: { type: [string, "null"] }
+        lastActivityAt: { type: [string, "null"], format: date-time }
+    OfferLine:
+      type: object
+      required: [lineKey]
+      properties:
+        lineKey: { type: string }
+        rate: { type: [string, "null"] }
+        amount: { type: [string, "null"] }
+        note: { type: string }
+        pricebookItemId: { type: [string, "null"], format: uuid }
+        remembered: { type: boolean }
+    Offer:
+      type: object
+      required: [id, update, status, lines]
+      properties:
+        id: { type: string, format: uuid }
+        update: { type: integer }
+        status: { type: string, enum: [draft, submitted, withdrawn, superseded] }
+        lines: { type: array, items: { $ref: "#/components/schemas/OfferLine" } }
+        total: { type: [string, "null"] }
+        missingRates: { type: integer }
+        notes: { type: string }
+        qualifications: { type: string }
+        validUntil: { type: [string, "null"], format: date }
+        exchangeRate: { type: [string, "null"] }
+        source: { type: string, enum: [portal, excel] }
+        submittedAt: { type: [string, "null"], format: date-time }
+        lastImportReport:
+          type: object
+          properties:
+            matched: { type: integer }
+            unknownRows: { type: array, items: { type: integer } }
+            invalid: { type: array, items: { type: object, properties: { row: { type: integer }, column: { type: string }, value: { type: string } } } }
+    OfferSave:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            type: object
+            required: [lineKey]
+            properties:
+              lineKey: { type: string }
+              rate: { type: [string, "null"] }
+              pricebookItemId: { type: [string, "null"], format: uuid, description: a pick from the vendor's pricebook; remembered for this firm }
+              note: { type: string }
+        notes: { type: string }
+        qualifications: { type: string }
+        validUntil: { type: [string, "null"], format: date }
+        exchangeRate: { type: [string, "null"] }
+    Comparison:
+      type: object
+      required: [requestId, update, vendors, lines]
+      properties:
+        requestId: { type: string, format: uuid }
+        update: { type: integer }
+        vendors:
+          type: array
+          items:
+            type: object
+            required: [invitationId, companyName]
+            properties:
+              invitationId: { type: string, format: uuid }
+              companyName: { type: string }
+              offerId: { type: [string, "null"], format: uuid }
+              total: { type: [string, "null"] }
+              rank: { type: [integer, "null"] }
+              complete: { type: boolean }
+              submittedAt: { type: [string, "null"], format: date-time }
+              validUntil: { type: [string, "null"], format: date }
+              qualifications: { type: string }
+        lines:
+          type: array
+          items:
+            type: object
+            required: [line, rates]
+            properties:
+              line: { $ref: "#/components/schemas/OfferRequestLine" }
+              rates:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    invitationId: { type: string, format: uuid }
+                    rate: { type: [string, "null"] }
+                    amount: { type: [string, "null"] }
+                    flags: { type: array, items: { type: string, enum: [missing, deviates, lowest, note] } }
+                    note: { type: string }
+              lowest: { type: [string, "null"] }
+              median: { type: [string, "null"] }
+              estimate: { type: [string, "null"], description: "the firm's own rate (F20), when the BoQ has an estimate" }
+    VendorRequestSummary:
+      type: object
+      required: [invitationId, firmName, requestName, status, requestStatus]
+      properties:
+        invitationId: { type: string, format: uuid }
+        firmName: { type: string }
+        requestName: { type: string }
+        deadline: { type: [string, "null"], format: date-time }
+        timezone: { type: string }
+        requestStatus: { type: string, enum: [open, closed, cancelled] }
+        status: { type: string, enum: [invited, viewed, declined, submitted] }
+        needsResubmit: { type: boolean }
+    VendorRequestDetail:
+      allOf:
+        - $ref: "#/components/schemas/VendorRequestSummary"
+        - type: object
+          properties:
+            message: { type: string }
+            attachments: { type: array, items: { $ref: "#/components/schemas/Attachment" } }
+            currency: { type: string }
+            allowPartial: { type: boolean }
+            currentUpdate: { type: integer }
+            updateSummary: { type: object, properties: { added: { type: integer }, removed: { type: integer }, changed: { type: integer } } }

@@ -23,7 +23,7 @@ because the frontend is built against it.
 | Engine | HTTP transport: `POST {ENGINE_URL}/jobs/{type}` (NDJSON progress → SSE `job.progress`), `POST {ENGINE_URL}/rpc/{op}`. Engine storage root = the mock's blob folder (`ENGINE_STORAGE=file://…/.data/blobs`) |
 | SSE | In-process event bus → `GET /api/v1/events` |
 | Email | Written to `.data/outbox/*.html` and listed at `GET /_dev/outbox` (dev page) |
-| Clock | `GET/POST /_dev/clock` to move time forward (tender deadlines, invitation expiry) |
+| Clock | `GET/POST /_dev/clock` to move time forward (invitation and session expiry; module deadlines) |
 | Port | 4010 |
 
 ## What it implements
@@ -38,7 +38,7 @@ Everything in `openapi.yaml`, with these simplifications:
 | Billing | `manual` adapter: checkout returns `/_dev/checkout?plan=…`, which switches the plan immediately |
 | Jobs | Executed immediately, one at a time per type, via the engine HTTP transport. Progress relayed. Cancel closes the stream |
 | Ingestion | Lines, questions, log kept as arrays per run (no DB). Paging and filters done in memory |
-| Tender scheduler | Checks deadlines every 10 s against the mock clock |
+| Scheduler | Core tasks and module-registered tasks every 10 s against the mock clock |
 | Search, audit | Audit events appended. Filters in memory |
 | Email | Outbox files |
 
@@ -59,10 +59,13 @@ Drop this path as soon as EN-001 is merged.
 |---|---|
 | Plans | free, professional, team, enterprise (values from 00-product/05) |
 | Orgs | **Studio Demo** (`studio-demo`, team plan), **Small Firm** (`small-firm`, free plan, at its project limit, for limit testing) |
-| Users | Olivia (owner), Ivana (library_editor), Marko (member → estimator), Ana (member → approver), Victor (member → viewer), Clara (guest, client), bidders: Bob (Alfa Bau), Bea (Beton d.o.o.), Cem (CityBuild), Dana (in both orgs) |
+| Users | Olivia (owner), Ivana (library_editor), Marko (member → estimator), Ana (member → approver), Victor (member → viewer), vendors (pricing module plugin): Bob (Alfa Bau), Bea (Beton d.o.o.), Cem (CityBuild), Dana (linked to both orgs), Pat (platform admin) |
+| Vendor links | Studio Demo: Bob, Bea, Cem, Dana active, one pending invitation; Small Firm: Dana active |
+| Share links | Duplex "Tender BoQ": one pinned link (active), one revoked, one expired |
+| Sessions | Marko has an active session on "Firefox on macOS" so the takeover screen can be tested |
 | System presets | Everything in `presets/` (rule sets, classifications, dictionaries, settings) as system-layer presets, version 1 |
 | Org presets | "Studio rules" (patch on as-modelled, 3 settings changed, v1 published + a draft), "Studio trades" classification (copy of demo-trades), "Studio names" dictionary (copy of acme-company) |
-| Project 1 | **Duplex** (`fixtures/ifc/Ifc2x3_Duplex_Architecture.ifc`): Architecture model v1 and v2 (v2 = modified fixture from EN-008), BoQ "Tender BoQ" with Rev A issued (on v1) and Rev B draft (on v2) with a few decisions and one override, one tender (closed, 2 packages, 3 bidders, offers in), one tender draft |
+| Project 1 | **Duplex** (`fixtures/ifc/Ifc2x3_Duplex_Architecture.ifc`): Architecture model v1 and v2 (v2 = modified fixture from EN-008), BoQ "Tender BoQ" with version A saved (on v1) and a working version (on v2) with a few decisions and line edits (a quantity, a text, a move, an exclusion); a second BoQ "Cost check" confirmed. Pricing plugin: an org pricebook (200 items), Bob's and Bea's pricebooks shared with Studio Demo, an estimate on "Tender BoQ" with 10 remembered matches, one open offer request to two vendors (one offer in) |
 | Project 2 | **Office (federated)**: architecture + structure pair downloaded by `npm run mock:fetch-fixtures` (NBU office pair from `fixtures/corpus/catalogue.json` URLs, not committed); BoQ Rev A draft in `needs_input` |
 | Project 3 | **Empty project** (for empty states) |
 
@@ -86,3 +89,6 @@ minutes once and the result is cached in `.data/`.
    `NEXT_PUBLIC_AUTH_ADAPTER` to the real provider.
 3. The mock stays for frontend e2e tests in CI (fast, deterministic) and for demos without a
    backend.
+
+The pricing module is a mock **plugin** (`apps/mock-api/plugins/pricing`), registered only when
+`MODULE_PRICING=1`. Its seed data and handlers live there; the core mock runs without it.

@@ -57,90 +57,128 @@ Runs are immutable once finished. Answering a question doesn't change a run. The
 "Re-generate", which creates a new run with the current decisions and adjustments. The
 revision's `currentRunId` moves to the newest **finished** run (complete or needs_input).
 
-## BoqRevision
+## BoqRevision (working and saved versions, P29)
 
 ```mermaid
 stateDiagram-v2
-  [*] --> draft: BoQ created, or "start new revision" from an issued one
-  draft --> in_review: submit (current run complete, no blocking questions)
-  in_review --> draft: request changes (comment required)
+  [*] --> draft: BoQ created, a version saved (the next working version), or BoQ reopened
+  draft --> issued: save version (approvalRequired off)
+  draft --> in_review: submit (approvalRequired on)
+  in_review --> draft: request changes (comment required), or any edit (review withdrawn)
   in_review --> approved: approve (four-eyes: approver != submitter)
-  approved --> draft: reopen (any edit to inputs, decisions or adjustments)
-  approved --> issued: issue
+  approved --> draft: any edit to inputs, decisions or line edits
+  approved --> issued: save the approved version
   issued --> [*]
 ```
 
 Rules:
-- **Edits allowed only in `draft`.** Changing inputs, overrides, manual items or project
-  decisions that the current run uses, while the revision is `in_review` or `approved`, sends
-  it back to `draft` (the UI warns first). Decisions are project-wide, so one answer can reopen
-  several revisions; the UI lists which.
-- **Submit preconditions:** `currentRunId` set, that run `complete` (no blocking questions),
-  and it uses the current inputs, decisions and adjustments (no pending changes).
-- **Issue** freezes: the run id, a copy of the adjustments, an Excel export, and a `frozen`
-  record. After that nothing about the revision can change (`409 revision_locked`), not even by
-  an org owner.
-- **New revision:** allowed only when the BoQ's current revision is `issued`. Creates revision
-  N+1 in `draft` with the same inputs, `basedOnRevisionId` = the issued one. The user then swaps
-  in new model versions and re-generates.
-- A BoQ has at most one non-issued revision at a time.
+- `draft` is the **working version**, shown as "Working"; `issued` is a **saved version**,
+  shown as "Saved". Review states exist only when the org has `approvalRequired` on.
+- **Edits allowed only in `draft`.** Changing inputs, line edits, manual lines or project
+  decisions that the current run uses, while `in_review` or `approved`, sends it back to `draft`
+  (the UI warns first). Decisions are project-wide, so one answer can reopen several revisions;
+  the UI lists which.
+- **Save / submit preconditions:** `currentRunId` set, that run finished, and it uses the
+  current inputs, decisions and line edits (no pending changes). Blocking questions don't
+  prevent saving; their count is stored on the version (P29).
+- **Saving** freezes: the run id, a copy of the line edits and manual lines, the position
+  numbers, an Excel export, and a `frozen` record. Nothing about a saved version can change
+  afterwards (`409 revision_locked`), not even by an org owner. In the same transaction the next
+  `draft` revision is created with the same inputs (`basedOnRevisionId` = the saved one), unless
+  the save was part of confirming the BoQ.
+- A BoQ has at most one non-saved revision at a time.
 
-## Tender
+## Boq
 
 ```mermaid
 stateDiagram-v2
-  [*] --> draft
-  draft --> open: open (≥1 package, ≥1 invitation, deadline in the future)
-  draft --> cancelled
-  open --> open: addendum (new issued revision or package change)
-  open --> closed: deadline passes (automatic) or close early
-  open --> cancelled
-  closed --> open: extend deadline (reopens, bidders notified)
-  closed --> awarded: every package awarded or cancelled
-  closed --> cancelled
-  awarded --> [*]
+  [*] --> working
+  working --> confirmed: confirm (saves a final version first if the working one changed)
+  confirmed --> working: reopen (lead, reason; a new working version from the last saved one)
 ```
 
-- **Sealed tenders:** while `open`, the firm sees each invitation's status (invited, viewed,
-  declined, submitted) and the submit time, but not rates or totals. At `closed` everything
-  becomes visible.
-- **Unsealed tenders:** offers are visible as soon as they are submitted.
-- Opening sends invitations (emails). Invitations added later in `open` are sent immediately.
+- `confirmed`: every write to the BoQ returns `409 boq_confirmed`; its saved versions,
+  exports and share links keep working. Archiving the project makes all its BoQs read-only
+  whatever their state.
 
-## TenderPackage
+## Session (BR-54)
 
-`open` → `awarded` (choose one submitted offer of the latest addendum) or `cancelled`.
-Award is allowed only when the tender is `closed`. Award notifies every bidder invited to the
-package.
+```mermaid
+stateDiagram-v2
+  [*] --> active: sign-in (no other active session, or takeover confirmed)
+  active --> ended: sign out
+  active --> replaced: same account signs in elsewhere and takes over
+  active --> expired: no request for 12 h (configurable)
+  active --> ended: platform admin ends it (F19)
+```
 
-## BidInvitation
+- A sign-in while another session is `active` returns `409 session_active` until the user
+  confirms the takeover. A replaced session's next request returns `401 session_replaced`.
+
+## ShareLink
+
+```mermaid
+stateDiagram-v2
+  [*] --> active
+  active --> revoked: revoke
+  active --> expired: expiresAt passes
+  active --> suspended: org turns publicLinksAllowed off
+  suspended --> active: turned on again (if not expired)
+```
+
+## Pricing module (P36)
+
+These belong to the module and live with its own code; the core has none of them.
+
+### VendorLink
+
+```mermaid
+stateDiagram-v2
+  [*] --> invited: org invites a vendor
+  invited --> active: vendor accepts (signs in or up)
+  invited --> removed: org revokes, or 30 days pass
+  active --> removed: org removes, or vendor leaves
+  removed --> invited: org invites again
+```
+
+### OfferRequest
+
+```mermaid
+stateDiagram-v2
+  [*] --> open: send (lines frozen, update 0)
+  open --> open: send update (lines frozen again, update n+1)
+  open --> closed: close, or deadline passes (automatic)
+  closed --> open: extend the deadline
+  open --> cancelled
+  closed --> cancelled
+```
+
+### OfferInvitation
 
 ```mermaid
 stateDiagram-v2
   [*] --> invited
-  invited --> viewed: bidder opens it
+  invited --> viewed: vendor opens it
   viewed --> declined
   invited --> declined
   viewed --> submitted: offer submitted
-  submitted --> viewed: offer withdrawn, or superseded by an addendum
-  declined --> viewed: bidder reconsiders before deadline
+  submitted --> viewed: offer withdrawn, or superseded by an update
+  declined --> viewed: vendor reconsiders while open
 ```
 
-## Offer
+### Offer
 
 ```mermaid
 stateDiagram-v2
   [*] --> draft
-  draft --> submitted: submit (before deadline)
-  submitted --> draft: edit before deadline (becomes a new draft; the submitted one stays until re-submit)
-  submitted --> withdrawn: withdraw before deadline
-  submitted --> superseded: addendum affecting the package
-  draft --> superseded: addendum affecting the package
+  draft --> submitted: submit (while the request is open)
+  submitted --> draft: edit while open (the submitted one stays until re-submitted)
+  submitted --> withdrawn: withdraw while open
+  submitted --> superseded: update sent
+  draft --> superseded: update sent
 ```
 
-- Submitting needs a rate on every line with a quantity, unless the tender allows partial
-  offers (`Tender.allowPartial`, default false). Lines with null quantity may have a rate or
-  stay empty.
-- After an addendum, a new draft is created from the superseded offer. Rates are carried over
-  for line keys that still exist with the same unit, and the bidder must submit again.
-- After the deadline nothing changes. Late submission returns `409 deadline_passed`.
+- Submitting needs a rate on every line with a quantity unless the request allows partial
+  offers (default on). After an update, a new draft is created with rates carried over by line
+  key and unit; the vendor submits again. After close nothing changes (`409 deadline_passed`).
+

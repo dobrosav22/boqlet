@@ -6,8 +6,15 @@ Provider undecided (P10). Whatever is chosen must give:
 - OIDC/OAuth2 tokens the API can verify (JWT with `sub`, `email`, `email_verified`), or
   server sessions with an equivalent identity;
 - verified email (required for invitation matching);
-- passwordless email sign-in **or** an easy sign-up for bidders (F11 edge case);
-- later: enterprise SSO (SAML/OIDC) per org, MFA.
+- passwordless email sign-in **or** an easy sign-up for vendors (pricing module, F11 edge case);
+- later: enterprise SSO (SAML/OIDC) per org, MFA (required for platform admins when offered).
+
+**One active session per account** (BR-54) is enforced by the backend, not the provider: a
+`sessions` row is created after authentication, its id travels with every request (an
+`HttpOnly` cookie, or a `sid` claim bound at session creation), and every request checks it is
+the user's active session. Takeover marks the old row `replaced` and publishes
+`session.revoked` on that user's SSE channel. The provider's own sessions are revoked too
+where its API allows; otherwise the backend check is the boundary.
 
 The API maps `sub` → `User.authSubject` (just in time). It never stores passwords itself
 unless the "Java-owned auth" option is chosen (then: Argon2id, rate limits, email
@@ -19,12 +26,22 @@ verification, reset flow: all in scope of that decision).
   (and project membership where needed). A single helper/annotation does it, so a query
   can't forget (BR-50).
 - Cross-tenant access returns `404`, not `403` (permissions.md).
-- Bidder endpoints (`/bids/*`) use a separate access path: the invitation must belong to the
-  user, and only package lines and the tender summary are readable.
+- **Pricing module endpoints** (`/pricing/*`, P36) are a separate module with its own Policy.
+  Vendor endpoints (`/pricing/vendor/*`) use their own access path: only the vendor's own
+  pricebooks, matches, links and the lines of requests sent to them are readable. With the
+  module off for an org, its endpoints answer `404` for that org.
+- **Public share endpoints** (`/public/shares/{token}/*`, F18) need no authentication. They
+  resolve the token hash, check expiry, revocation and the org's `publicLinksAllowed`, and
+  return only what the link includes (BR-56). `noindex`, `Referrer-Policy: no-referrer`, rate
+  limits per token and IP (60/min), and signed URLs per request for geometry and Excel.
+- **Admin endpoints** (`/admin/*`, F19) check `platformRole` on every request and answer `404`
+  otherwise. They read org metadata through dedicated queries that never select content
+  columns (BR-57). Every call is audited with `actorKind: "platform_admin"`.
 - Signed URLs are issued only after the same checks. They are short-lived (security: 5 min
   GET, 1 h PUT) and scoped to one key.
 - **Isolation test suite** (v1 acceptance 8): for every endpoint, automated tests with a user
-  of another org, a project viewer, a guest and a bidder assert the expected `404`/`403`.
+  of another org, a project viewer, a vendor (linked to another org, and to the same org), an
+  anonymous caller and a platform admin assert the expected `404`/`403`.
 
 ## Input handling
 
@@ -32,7 +49,7 @@ verification, reset flow: all in scope of that decision).
   worker, a separate process/container with no DB credentials beyond its job row, no
   network access except storage and the DB, CPU/memory limits and a timeout per job (parse:
   30 min default, large pool 2 h).
-- Spreadsheets (code lists, bidder offers): parsed only in the worker/rpc with openpyxl in
+- Spreadsheets (code lists, preset templates, BoQ edits, and in the module: offers, pricebooks): parsed only in the worker/rpc with openpyxl in
   read-only, data-only mode (no formulas evaluated, no macros: `.xlsm` rejected). Size ≤ 20 MB.
 - Attachments: any type, stored as-is, served with `Content-Disposition: attachment` and the
   original content type replaced by `application/octet-stream` for non-PDF/image types. Virus
@@ -48,7 +65,7 @@ verification, reset flow: all in scope of that decision).
 - TLS everywhere. HSTS on the web app.
 - Encryption at rest: storage (SSE), database (provider-managed).
 - Secrets via environment/secret manager, never in the repo.
-- PII held: user name, email, IP in audit events, bidder company/contact. A data map lives in
+- PII held: user name, email, IP in audit events, vendor company/contact (pricing module). A data map lives in
   `07-backend/db-schema.md` (columns marked PII).
 - GDPR basics: data processing agreement template for customers (legal, outside this repo),
   data export per org (owner: all projects, BoQs, decisions, exports as a zip, a background
@@ -64,12 +81,12 @@ verification, reset flow: all in scope of that decision).
 - Cookies (if sessions): `HttpOnly`, `Secure`, `SameSite=Lax`. With bearer tokens: no
   tokens in `localStorage` when the provider offers cookie-based sessions.
 - CSRF protection for cookie auth (SameSite + Origin check on state-changing requests).
-- Rate limits: auth endpoints (provider), invitations (20/h per org), bidder submissions
+- Rate limits: auth endpoints (provider), invitations (20/h per org), vendor offer submissions
   (10/min per invitation), uploads (per plan), rpc calls (60/min per user).
 - Webhooks: signature verification, replay window 5 min, idempotency by event id.
 
 ## Audit
 
 Append-only audit events for every write (BR-51). Includes failed permission checks on
-sensitive actions (issue, award, role change), webhook signature failures and sign-in from
+sensitive actions (save version, confirm, role change), webhook signature failures and sign-in from
 new countries if the provider reports it.

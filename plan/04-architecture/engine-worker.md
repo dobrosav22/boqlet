@@ -4,7 +4,9 @@ The engine (`engine/ifc_boq`) becomes a worker with a fixed JSON contract. The m
 the Java backend both use exactly this contract. Today's FastAPI (`engine/ifc_boq/api.py`)
 stays as the PoC's dev API. The worker is new code: `engine/ifc_boq/worker.py` (job
 execution), `engine/ifc_boq/rpc.py` (quick calls), `engine/ifc_boq/storage.py` (local folder
-or S3), `engine/ifc_boq/sheets/` (package/comparison Excel, offer import). Tasks: EN-001…EN-008.
+or S3), `engine/ifc_boq/sheets/` (core workbooks: BoQ edits import, preset templates) and
+`engine/ifc_boq/sheets/pricing/` (the pricing module's workbooks, loaded only when present,
+`04-architecture/modules.md`). Tasks: EN-001…EN-013; pricing: EN-P1.
 
 Public engine functions the worker wraps (docs/05): `parse.parse_file`, `pipeline.get_boq`,
 `export_xlsx.export`, `pipeline.names_in_model`, `presets.check`, `presets.flattened`,
@@ -15,7 +17,7 @@ Public engine functions the worker wraps (docs/05): `parse.parse_file`, `pipelin
 ```json
 {
   "jobId": "uuid",
-  "type": "parse | run | preview | diff | export_xlsx | export_package | export_comparison | import_offer",
+  "type": "parse | run | preview | diff | export_xlsx | import_boq_edits | pricing.*",
   "orgId": "uuid",
   "input": { "...per type..." },
   "outputPrefix": "orgs/{orgId}/…/",
@@ -91,7 +93,7 @@ usually the published version). Output: `{resultKey, compareResultKey?, diffKey?
 under `previews/` with a 7-day lifecycle.
 
 ### diff (EN-002)
-Input: `{ "fromResultKey": "…", "toResultKey": "…", "fromLabel": "Rev A", "toLabel": "Rev B" }`.
+Input: `{ "fromResultKey": "…", "toResultKey": "…", "fromLabel": "A", "toLabel": "Working" }`.
 Output: `{ "diffKey": "…/diff.json.gz", "summary": { "linesAdded": 2, "linesRemoved": 1, "linesChanged": 7, "elementsAdded": 3, "elementsRemoved": 1, "elementsChanged": 4, "questionsNew": 2, "questionsResolved": 0 } }`.
 `diff.json.gz` follows `RunDiff` (data model). It will be added to `packages/types` as
 `diff.ts` with a generated schema.
@@ -101,19 +103,19 @@ Input: `{ "resultKey": "…", "diffKey": null, "meta": { …as run.export.meta�
 Output: `{ "xlsxKey": "…", "sizeBytes": 123 }`. With `diffKey` it writes the change report
 instead.
 
-### export_package (EN-006)
-Input: `{ "tender": {…name, firm, deadline, timezone, currency…}, "package": {…name, code…}, "lines": [PackageLine], "offer": null | {lines: [{lineKey, rate, note}]}, "fileName": "…" }`.
-Output: `{ "xlsxKey": "…" }`. A protected sheet with a hidden `lineKey` column. Only rate and
-note are editable.
+### import_boq_edits (EN-006, F12)
 
-### import_offer (EN-006)
-Input: `{ "fileKey": "…", "lines": [PackageLine] }`.
-Output: `{ "lines": [{lineKey, rate, note}], "report": { "matched": 120, "unknownRows": [3, 17], "invalid": [{row, column, value}], "missing": ["lineKey…"] } }`.
-The API writes the matched rates into the bidder's draft offer.
+Input: the uploaded workbook's storage key, the revision's current run (lines with keys, codes
+and the groupBy system used at export). Output: `EditsImportReport` (openapi): proposed line
+edits by line key, proposed manual lines for rows without a key (with the group they sit
+under), and problems by sheet, row and column. Read-only, data-only openpyxl. Applies nothing.
 
-### export_comparison (EN-006)
-Input: `{ "tender": {…}, "package": {…}, "comparison": "the API's comparison response" }`.
-Output: `{ "xlsxKey": "…" }`.
+### pricing.* (module jobs, EN-P1)
+
+`pricing.export_request` (offer request workbook for vendors), `pricing.import_offer` (vendor's
+filled workbook → rates and a report), `pricing.export_comparison`, `pricing.export_estimate`
+(priced BoQ in the core BoQ layout), `pricing.import_pricebook` (template → proposed items and
+problems). Registered by `engine/ifc_boq/sheets/pricing/`; absent when the module is removed.
 
 ## RPC (quick, synchronous)
 
@@ -125,6 +127,8 @@ Output: `{ "xlsxKey": "…" }`.
 | `names` | `{parsedKey, dictionaries[]}` | `NamesResponse` | `pipeline.names_in_model` |
 | `codelist-read` | `{fileKey}` (uploaded by the API) | `TableReadResponse` | `codelist_import` |
 | `codelist-build` | `CodeListBuildRequest` | `CodeListBuildResponse` | `codelist_import` |
+| `template-export` | `{kind, doc, library}` | xlsx bytes (base64) | `sheets/templates.py` (EN-012) |
+| `template-import` | `{kind, doc, file}` | `TemplateImportResult` (openapi) | `sheets/templates.py` (EN-012) |
 | `expr-check` | `{expr, context: "line" \| "element" \| "building"}` | `{ok, problems, readable}` | `expr.py` parser |
 
 The rpc service caches parsed models by key (LRU, memory-bounded) for `names`.

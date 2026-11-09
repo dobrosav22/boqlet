@@ -6,7 +6,7 @@
 |---|---|---|---|
 | Engine unit + acceptance | pytest | `engine/tests` | Existing suite (194 tests) incl. Duplex `HAND_BOQ`; new worker, diff, override, sheets tests (tasks-engine.md) |
 | Contract | Schemathesis or a hand-written suite over the generated client | `tests/contract` | Every operation in `openapi.yaml`: status codes, schemas, error codes; runs against the **mock** (M0–M4) and **Java** (M5+) |
-| Behaviour scenarios | Vitest (TS) over the generated client | `tests/scenarios` | Domain rules through the API: state machines, permissions, limits, sealed tenders, BR-xx. Same suite against mock and Java |
+| Behaviour scenarios | Vitest (TS) over the generated client | `tests/scenarios` | Domain rules through the API: state machines, permissions, limits, versions and confirmation, BR-xx. Same suite against mock and Java |
 | Frontend unit | Vitest + Testing Library | `apps/app` | Components with logic: grouping, readable formulas, comparison flags display, decimal display, permission gating |
 | End-to-end | Playwright | `apps/app/e2e` | Flows FL-1…FL-8 against mock + real engine (CI) and against Java on staging (nightly) |
 | Backend unit/integration | JUnit 5 + Testcontainers | `services/api` | Policies, state machines, repositories, ingestion, fake worker |
@@ -17,8 +17,7 @@
 
 `tests/contract` and `tests/scenarios` are written during M0–M4 **against the mock**. They
 describe the backend's behaviour precisely. The Java backend is done when the same suites pass
-against it unchanged (M5–M7). Scenario tests are named after rule ids (`BR-44 sealed tender
-hides rates from every firm endpoint`) and acceptance criteria (`F11-AC2`).
+against it unchanged (M5–M7). Scenario tests are named after rule ids (`BR-27 confirmed BoQ refuses writes`) and acceptance criteria (`F11-AC2`).
 
 Each scenario seeds through the API only (no direct DB access), so it runs against both
 implementations. A test-only endpoint `POST /_test/clock` (mock and Java, disabled in
@@ -33,7 +32,8 @@ production builds) moves time for deadline tests.
 | Hand BoQ | `engine/tests/test_duplex.py` `HAND_BOQ`, exported to JSON for e2e | v1 criterion 1 |
 | Federated pair | NBU office architecture + structure (downloaded, docs/12) | federation, nightly |
 | buildingSMART samples | `fixtures/ifc/buildingsmart` | parse edge cases |
-| Bidder xlsx files | filled package files from Excel and LibreOffice (EN-006) | import |
+| Edited BoQ xlsx files | exported BoQs edited in Excel and LibreOffice (EN-006) | edits import |
+| (Pricing module) offer and pricebook xlsx files | filled in Excel and LibreOffice (EN-P1) | module imports |
 | Recorded engine outputs | results of the real worker on the fixtures | Java integration tests (fake worker) |
 
 ## CI pipeline
@@ -62,3 +62,9 @@ production builds) moves time for deadline tests.
 - No new hard-coded UI strings; i18n keys added.
 - Audit events written for new write actions.
 - Docs: plan status updated if a milestone moved; `docs/11` "Done" row added (project rule).
+
+## Core without modules
+
+Every CI run includes a **core-only** job: the app, mock, Java service and engine built and tested
+with the pricing module removed (P36, BR-41). A failure there means the core started depending on
+the module.

@@ -3,7 +3,7 @@
 ## Purpose
 
 Anyone can sign up, create their firm's organisation and invite colleagues. One login works
-across several orgs, guest access and bidding.
+across several orgs and, with the pricing module, as a vendor. There are no logged-in guests (P28).
 
 ## Stories
 
@@ -15,19 +15,22 @@ across several orgs, guest access and bidding.
 - As a user in several orgs, I switch orgs from the top bar. The URL carries the org slug.
 - As an owner, I change roles, remove members, transfer ownership.
 - As any user, I edit my name and locale.
+- As a user signing in while my account is open on another device, I'm told where it is open
+  and confirm ending that session before I continue (P22).
 
 ## Behaviour
 
 1. **Sign-up / sign-in is delegated to the auth adapter** (P10). The app never shows a
    password form of its own unless the chosen provider requires embedded forms. After
    authentication the frontend calls `GET /me`.
-2. `GET /me` returns `{user, memberships: [{org, role}], guestProjects: [...], bidInvitationsOpen: n}`.
+2. `GET /me` returns `{user, memberships: [{org, role}], session, modules: {…}}`; modules add
+   their own fields under `modules` (pricing: `{vendor, linkedFirms, openRequests}`).
    The backend creates the `User` row on first sight of a new `authSubject` (just in time).
 3. **Routing after sign-in:**
    - pending invitation token in the session → accept it, go to that org;
    - else one membership → `/{orgSlug}`;
    - else several → the last-used org (stored client-side), else an org picker;
-   - else bid invitations only → `/bids`;
+   - else a module account kind only (pricing: a vendor with no org) → that module's area (`/vendor`);
    - else → `/onboarding` (create org).
 4. **Create org:** name required; slug suggested from the name (lower-case, `a-z0-9-`, 3–40
    chars), editable, unique (`409 slug_taken`). The creator becomes `owner`. A Free
@@ -45,10 +48,26 @@ across several orgs, guest access and bidding.
    stay in the audit log with their name.
 9. **Delete org (owner):** type the org name to confirm. Status becomes `deleting`. Data is
    removed within 30 days (BR-52). Members are notified.
+10. **One active session per account** (P22, BR-54). After the auth adapter signs the user
+    in, the app opens a session (`POST /sessions` with a device label such as "Chrome on
+    Windows"). If the account has another active session, the API answers
+    `409 session_active` with that session's device label, approximate place (country/city
+    from the IP, when known) and last activity. The screen says: "You're signed in on Chrome
+    on Windows (Belgrade), last active 3 minutes ago. Continue here and sign out there?"
+    - **Continue here** → `POST /sessions {takeover: true}`: the other session is ended. Its
+      next request gets `401 session_replaced`, and an SSE event `session.revoked` shows it
+      "You were signed out because your account was opened on another device".
+    - **Cancel** → signs out here; nothing changes on the other device.
+    A session counts as active until sign-out, takeover, or 12 hours without any request
+    (configurable). Tabs of one browser share one session. Applies to every account: members,
+    vendors and platform admins. Takeovers are audited (`session.replaced`, both device
+    labels) so an owner can see an account being passed around. The session is the backend's
+    own record, whatever the auth provider (07-backend D1).
 
 ## Screens
 
-- `/sign-in`, `/sign-up` (auth adapter pages), `/onboarding` (create org), `/invite/[token]`.
+- `/sign-in`, `/sign-up` (auth adapter pages), `/session-conflict` (the takeover question),
+  `/onboarding` (create org, then the setup wizard, F16), `/invite/[token]`.
 - `/{org}/settings/general`, `/{org}/settings/members` (members table: name, email, role,
   joined, last active; invitations table: email, role, sent, expires, resend/revoke).
 - `/account` (name, locale, my orgs, leave org).
@@ -69,7 +88,8 @@ across several orgs, guest access and bidding.
 `DELETE /orgs/{orgId}/members/{userId}`, `GET /orgs/{orgId}/invitations`,
 `POST /orgs/{orgId}/invitations`, `DELETE /orgs/{orgId}/invitations/{invitationId}`,
 `POST /orgs/{orgId}/invitations/{invitationId}/resend`, `GET /invitations/{token}`,
-`POST /invitations/{token}/accept`.
+`POST /invitations/{token}/accept`, `POST /sessions`, `DELETE /sessions/current`,
+`GET /sessions/current`.
 
 ## Acceptance criteria
 
@@ -77,5 +97,6 @@ across several orgs, guest access and bidding.
 - [ ] An invited user with a different email address cannot accept the invitation.
 - [ ] Inviting beyond the seat limit returns `402` with `limit: "seats"`, and the UI shows the upgrade prompt.
 - [ ] The last owner cannot leave or be demoted.
+- [ ] Signing in on a second browser shows the takeover question; continuing ends the first session (its next request gets `401 session_replaced` and it shows the signed-out message within 5 s); cancelling leaves the first session working.
 - [ ] A user in two orgs switches between them, and every request after the switch uses the new org.
 - [ ] Every action above writes an audit event (`member.invited`, `member.joined`, `member.role_changed`, `member.removed`, `org.created`, `org.updated`).

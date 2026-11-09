@@ -37,19 +37,20 @@ erDiagram
   Run ||--o{ RunQuestion : has
   RunLine ||--o{ RunLineElement : has
   Preset ||--o{ PresetVersion : has
-  Project ||--o{ Tender : has
-  Tender }o--|| BoqRevision : "prices (issued)"
-  Tender ||--o{ TenderPackage : has
-  Tender ||--o{ TenderAddendum : has
-  TenderPackage ||--o{ PackageLine : has
-  TenderPackage ||--o{ BidInvitation : has
-  BidInvitation ||--o{ Offer : has
-  Offer ||--o{ OfferLine : has
   Org ||--o{ Job : runs
   Org ||--o{ UsageEvent : records
   Org ||--o{ AuditEvent : records
+  User ||--o{ Session : signs_in
+  Boq ||--o{ ShareLink : shared_by
+  Boq ||--o{ BoqRevision : versions
+  Org ||--o{ LimitEvent : hits
+  Org ||--o{ AdminNote : has
   User ||--o{ Notification : receives
 ```
+
+The pricing module's entities (vendors, pricebooks, estimates, offer requests) are not part of
+the core model. They live in the module's own schema and reference core entities one way only
+(last section, P36, `04-architecture/modules.md`).
 
 ## Identity and tenancy
 
@@ -61,10 +62,24 @@ erDiagram
 | name | string | |
 | locale | string | BCP 47, default `en` |
 | authSubject | string | id at the auth provider (P10); unique |
+| platformRole | `admin`? | operator of the product (F19); set by CLI/seed only |
 | createdAt | datetime | |
 
-A user can be a member of several orgs, a guest in other orgs' projects and a bidder for any
-number of tenders, all with one login.
+A user can be a member of several orgs, and (with the pricing module) a vendor linked to any
+number of orgs, all with one login and one active session (BR-54). There are no logged-in
+guests (P28): outsiders get share links (F18).
+
+### Session
+| Field | Type | Notes |
+|---|---|---|
+| id | uuid | carried by every request (cookie or token claim `sid`) |
+| userId | uuid | at most one `active` per user (BR-54) |
+| status | `active` \| `ended` \| `replaced` \| `expired` | |
+| deviceLabel | string | "Chrome on Windows", from the user agent |
+| place | string? | approximate, from the IP (country, city), for the takeover question |
+| lastSeenAt | datetime | updated at most once a minute; idle > 12 h → `expired` |
+| replacedBySessionId | uuid? | |
+| createdAt, endedAt | datetime | |
 
 ### Org
 | Field | Type | Notes |
@@ -76,7 +91,14 @@ number of tenders, all with one login.
 | settings.defaultLocale | string | |
 | settings.defaultCurrency | string | ISO 4217 |
 | settings.defaultUnitSystem | `metric` \| `imperial` | |
-| setup | `OrgSetup`? | setup wizard progress (F16): `{status: "in_progress" \| "done" \| "dismissed", step, modelVersionId?, ruleSetPresetId?, classificationPresetId?, dictionaryPresetId?, startedBy, updatedAt, completedAt?}` |
+| settings.approvalRequired | boolean | default false; saving a version needs review and approval (F09 §4, P29) |
+| settings.numberFormat | `{decimal: "." \| ",", thousands: "," \| "." \| " " \| "'" \| ""}`? | overrides the locale's defaults (P35) |
+| settings.dateFormat | string? | e.g. `dd.MM.yyyy`; overrides the locale's default |
+| settings.defaultLanguage | string | UI language for new members, default `en` |
+| settings.publicLinksAllowed | boolean | default true (F18) |
+| status | `active` \| `suspended` \| `deleting` | suspended by a platform admin (F19): read-only, no new jobs |
+| tags | string[] | platform admin's sales tags (F19); never shown to the org |
+| setup | `OrgSetup`? | setup wizard progress (F16): `{status: "in_progress" \| "done", step, modelVersionId?, ruleSetPresetId?, classificationPresetId?, dictionaryPresetId?, startedBy, updatedAt, completedAt?}` |
 | createdAt | datetime | |
 
 ### Membership
@@ -136,7 +158,7 @@ number of tenders, all with one login.
 | Field | Type | Notes |
 |---|---|---|
 | projectId, userId | uuid | unique pair |
-| role | `lead` \| `estimator` \| `approver` \| `viewer` \| `guest` | |
+| role | `lead` \| `estimator` \| `approver` \| `viewer` | org members only (P28) |
 | addedBy | uuid | |
 
 Org owners and admins have `lead` rights on every project without a row.
@@ -224,17 +246,25 @@ Sent to the engine as engine `Decision {questionId, scope: "project", answer, no
 History: a changed answer keeps the old row with `supersededAt` (audit), the API returns
 current rows only.
 
-### LineOverride (per BoQ, carried to later revisions)
+### LineOverride: a line edit (per BoQ, carried to later revisions)
 | Field | Type | Notes |
 |---|---|---|
 | id | uuid | |
 | boqId | uuid | |
-| lineKey | string | unique per BoQ |
-| quantity | number \| null | null = force flagged |
-| reason | string | required |
+| lineKey | string | unique per BoQ; all edits of one line live in one row |
+| quantity | number \| null? | absent = not edited; null = force flagged |
+| description | string? | replaces the shown text (item text or line text) |
+| unit | string? | only together with `quantity` (`409 unit_needs_quantity`) |
+| codes | `Record<system, code>`? | moves the line to another section in that classification |
+| sortAfter | string \| null? | line key it follows inside its section; null = first; presentation only |
+| excluded | boolean? | out of totals and the exports' BoQ sheet, still listed (BR-03) |
+| reason | string? | required when `quantity` or `excluded` is set |
 | createdBy, createdAt | | |
 
-Sent to the engine as a decision with `questionId = "override:{lineKey}"` (engine task EN-003).
+Sent to the engine as a decision with `questionId = "override:{lineKey}"` and the edited fields
+(engine task EN-003): quantity before derived rules (derived lines follow it), codes as the
+line's classification decision, description, unit and exclusion on the final line. `sortAfter`
+is applied by the backend when ordering lines (no number involved).
 The engine applies it, logs it, marks the line, and raises an `orphan_override` question if the
 line no longer exists.
 
@@ -252,8 +282,10 @@ the engine as a project-level patch that appends manual items to the rule set at
 | projectId | uuid | |
 | name | string | "Tender BoQ", "Cost check stage 3" |
 | description | string? | |
-| currentRevisionId | uuid | the newest revision, whatever its status |
-| latestIssuedRevisionId | uuid? | |
+| status | `working` \| `confirmed` | P29; confirmed = done, read-only until reopened (F09 §5–6) |
+| confirmedBy, confirmedAt | | |
+| currentRevisionId | uuid | the working version (a `draft` revision), or the last saved one when confirmed |
+| latestIssuedRevisionId | uuid? | the last saved version |
 | archived | boolean | |
 
 ### BoqRevision
@@ -263,15 +295,17 @@ the engine as a project-level patch that appends manual items to the rule set at
 | boqId | uuid | |
 | number | int | 1, 2, 3 |
 | label | string | "A", "B", "C" (from number; configurable later) |
-| status | `draft` \| `in_review` \| `approved` \| `issued` | see state machines |
+| status | `draft` \| `in_review` \| `approved` \| `issued` | shown as Working / In review / Approved / Saved; review states only when `approvalRequired` (P29) |
 | inputs | `RevisionInputs` | below; editable only in `draft` |
 | currentRunId | uuid? | the run shown in the sheet |
-| basedOnRevisionId | uuid? | the issued revision this one continues |
+| basedOnRevisionId | uuid? | the saved version this working version continues |
 | submittedBy/At, approvedBy/At, issuedBy/At | | |
 | reviewers | uuid[] | chosen at submit |
 | reviewComments | `{id, by, at, text, lineKey?, outcome?: "approved" \| "changes_requested"}[]` | `lineKey` for comments on one line |
 | pendingChanges | string[] | computed: what differs from the current run's request (`inputs.models`, `inputs.ruleSet`, `decisions`, `adjustments`...) |
-| frozen | `{runId, adjustments, exportIds[]}`? | written at issue; immutable |
+| frozen | `{runId, adjustments, positionNumbers, exportIds[]}`? | written when the version is saved; immutable |
+| saveNote | string? | the note given when saving |
+| openQuestionsAtSave | int? | blocking questions open when saved (allowed, shown as a badge) |
 
 `RevisionInputs`:
 ```json
@@ -308,7 +342,8 @@ layer.
 Rows written from the `BoqResult` when a run job succeeds, so lines can be paged, filtered and
 grouped without loading the whole result.
 
-- `RunLine`: `{runId, lineKey, sortIndex, ruleId, ruleKind, description, unit, quantity, source, family, keys, codes, location, tags, notes, trace, overridden: {quantity, reason}?}`. Same fields as engine `BoqLine` plus `sortIndex` and `overridden`. `description` is the rule set's line text; each `codes[system].text` is that system's filled item text, when its code has one (EN-010).
+- `RunLine`: `{runId, lineKey, sortIndex, ruleId, ruleKind, description, unit, quantity, source, family, keys, codes, location, tags, notes, trace, overridden: {quantity, reason}?}`. Same fields as engine `BoqLine` plus `sortIndex`, `positionNo` (P30: section code + running number,
+  computed by the backend from the line order and edits; frozen in saved versions) and `overridden`. `description` is the rule set's line text; each `codes[system].text` is that system's filled item text, when its code has one (EN-010).
 - `RunLineElement`: `{runId, lineKey, guid, modelVersionId, quantity}`. The element ↔ line index for the viewer and for diffs.
 - `RunQuestion`: engine `Question` + `{runId}`. Whether it is answered is a join with `Decision`.
 - `RunLogEntry`: engine `LogEntry` + `{runId}`.
@@ -319,92 +354,27 @@ grouped without loading the whole result.
 - `LineChange`: `{lineKey, change: "added" | "removed" | "changed", before?: {quantity, unit, description, codes}, after?: {…}, delta?: number, deltaPct?: number, causes: ("elements_added" | "elements_removed" | "elements_changed" | "rules_changed" | "decision_changed" | "override_changed")[]}`
 - `ElementChange`: `{guid, model, change: "added" | "removed" | "changed", fields?: string[]}`
 
-## Tendering
+## Sharing
 
-### Tender
+### ShareLink (F18)
 | Field | Type | Notes |
 |---|---|---|
 | id | uuid | |
-| projectId | uuid | |
-| revisionId | uuid | an **issued** revision (latest addendum's revision) |
-| name | string | |
-| currency | string | ISO 4217, default project currency |
-| deadline | datetime | with timezone |
-| instructions | string | shown to bidders (markdown) |
-| timezone | string | IANA zone the deadline is expressed in |
-| attachments | `TenderAttachment[]` | `{id, fileName, storageKey, sizeBytes, uploadedBy, uploadedAt}`: drawings, specs (PDF etc.) |
-| sealed | boolean | default true |
-| allowPartial | boolean | default false; offers may leave lines unpriced |
-| deviationThresholdPct | number | default 30; comparison flags rates further than this from the median |
-| sharedWithGuests | boolean | default false; project guests may see the comparison after close |
-| textSystem | string? | classification id whose item numbers and item texts bidders see (P14); default the revision's first classification |
-| status | `draft` \| `open` \| `closed` \| `awarded` \| `cancelled` | |
-| openedAt, closedAt | | |
-
-### TenderAddendum
-`{id, tenderId, number, revisionId, note, createdBy, createdAt, affectedPackageIds[]}`. Number 0
-is the opening state. Every addendum re-snapshots the package lines.
-
-### TenderPackage
-| Field | Type | Notes |
-|---|---|---|
-| id | uuid | |
-| tenderId | uuid | |
-| name | string | "Concrete works" |
-| code | string? | |
-| selection | `PackageSelection` | how its lines were chosen (re-applied at addenda) |
-| status | `open` \| `awarded` \| `cancelled` | |
-| awardedOfferId | uuid? | |
-
-`PackageSelection`: `{byCode?: {system, codes[]}[], byFamily?: string[], lineKeys?: string[], excludeLineKeys?: string[]}`.
-A line belongs to at most one package of a tender. The API rejects overlapping selections with
-`409 line_in_other_package`.
-
-### PackageLine (frozen copy, per addendum)
-`{id, packageId, addendumNumber, lineKey, sortIndex, code, description, unit, quantity, source, notes}`.
-`code` and `description` come from the tender's `textSystem`: the item number and filled item
-text, or the rule set's line text when the code has none.
-Flagged lines (quantity null) are included and shown as "quantity to be confirmed". Bidders may
-price them as a rate only.
-
-### BidInvitation
-| Field | Type | Notes |
-|---|---|---|
-| id | uuid | |
-| packageId | uuid | |
-| email | string | |
-| companyName | string | |
-| contactName | string? | |
-| userId | uuid? | set when the bidder accepts with an account |
-| token | string | hash stored; link in the invitation email |
-| status | `invited` \| `viewed` \| `declined` \| `submitted` | `submitted` while a current offer exists |
-| declineReason | string? | |
-
-### Offer
-| Field | Type | Notes |
-|---|---|---|
-| id | uuid | |
-| invitationId | uuid | |
-| addendumNumber | int | which package-line snapshot it prices |
-| status | `draft` \| `submitted` \| `withdrawn` \| `superseded` | |
-| total | decimal | sum of line amounts, computed by the backend |
-| notes, qualifications | string | |
-| validUntil | date? | |
-| source | `portal` \| `excel` | |
-| submittedAt | datetime? | |
-
-### OfferLine
-`{offerId, packageLineId, lineKey, rate: decimal | null, amount: decimal | null, note?}`.
-`amount = round(quantity × rate, currency minor units)`; null when the rate or quantity is null.
-
-### Bidder address book (derived)
-`GET /orgs/{orgId}/bidders` lists distinct `{email, companyName, contactName, lastInvitedAt, tenders}`
-from the org's past invitations. No separate entity in v1.
+| boqId | uuid | |
+| mode | `pinned` \| `latest_issued` | |
+| runId | uuid? | for `pinned` |
+| include | `{lineDetail, viewer, log, excel}` booleans; `groupBy` classification id | |
+| label | string? | |
+| tokenHash | string | 32 random bytes, base64url; only the hash is stored |
+| expiresAt | datetime? | |
+| revokedAt, revokedBy | | |
+| views, lastViewedAt | int, datetime? | |
+| createdBy, createdAt | | |
 
 ## Exports
 
 ### Export
-`{id, orgId, projectId, kind: "boq_xlsx" | "issued_boq_xlsx" | "changes_xlsx" | "package_xlsx" | "comparison_xlsx", subjectType, subjectId, fileName, storageKey, sizeBytes, jobId, createdBy, createdAt}`.
+`{id, orgId, projectId, kind: "boq_xlsx" | "issued_boq_xlsx" | "changes_xlsx" | string (module kinds, e.g. "pricing.estimate_xlsx"), subjectType, subjectId, fileName, storageKey, sizeBytes, jobId, createdBy, createdAt}`.
 Issued exports are referenced from `BoqRevision.frozen.exportIds` and never deleted while the
 revision exists.
 
@@ -415,7 +385,7 @@ revision exists.
 |---|---|---|
 | id | uuid | |
 | orgId, projectId | uuid | |
-| type | `parse` \| `run` \| `preview` \| `diff` \| `export_xlsx` \| `export_package` \| `export_comparison` \| `import_offer` \| `names` | |
+| type | `parse` \| `run` \| `preview` \| `diff` \| `export_xlsx` \| `import_boq_edits` \| `names` \| `pricing.*` (module job types) | |
 | status | `queued` \| `running` \| `succeeded` \| `failed` \| `cancelled` | |
 | progress | `{stage: string, pct: number, message?: string}` | |
 | input | JSON | per type, see `04-architecture/engine-worker.md` |
@@ -429,10 +399,86 @@ revision exists.
 `{id, userId, orgId?, kind, title params, entityType, entityId, url, readAt?, createdAt}`.
 Kinds: see F13.
 
+### LimitEvent
+`{id, orgId, userId?, limit, current, max, action, at}`. Written for every `402`. Feeds the admin
+console's "hit a limit" signal (F19).
+
+### AdminNote
+`{id, orgId, authorId, text, createdAt}`. Platform admins only (F19); never shown to the org.
+
 ### UsageEvent
 `{id, orgId, projectId?, jobId, kind: "parse" | "run" | "preview", durationMs, modelBytes, elementCount, outcome, at}`.
 
 ### AuditEvent (append-only)
-`{id, orgId, projectId?, actorId, actorKind: "user" | "system" | "bidder", action, entityType, entityId, data, ip?, at}`.
+`{id, orgId, projectId?, actorId, actorKind: "user" | "system" | "vendor" | "platform_admin", action, entityType, entityId, data, ip?, at}`.
 Actions are dotted verbs: `model_version.uploaded`, `decision.set`, `revision.issued`,
-`tender.opened`, `offer.submitted`, `package.awarded`, `member.role_changed`... (full list in F09).
+`version.saved`, `boq.confirmed`, `member.role_changed`... (full list in F09); modules register
+`pricing.*` actions.
+
+## Pricing module (separate schema `pricing`, removable; P32–P36)
+
+Every table lives in the Postgres schema `pricing` and references core rows one way
+(`orgs`, `users`, `projects`, `boqs`, `boq_revisions`, `runs`), with cascade on delete. No core
+entity references these. Dropping the schema removes the module (04-architecture/modules.md).
+
+### ModuleSettings (per org)
+`{orgId, membersCanInviteVendors: true, membersCanEditPricebooks: false, offersFromSavedVersionsOnly: false, stalePriceMonths: 12}`.
+
+### VendorProfile (per user)
+`{userId, company, trades: string[], phone?}`. A user with a profile is a vendor (F17).
+
+### VendorLink (an org's vendor directory, F17)
+| Field | Type | Notes |
+|---|---|---|
+| id | uuid | |
+| orgId | uuid | |
+| vendorUserId | uuid? | set when accepted |
+| email | string | invitation address |
+| companyName, contactName | string | the org's labels |
+| trades | string[] | the org's tags |
+| status | `invited` \| `active` \| `removed` | |
+| sharedPricebookId | uuid? | chosen by the vendor: the list this org sees (P33) |
+| tokenHash | string | 30 days |
+| invitedBy, acceptedAt, removedAt | | |
+
+Unique `(orgId, lower(email))` while not removed.
+
+### Pricebook, PricebookItem (F20)
+- `Pricebook`: `{id, ownerKind: "org" | "vendor", ownerId, name, currency, description?, createdBy, updatedAt}`.
+- `PricebookItem`: `{id, pricebookId, ref, description, unit, rate: decimal, trade?, tags[], priceDate, notes?}`;
+  history rows `{itemId, rate, priceDate, changedBy, changedAt}` on every rate change.
+
+### PriceMatch (remembered match, F20 §3)
+`{id, ownerKind: "org" | "vendor", ownerId, forOrgId? (vendor matches are per firm), key: {itemCode?, classificationId?, textHash?, unit}, pricebookItemId, createdBy, updatedAt}`.
+Unique per `(ownerKind, ownerId, forOrgId, key)`.
+
+### Estimate, EstimateLine (F20 §2)
+- `Estimate`: `{id, boqId, currency, taxPct?, exchangeRates: {currency: decimal}, updatedAt}`; one per BoQ.
+- `EstimateLine`: `{estimateId, lineKey, rate: decimal | null, source: {kind: "pricebook" | "offer" | "manual", pricebookItemId?, offerId?, vendorLinkId?}, priceDate?, note?}`.
+- `EstimateSnapshot`: `{revisionId, lines, totals, takenAt}`, written by the module when the core
+  event `version.saved` arrives.
+
+### OfferRequest and its parts (F11)
+| Field | Type | Notes |
+|---|---|---|
+| id | uuid | |
+| orgId, projectId, boqId | uuid | |
+| revisionId, runId | uuid | what the current update's lines were frozen from |
+| name, message | string | |
+| attachments | `{id, fileName, storageKey, sizeBytes, uploadedBy, uploadedAt}[]` | |
+| deadline, timezone | datetime?, string? | optional |
+| currency | string | |
+| textSystem | string? | classification whose item numbers and texts vendors see (P14) |
+| allowPartial | boolean | default true |
+| deviationThresholdPct | number | default 30 |
+| selection | `{wholeBoq?, byCode?, lineKeys?, elementGuids?, excludeLineKeys?}` | re-applied on updates |
+| currentUpdate | int | 0 at sending |
+| status | `open` \| `closed` \| `cancelled` | |
+| createdBy, createdAt, closedAt | | |
+
+- `OfferRequestLine` (frozen, per update): `{requestId, update, lineKey, positionNo, code, groupPath, description, unit, quantity, source, notes, changedInUpdate}`.
+- `OfferInvitation`: `{id, requestId, vendorLinkId, status: "invited" | "viewed" | "declined" | "submitted", declineReason?, lastActivityAt}`.
+- `Offer`: `{id, invitationId, update, status: "draft" | "submitted" | "withdrawn" | "superseded", total, notes, qualifications, validUntil?, exchangeRate?, source: "portal" | "excel", submittedAt?}`.
+- `OfferLine`: `{offerId, lineKey, rate: decimal | null, amount: decimal | null, note?, pricebookItemId?}`;
+  `amount = round(quantity × rate)` to the currency's minor units (BR-47).
+

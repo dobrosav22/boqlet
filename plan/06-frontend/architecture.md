@@ -16,9 +16,9 @@ quantity computation (BR-01), no direct engine access. It talks to the API in `o
 | URL state | `nuqs` (typed search params) | Tabs, filters, grouping, selected line |
 | Client state | React state; Zustand only for the Library editor drafts and viewer selection | Port of `apps/web/src/library/store.ts` |
 | i18n | **next-intl** (ICU) | `messages/en/*.json`, pseudo-locale `en-XA` |
-| Styling | Tailwind CSS + Radix UI primitives (shadcn/ui-style components kept in the repo) | **Recommendation; owner to confirm in FE-001** |
+| Styling | **shadcn/ui** (Tailwind CSS + Radix UI primitives, components kept in the repo), one self-hosted monospace font | **Decided (P23)**; design-system.md |
 | 3D | three.js (port of `apps/web/src/viewer`) | Lazy-loaded route chunk |
-| Decimals | `big.js` | Bidder amount display only; the backend computes the stored amounts (BR-47) |
+| Decimals | `big.js` | Pricing module amount display only; the backend computes the stored amounts (BR-47) |
 | Tests | Vitest + Testing Library; Playwright e2e against mock API + engine | 08-delivery/testing.md |
 | Lint | ESLint (next, typescript, `react/jsx-no-literals` or `i18next/no-literal-string` for UI text), Prettier | No literal UI strings (F15) |
 
@@ -41,7 +41,8 @@ apps/app/
     (public)/sign-in/[[...rest]]/page.tsx
     (public)/sign-up/[[...rest]]/page.tsx
     (public)/invite/[token]/page.tsx
-    (public)/bid-invite/[token]/page.tsx
+    (public)/s/[token]/page.tsx       # share link (F18)
+    (public)/session-conflict/page.tsx
     (app)/layout.tsx                   # auth gate, SSE connection, QueryClientProvider, IntlProvider
     (app)/onboarding/page.tsx
     (app)/account/page.tsx
@@ -54,21 +55,25 @@ apps/app/
     (app)/[org]/projects/[projectId]/models/…
     (app)/[org]/projects/[projectId]/boqs/[boqId]/page.tsx   # workspace with ?tab=
     (app)/[org]/projects/[projectId]/decisions/page.tsx
-    (app)/[org]/projects/[projectId]/tenders/[tenderId]/page.tsx
     (app)/[org]/projects/[projectId]/library/…
     (app)/[org]/projects/[projectId]/settings/page.tsx
     (app)/[org]/projects/[projectId]/activity/page.tsx
     (app)/[org]/library/…
     (app)/[org]/settings/{general,members,billing,usage,audit}/page.tsx
-    (bidder)/layout.tsx                # minimal chrome
-    (bidder)/bids/page.tsx
-    (bidder)/bids/[invitationId]/page.tsx
+    (app)/[org]/setup/page.tsx         # setup wizard (F16)
+    (admin)/admin/…                    # platform admin console (F19), own layout
   src/
     api/            schema.d.ts (generated), client.ts, keys.ts (query keys), hooks/<resource>.ts, errors.ts
     auth/           AuthAdapter.ts, adapters/mock.tsx, adapters/<provider>.tsx (after the decision)
     realtime/       sse.ts (connect, reconnect, Last-Event-ID), invalidation.ts (event → query keys)
     features/       one folder per feature: projects, models, boq-sheet, questions, viewer, changes,
-                    review, library (ported), tenders, bids, settings, billing, notifications
+                    versions, library (ported), sharing, setup, settings, billing, notifications, admin
+    extensions/     the extension registries (nav, workspace tabs, selection actions, line badges,
+                    settings sections, areas, notification kinds); empty by default
+packages/pricing-ui/ (pricing module, removable, P36)
+  src/register.ts  registers its routes ([org]/pricing/*, /vendor/*, /vendor-invite/[token]),
+                   tabs, actions, badges, nav items and i18n namespace with the core registries
+  src/…            vendors, pricebooks, estimate, offer requests, vendor area
     components/     design-system components (design-system.md)
     i18n/           config, formatters (numbers, units, currency, dates)
     lib/            permissions.ts, units.ts, decimal.ts, download.ts
@@ -161,3 +166,11 @@ design system.
 
 In dev, `next.config` rewrites `/api/v1/*` to the mock (or Java) so cookies and CSP behave as
 in production (same origin).
+
+## Modules (P36)
+
+The app imports `packages/pricing-ui` in exactly one place (`src/modules.ts`), and only when the
+build flag `MODULE_PRICING` is set. Core code never imports from a module; modules import core
+components, hooks and the generated core client. A lint rule (`no-restricted-imports`) forbids
+`@ifc-boq/pricing-ui` anywhere but `src/modules.ts`. CI builds the app with and without the
+module.

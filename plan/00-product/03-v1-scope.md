@@ -4,28 +4,35 @@
 
 | Area | In scope | Feature |
 |---|---|---|
-| Accounts | Public sign-up, create organisation, invite members, org roles, multi-org membership | F01 |
+| Accounts | Public sign-up into the default tier, create organisation, invite members, org roles, multi-org membership, one active session per account (P22). Account kinds: org users, vendor users (pricing module); no logged-in guests (P28) | F01 |
 | Projects | Create, settings (currency, units, locale, default presets), project members and roles, archive | F02 |
 | Models | Several discipline models per project, versions, upload with progress, parse job, input-check report, discipline and scope rules per model | F03 |
 | BoQ | Several BoQs per project; inputs (model versions + presets); runs as background jobs; needs-input state | F04 |
 | Questions | All engine question kinds; answer, dismiss, bulk answer; project decisions carried across versions and BoQs; promote name answers to the company dictionary | F05 |
-| Sheet | Virtualised BoQ sheet, group by any attached code system, subtotals per group, filters, line trace, calculation log, warnings, manual lines, quantity overrides with reason; "not in the models" notice with counts by source (P15) | F06 |
+| Sheet | Virtualised BoQ sheet, group by any attached code system, subtotals per group, filters, line trace, calculation log, warnings, manual lines, quantity overrides with reason; "not in the models" notice with counts by source (P15); full line editing: overwrite quantity, text and unit, move between sections, reorder, exclude (P20); "How it is calculated" in plain words (P25) | F06 |
 | Viewer | 3D view of the run's models; line → elements highlight; element → lines; colour by coverage / code group | F07 |
 | Revisions | New model version → re-run → change report (lines and elements); compare any two runs | F08 |
-| Workflow | Draft → in review → approved → issued (locked); optional four-eyes; audit log | F09 |
-| Library | Rule sets, classifications, dictionaries at system / org / project layer; versions with draft and publish; preview against a model version; code-list import from spreadsheets; item texts on codes, shown as line descriptions and sent to bidders (P14) | F10 |
+| Workflow | Working version always editable; save versions (locked snapshots); confirm the BoQ when done, reopen; optional review and approval per org (P29); audit log | F09 |
+| Library | Rule sets, classifications, dictionaries at system / org / project layer; versions with draft and publish; preview against a model version; code-list import from spreadsheets; item texts on codes, shown as line descriptions (P14) | F10 |
 | Setup | Guided first setup: the essential measuring questions with a live preview, item list and item texts import, names, publish as the org's defaults (P16) | F16 |
-| Tendering | Tenders from issued revisions, packages, bidder invitations, bidder portal, offers, Excel round-trip, addenda, sealed bids, comparison, award per package | F11 |
-| Exports | Excel BoQ (per run and frozen per issued revision), package Excel, comparison Excel | F12 |
-| Notifications | In-app (live) and email for job finished, needs input, review requests, tender events | F13 |
+| Exports | Excel BoQ (per run and frozen per saved version); edit the Excel and import the edits back; change report Excel. Pricing exports belong to the module | F12 |
+| **Pricing module** (optional, removable, P36) | Vendors linked to orgs; pricebooks for firms and vendors; the firm's estimate on a separate Pricing tab; offer requests on a BoQ or part, offers filled from vendors' pricebooks, comparison (P32–P34) | F17, F20, F11 |
+| Sharing | Public read-only share links per BoQ revision, revocable, with expiry (P26) | F18 |
+| Admin console | Platform admin view of every org, user, seat, usage, activation funnel, limit hits; notes and tags for sales (P27) | F19 |
+| Notifications | In-app (live) and email for job finished, needs input, versions and confirmations, review requests (when approval is on), pricing-module events | F13 |
 | Plans | Free plan with limits, entitlements, usage events, billing provider adapter (no hard dependency on one provider) | F14 |
-| i18n | English UI through an i18n layer; locale-aware numbers and dates; metric and imperial display; currency per project/tender | F15 |
+| i18n | English UI by default, more languages added as translations; org-customisable currency, units, number and date formats (P35) | F15 |
 
 ## Out of v1 (later, in rough order)
 
 | Item | Why later |
 |---|---|
+| Support inbox and announcements in the admin console | After v1 (F19 "Later") |
+| Vendor company accounts (several people pricing for one vendor) | One vendor account per person in v1 |
 | Setup wizard: "start from your last BoQ" (suggestions read from an uploaded past BoQ) | Needs matching texts to kinds of line, likely AI-assisted (F16 "Later", Q23) |
+| Formal tendering (packages, sealed bids, addenda, award) | Dropped (P34): offer requests in the pricing module instead |
+| Construction phase: payment certificates, progress measurement, variations, final account | Out of scope: the product ends at a confirmed BoQ |
+| Automatic or AI matching of pricebook items to BoQ lines | Manual picks, remembered (P33) |
 | BCF issues to designers | Design-led users fix their own models (P06) |
 | AI name suggestions | Settings exist in the engine, nothing built; questions cover it (09) |
 | Coordinate alignment between models | Engine assumes shared coordinates; warning when they don't overlap |
@@ -33,8 +40,6 @@
 | IDS input checks per preset | Parse checks and questions cover v1 |
 | Teams (groups with roles) | Project membership per user is enough for v1 |
 | Custom roles, SSO / SCIM | Enterprise tier |
-| Client approval step in the app | Sign-off stays with the preparing firm in v1 |
-| Clarification Q&A thread inside a tender | Use tender notes + email in v1 (see 09) |
 | Pulling models from CDEs (ACC, Trimble Connect) | Upload only in v1 |
 | Design options handling | Field measured, unused (docs/11) |
 | Mobile layouts beyond read-only | Desktop-first work tool |
@@ -58,24 +63,37 @@ walked through by hand otherwise (M).
    without asking again.
 4. **Traceability (M).** For any line, a user reaches its elements in the 3D view and its
    formula, parameters and per-element shares in two clicks or fewer.
-5. **Workflow (A).** An issued revision cannot be changed by anyone, including an org owner
-   (API returns `409 revision_locked`); changes require a new revision.
-6. **Tender round (A + M).** From an issued revision: two packages, three bidders (one pricing
-   in the browser, one by Excel upload, one declining), sealed until the deadline, comparison
-   showing totals, per-line rates, lowest and median, missing rates; award of one package
-   notifies all bidders of that package.
+5. **Versions (A).** A saved version cannot be changed by anyone, including an org owner
+   (`409 revision_locked`); a confirmed BoQ refuses every write (`409 boq_confirmed`) until it
+   is reopened; with approval switched on, saving needs an approval (F09).
+6. **Pricing module (A + M), only if the module ships in v1.** A firm imports a pricebook, prices
+   the Duplex BoQ from it and from a vendor's shared list, sends two sections to two vendors,
+   one answers in the browser from their pricebook and one by Excel; the comparison shows both
+   offers and the estimate. With the module removed from the build, criteria 1–5 and 7–17 still
+   pass unchanged (P36).
 7. **Library (M).** An org library editor creates a rule set on "As modelled", changes three
    settings, previews against the Duplex, publishes; a new BoQ using it shows the changed
    numbers; BoQs issued earlier are unchanged.
 8. **Isolation (A).** Automated tests prove a member of org X cannot read any resource of org Y,
-   a project viewer cannot see unissued revisions, and a bidder cannot read anything but their
-   own invitations and the package lines sent to them.
+   a project viewer cannot edit, and a vendor cannot read anything but their own invitations,
+   the lines sent to them and their own pricebooks.
 9. **Limits (A).** A free-plan org hitting a limit gets a clear `402 limit_reached` with the
    limit name; the UI shows what was hit and how to upgrade.
 10. **Performance (A).** The NFR targets in `04-architecture/nfr.md` hold on the reference
     files.
 11. **i18n (A).** A pseudo-locale build shows no hard-coded English strings in the app shell,
-    sheet, questions, tender and bidder screens.
+    sheet, questions, Library, share page and (with the module) vendor screens.
 12. **First setup (M).** A person new to the app runs the setup wizard (F16) on the sample
     Duplex in under 15 minutes and gets a BoQ whose Excel shows their item numbers and filled
     item texts, with the "not in the models" note.
+13. **Editing (A).** Two people editing the same BoQ see each other's edits live (P31). On the Duplex: one quantity edit, one text edit, one move to another
+    section, one exclusion and one manual line survive a new model version; an Excel edited and
+    imported back gives the same edits (F06, F12).
+14. **Vendors (A + M, pricing module).** A vendor linked to two orgs answers an offer request
+    from each, sees nothing else of either, and each org sees only its own link and lists (F17).
+15. **Share link (A).** A link opens with no account, shows only what was included, and stops
+    working within a second of being revoked (F18).
+16. **Single session (A).** A second sign-in of the same account asks to take over, and the
+    first device is signed out after confirming (F01 §10).
+17. **Admin console (A).** Its numbers match the orgs' own usage pages, and no response
+    contains project content (F19).

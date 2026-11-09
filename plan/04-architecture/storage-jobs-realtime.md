@@ -16,7 +16,7 @@ layout (`apps/mock-api/.data/blobs/`).
 | `orgs/{orgId}/diffs/{diffId}/diff.json.gz` | diff job | cache, may be recomputed |
 | `orgs/{orgId}/previews/{jobId}/…` | preview job | 7 days (lifecycle rule) |
 | `orgs/{orgId}/exports/{exportId}/{fileName}` | export jobs | issued: while the revision exists; others: 90 days |
-| `orgs/{orgId}/tenders/{tenderId}/attachments/{attachmentId}/{fileName}` | browser (signed PUT) | while the tender exists |
+| `orgs/{orgId}/pricing/…` | pricing module (attachments, workbooks) | the module's own rules; deleted with the module's data |
 | `orgs/{orgId}/imports/{jobId}/{fileName}` | browser (signed PUT) | 7 days |
 | `orgs/{orgId}/presets/{presetVersionId}/codelist.json.gz` | API | large code lists only |
 
@@ -75,6 +75,10 @@ Events (`event:` name, `data:` JSON):
 | `job.finished` | `{jobId, type, status, subjectType, subjectId, projectId, error?}` | same |
 | `notification.created` | `Notification` | the recipient |
 | `entity.changed` | `{entityType, entityId, projectId?, change: "created" \| "updated" \| "deleted"}` | users with access |
+| `boq.line_edited` | `{boqId, lineKeys, by, at}` | users with the BoQ open (P31) |
+| `boq.presence` | `{boqId, users: [{userId, name, lineKey?}]}` | users with the BoQ open |
+| `session.revoked` | `{sessionId}` | the replaced session only (BR-54) |
+| `module.*` | defined by modules (pricing: `pricing.offer_submitted`, …) | per module |
 
 - `id:` on every event; on reconnect the client sends `Last-Event-ID`, and the server replays
   the last 5 minutes from a ring buffer (per instance; with several API instances, events go
@@ -88,8 +92,8 @@ Events (`event:` name, `data:` JSON):
 
 | Task | Every | Action |
 |---|---|---|
-| Close tenders | 1 min | `open` tenders past deadline → `closed`, notifications |
-| Deadline reminders | 15 min | 24 h before deadline: firm + bidders not submitted |
+| Expire sessions | 15 min | active sessions idle > 12 h → `expired` (BR-54) |
+| Module tasks | per module | registered by modules (pricing: close offer requests at deadline, 24 h reminders) |
 | Expire invitations | 1 h | org invitations past `expiresAt` |
 | Re-queue dead jobs | 1 min | heartbeat older than 2 min |
 | Clean abandoned uploads | 1 h | `awaiting_upload` older than 24 h |

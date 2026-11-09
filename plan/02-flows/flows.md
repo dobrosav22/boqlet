@@ -8,17 +8,19 @@ system interaction where it isn't obvious. Screens are defined in [screens.md](s
 | # | Actor | Step | Screen | API |
 |---|---|---|---|---|
 | 1 | Visitor | Sign up through the auth adapter | `/sign-up` | (auth provider) |
-| 2 | User | Lands in onboarding, names the org, picks currency / units / country | `/onboarding` | `GET /me`, `POST /orgs` |
+| 1a | User | After sign-in: if the account is open on another device, confirms the takeover (F01 §10) | `/session-conflict` | `POST /sessions` (`409 session_active` → `{takeover: true}`) |
+| 2 | User | Lands in onboarding, names the org, picks currency / units / country. The org starts on the default tier (P17) | `/onboarding` | `GET /me`, `POST /orgs` |
+| 2a | Owner | **Setup wizard, required** (F16, P18): how the firm measures, item numbers and texts, names. "Use the suggested answers" finishes in minutes | `/{org}/setup` | F16 API |
 | 3 | Owner | Optional: invite colleagues (skip allowed) | `/onboarding` step 2 | `POST /orgs/{id}/invitations` |
 | 4 | Owner | Empty dashboard with "Create your first project" and "Try with a sample project" | `/{org}` | `GET /orgs/{id}/projects` |
 | 5 | Owner | Sample project: a copy of the Duplex project (model, BoQ, a few answered questions) to explore | `/{org}/projects/{p}` | `POST /orgs/{id}/projects?sample=duplex` |
-| 6 | Owner | "Set up how your firm measures": the setup wizard (F16) on the sample Duplex or an uploaded model; publishes the org's rule set, classification with item texts and company dictionary, starred as project defaults | `/{org}/setup` | `GET/PUT /orgs/{id}/setup`, Library endpoints (F16 API) |
+| 6 | Owner | Later: refine the presets in the Library (guided mode, full editors or Excel templates, F10) | `/{org}/library` | Library endpoints |
 
 The sample project doesn't count as an active project, and its processing doesn't count as usage.
-Steps 5 and 6 are optional and in any order. Previews run by the wizard count as processing
-(BR-62), except on the sample project.
+Step 2a is required before the dashboard opens. Steps 3, 5 and 6 are optional. Previews run by
+the wizard count as processing (BR-62), except on the sample Duplex.
 
-## FL-2 Main loop: models to an issued BoQ
+## FL-2 Main loop: models to a confirmed BoQ
 
 ```mermaid
 sequenceDiagram
@@ -46,13 +48,13 @@ sequenceDiagram
   E->>UI: Answer questions (bulk), Regenerate
   UI->>API: POST /projects/{p}/decisions, POST /revisions/{r}/runs
   API-->>UI: run complete
-  E->>UI: Review lines, trace, viewer; override one line; add preliminaries
-  E->>UI: Regenerate, Submit for review
-  UI->>API: POST /revisions/{r}/submit
-  actor A as Approver
-  A->>UI: Review screen, approve, issue
-  UI->>API: POST /revisions/{r}/approve, POST /revisions/{r}/issue
+  E->>UI: Review lines, explanations, viewer; edit lines; add preliminaries
+  E->>UI: Regenerate, Save version "A" (note, not-in-the-models tick)
+  UI->>API: POST /revisions/{r}/issue
   API->>W: export job (frozen Excel)
+  API-->>UI: version A saved, new working version opened
+  E->>UI: Later, when the BoQ is done: Confirm
+  UI->>API: POST /boqs/{b}/confirm
 ```
 
 Steps in words:
@@ -62,62 +64,44 @@ Steps in words:
    needed (design firms, P01).
 3. BoQs → New BoQ → setup prefilled → Generate (F04).
 4. Questions tab → answer (bulk where possible) → Regenerate (F05).
-5. Sheet → check lines, trace and viewer, override, add manual lines → Regenerate (F06, F07).
-6. Submit → reviewer approves → issue (F09). The frozen Excel is ready to download (F12).
+5. Sheet → check lines, explanations and viewer, edit lines, add manual lines → Regenerate
+   (F06, F07). Colleagues editing at the same time see each other's edits live (P31).
+6. Save version (F09 §2). The frozen Excel is ready to download (F12). Work continues in the
+   working version; save again at the next milestone.
+7. Confirm the BoQ when it is done (F09 §5). With approval switched on, step 6 is submit →
+   approve → save (F09 §4).
 
-## FL-3 New model version → Rev B
+## FL-3 New model version → next saved version
 
 | # | Actor | Step | Screen | API |
 |---|---|---|---|---|
 | 1 | Estimator | Uploads Architecture v2 (with a note) | model page | F03 calls |
 | 2 | System | Marks BoQs using v1 "new version available", notifies | — | `boq.new_version_available` |
-| 3 | Estimator | On the issued BoQ: "Start Rev B with v2" | BoQ workspace | `POST /boqs/{b}/revisions` + `PATCH /revisions/{r}` |
+| 3 | Estimator | In the working version: "Use v2" | BoQ workspace | `PATCH /revisions/{r}` |
 | 4 | Estimator | Generate. Only new questions appear. Answer them | Questions | runs, decisions |
-| 5 | Estimator | Changes tab: report vs Rev A. Checks the big deltas in the viewer (colour by changes) | Changes | `POST /runs/{run}/compare`, `GET /diffs/{d}/lines` |
-| 6 | Estimator | Submit. Approver reads the change report first, approves, issues Rev B | Review | F09 calls |
-| 7 | System | If a tender is open on Rev A: the issue dialog offers "Create addendum" | Issue dialog | `POST /tenders/{t}/addenda` |
+| 5 | Estimator | Changes tab: report against version A. Checks the big deltas in the model (Changes colour mode) | Changes | `POST /runs/{run}/compare`, `GET /diffs/{d}/lines` |
+| 6 | Estimator | Save version B (or submit it, with approval on) | BoQ workspace | F09 calls |
 
-## FL-4 Tender: firm side
+## FL-4 (Pricing module) Pricebooks and the firm's estimate
 
-```mermaid
-sequenceDiagram
-  actor E as Estimator
-  participant UI as App
-  participant API as API
-  actor B as Bidder
-  E->>UI: Tender this revision (issued Rev A)
-  UI->>API: POST /projects/{p}/tenders
-  E->>UI: One package per top-level group (Trade codes)
-  UI->>API: POST /tenders/{t}/packages/from-groups
-  E->>UI: Adjust packages, invite bidders per package
-  UI->>API: POST /packages/{k}/invitations
-  E->>UI: Open tender
-  UI->>API: POST /tenders/{t}/open
-  API-->>B: invitation emails
-  B->>API: price lines, submit (bidder flow FL-5)
-  API-->>UI: offer_submitted (no amounts while sealed)
-  API->>API: deadline passes → closed
-  E->>UI: Comparison per package
-  UI->>API: GET /packages/{k}/comparison
-  actor A as Approver
-  A->>UI: Award package
-  UI->>API: POST /packages/{k}/award
-  API-->>B: awarded / not awarded
-```
+| # | Actor | Step | Screen | API |
+|---|---|---|---|---|
+| 1 | Library editor | Pricing › Pricebooks → New → download the empty template, fill it in Excel, upload, review, save | `/{org}/pricing/pricebooks` | `POST /pricing/orgs/{o}/pricebooks`, `/import` |
+| 2 | Estimator | BoQ › Pricing tab → "Fill remembered prices" (nothing yet on a first BoQ) | Pricing tab | `POST /pricing/boqs/{b}/estimate/fill-remembered` |
+| 3 | Estimator | For each line: "Pick a price" from our pricebook or a vendor's shared list; matches are remembered | Pricing tab | `GET /pricing/orgs/{o}/price-search`, `POST /pricing/boqs/{b}/estimate/lines/batch` |
+| 4 | Estimator | Exports the priced BoQ | Pricing tab | `POST /pricing/boqs/{b}/estimate/export` |
+| 5 | Estimator | Next project: the same item numbers fill themselves from the remembered matches | Pricing tab | fill-remembered |
 
-## FL-5 Tender: bidder side
+## FL-5 (Pricing module) Offer requests
 
-| # | Step | Screen | API |
-|---|---|---|---|
-| 1 | Opens the invitation email link | `/bid-invite/{token}` | `GET /bid-tokens/{token}` |
-| 2 | Signs in or signs up (name, company) | auth adapter | `POST /bid-tokens/{token}/accept` |
-| 3 | Sees all their invitations across firms | `/bids` | `GET /bids` |
-| 4 | Opens a package: instructions, attachments, lines | `/bids/{i}` | `GET /bids/{i}`, `GET /bids/{i}/lines` |
-| 5a | Enters rates in the browser (autosave) | `/bids/{i}` | `PUT /bids/{i}/offer` |
-| 5b | Or downloads Excel, fills it in offline, uploads it, reviews the import report | `/bids/{i}` | `GET /bids/{i}/package.xlsx`, `POST /bids/{i}/offer/import` |
-| 6 | Adds notes and qualifications, submits | `/bids/{i}` | `POST /bids/{i}/offer/submit` |
-| 7 | Addendum arrives: reviews highlighted changes, resubmits | `/bids/{i}` | same |
-| 8 | After the award: sees the outcome | `/bids` | `GET /bids` |
+| # | Actor | Step | Screen | API |
+|---|---|---|---|---|
+| 1 | Member | Vendors → Invite vendor (email, company, trades) | `/{org}/pricing/vendors` | `POST /pricing/orgs/{o}/vendors` |
+| 2 | Vendor | Opens the email, signs up (name, company); keeps a pricebook; chooses which list this firm sees | `/vendor-invite/[token]`, `/vendor/firms` | `POST /pricing/vendor-invitations/{t}/accept`, `PATCH /pricing/vendor/firms/{l}` |
+| 3 | Estimator | Selects sections in the sheet (or elements in the model) → Request offers → vendors, optional deadline → Send | S12a | `POST /pricing/boqs/{b}/offer-requests` |
+| 4 | Vendor | Opens the request: "Fill from my pricebook", picks prices for the rest (remembered for this firm), submits; or uses Excel | `/vendor/requests/[id]` | `/pricing/vendor/requests/*` |
+| 5 | Estimator | Compares offers side by side with the estimate; copies one vendor's rates into the estimate | S15 | comparison, estimate |
+| 6 | Estimator | The BoQ changes → "Send update" → vendors confirm their prices | S15 | `POST /pricing/offer-requests/{r}/updates` |
 
 ## FL-6 Library: encode the office standard
 
@@ -148,3 +132,32 @@ Unknown names are the most common blocker on real files (docs/11). The flow must
 1. Free org hits `activeProjects` creating a second project → `402` → limit dialog.
 2. Owner → "Upgrade" → plan cards → `POST /orgs/{o}/billing/checkout` → provider checkout →
    return URL → webhook updates the subscription → entitlements refresh → retry works.
+
+## FL-9 Editing the BoQ with the model
+
+| # | Actor | Step | Screen | API |
+|---|---|---|---|---|
+| 1 | Estimator | Opens the BoQ: sheet and model side by side (F07 §9) | S12a | lines, scene, geometry |
+| 2 | | Filters by storey "Level 1" and code group "Walls": both sheet and model narrow | S12a | client-side |
+| 3 | | Clicks a line: "How it is calculated" explains it; its walls light up | S12a | `GET /runs/{r}/lines/by-key` |
+| 4 | | Edits the description, drags two lines into "Finishes", excludes one with a reason | S12a | `POST /boqs/{b}/overrides` |
+| 5 | | Box-selects facade elements in the model → "6 lines" → move them to "Facade" | S12a | `POST /boqs/{b}/overrides/batch` |
+| 6 | | Downloads Excel, a colleague edits it, imports it back, reviews and applies the edits (F12) | S12g | `POST /revisions/{r}/edits-import`, job |
+| 7 | | Generates again: every edit is kept and shown as an edit | S12a | `POST /revisions/{r}/runs` |
+
+## FL-11 Share a BoQ
+
+| # | Actor | Step | Screen | API |
+|---|---|---|---|---|
+| 1 | Lead | BoQ workspace → Share → "This version as it is now", includes sheet, explanations, 3D; expires in 30 days → copy link | S12 | `POST /boqs/{b}/share-links` |
+| 2 | Client | Opens the link without an account: reads the BoQ, clicks lines, turns the model | `/s/[token]` | `/public/shares/{token}/*` |
+| 3 | Lead | Later revokes it; the client sees "This link is no longer available" | S12 | `DELETE /share-links/{id}` |
+
+## FL-12 Platform admin
+
+| # | Actor | Step | Screen | API |
+|---|---|---|---|---|
+| 1 | Admin | Overview for the last 30 days; activation funnel shows orgs stuck at "first model" | `/admin` | `GET /admin/overview`, `/admin/funnel` |
+| 2 | Admin | Orgs filtered by "hit a limit": opens one, reads usage and limit events, adds a note and a tag | `/admin/orgs/[id]` | `GET /admin/orgs/{id}`, `POST …/notes` |
+| 3 | Admin | Extends the org's trial by 14 days with a reason (audited, visible to the org) | `/admin/orgs/[id]` | `PUT /admin/orgs/{id}/subscription` |
+
