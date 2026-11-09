@@ -5,7 +5,7 @@
 A new org's first BoQ uses the system presets: "As modelled" measures as the model has it, with
 no market's conventions (walls in m², every opening deducted, no excavation, no reinforcement
 estimate), no classification, no item texts. To an engineer that does not look like a BoQ, and
-the full Library (F10) asks a lot before the first useful result: 56 rule-set questions, a code
+the full Library (F10) asks a lot before the first useful result: 61 rule-set questions, a code
 list, a map, a dictionary.
 
 The wizard is the short path. In about fifteen minutes, on a model the user can see, it sets
@@ -36,8 +36,8 @@ later be edited in the Library like any preset.
    numbers use the neutral 'As modelled' rules. Set up your firm's rules →". Dismissible per
    user.
 
-Who: org owner, admin, library editor. Members see the dashboard card as "Ask an admin to set
-up how your firm measures" with no action.
+Who: org owner, admin, library editor. Members without library rights never run it; while it is
+unfinished they see "Your firm's setup isn't finished yet" and work with the system presets.
 
 ## Steps
 
@@ -49,9 +49,9 @@ with changed lines highlighted (the F10 preview, EN-005).
 
 - **Model to try it on:** pick a model version from any project the user can see, or the
   sample Duplex (FL-1). Optional. Without a model the wizard still works, with no preview.
-- **Start from:** "As modelled" (default), or a system or org rule set that is closer, for
-  example one written for the firm's market if one exists (Q9). The list shows each preset's
-  `basedOn` text.
+- **Start from:** "As modelled" (default), or any system or org rule set that is closer (no
+  market is built in, P35; a firm running the wizard again may start from its own). The list
+  shows each preset's `basedOn` text.
 - Creates the drafts: a rule-set patch, a classification and a company dictionary, named
   "{Org name} rules", "{Org name} items" and "{Org name} names" (editable). Free plan:
   `libraryOrgPresets` is 1 per kind (05-plans-and-limits), so the wizard fits it exactly. If
@@ -196,10 +196,11 @@ back opens the step where the user left. Finishing sets `completedAt`. There is 
 
 ### Designed for someone who has never seen the product
 
-- One question per screen in step 1, in the user's terms ("How do you measure masonry walls:
-  in m² or in m³?"), a one-line explanation, a small worked example, and the suggested answer
-  preselected. The preview shows what the answer changes, on the model, in numbers.
-- Never more than three choices visible at once; advanced options behind "More".
+- One topic per screen in step 1 (the checklist, one screen per switched-on item, the six
+  measuring screens), each question in the user's terms ("How do you measure masonry walls:
+  in m² or in m³?") with a one-line explanation, a small worked example, and the suggested
+  answer preselected. The preview shows what the answer changes, on the model, in numbers.
+- Never more than three answer choices visible per question; advanced options behind "More".
 - A progress bar with steps and time left ("about 4 minutes"). Back and forward never lose
   answers.
 - Plain words only: no "slot", "patch", "classification map" or IFC class names on screen.
@@ -225,8 +226,8 @@ uploaded for extraction (BR-53, F10 §12).
 
 - **The preview model has none of an item's elements:** the preview shows "not in this model"
   for that item; the wizard still lets the user give it an item number.
-- **The starting rule set has no `setup` slots** (an org's own rule set): step 1 lists its
-  sections and links to the full Settings tab.
+- **The starting rule set has no `setupSteps`** (an org's own rule set): parts 1a and 1b still
+  work from its data; 1c lists its sections with links to the full Settings tab.
 - **Two admins run the wizard at once:** one `Org.setup`; the second sees "Setup in progress
   by {name}" with "Open" (same drafts, F10 ETag rules) or "Start separately" (new drafts).
 - **Processing limit reached** (`402` on preview): the wizard keeps working without the

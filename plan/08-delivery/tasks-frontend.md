@@ -102,11 +102,11 @@ row → elements, box/shift selection in the model → lines panel with bulk act
 Edited colour modes, keyboard shortcuts.
 **Accept:** F07 criteria 5, 6.
 
-### FE-042 Not in the models (F06 §12, F09 §1)
+### FE-042 Not in the models (F06 §12, F09 §2)
 Sheet notice with counts by source and "Add line", collapsible per user; same text as the
-empty state of empty groups and in the "Add line" help; submit dialog checkbox (M3, with
-with FE-024, the submit dialog). Strings from the message catalogue.
-**Accept:** F06 criterion 8; submitting without the tick is impossible.
+empty state of empty groups and in the "Add line" help; the tick in the save-version dialog
+(built in M3 with FE-024). Strings from the message catalogue.
+**Accept:** F06 criterion 8; saving a version (approval off) without the tick is impossible.
 
 ### FE-012 Viewer (F07)
 Port `SceneView.ts`/`links.ts`; multi-model load; line ↔ element; element panel; colour modes

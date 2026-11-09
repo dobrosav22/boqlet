@@ -18,7 +18,7 @@ rule has an id. Tests and code comments cite it (`// BR-07`).
 | BR-09 | **Edits are explicit.** A line edit (quantity, text, unit, section, position, exclusion; P20) is kept per line key across runs and model versions. An edited line shows the engine's value and the edit, with the reason where one is required, in the sheet, the exports, share links and the change report. An excluded line stays listed as excluded. An edit whose line disappears becomes an `orphan_override` question, never silently dropped. | BR-03 |
 | BR-10 | Only `blocking` questions keep a run in `needs_input`. Informative questions are listed but don't block submission. | D20 |
 | BR-11 | **Item texts never change a number.** An item text belongs to a code in a classification (P14). Its blanks are filled by the engine only (BR-01), from the line's values. A blank the line has no value for stays visible and raises a run warning, never an empty or guessed text. | P14 |
-| BR-12 | **The app says what it cannot see.** Quantities come only from what the models contain; work not modelled as objects is the user's to add (manual lines) unless the rule set derives it. The sheet, the submit dialog and the exports say so (F06 §12, F09 §2, F12). The app never claims a BoQ is complete. | P15 |
+| BR-12 | **The app says what it cannot see.** Quantities come only from what the models contain; work not modelled as objects is the user's to add (manual lines) unless the rule set derives it. The sheet, the save-version dialog and the exports say so (F06 §12, F09 §2, F12). The app never claims a BoQ is complete. | P15 |
 
 ## Revisions and workflow
 

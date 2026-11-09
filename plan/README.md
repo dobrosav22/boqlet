@@ -38,7 +38,7 @@ owner's `06-frontend/design-guidelines.md` when it exists (P41).
 2. Take a task from `08-delivery/` (`tasks-frontend.md`, `tasks-backend.md`, `tasks-engine.md`).
    Every task names the spec sections it implements and its acceptance criteria.
 3. The HTTP contract is `05-api/openapi.yaml` (core) plus `05-api/openapi-pricing.yaml` (the optional pricing module). Frontend, mock API and Java backend all
-   implement or consume exactly this file. Change the contract first, then the code.
+   implement or consume exactly these files. Change the contract first, then the code.
 4. If a spec is silent or contradictory, do not guess on product behaviour: add the question to
    `09-open-questions.md` and ask the owner. Implementation details inside a module are yours.
 5. `07-backend/decisions-to-make.md` lists decisions the **backend agent must stop and ask the
@@ -60,11 +60,11 @@ owner's `06-frontend/design-guidelines.md` when it exists (P41).
 | 10 | [01-features/](01-features/) | One spec per feature (F01–F20; F11, F17, F20 form the removable pricing module) |
 | 11 | [02-flows/flows.md](02-flows/flows.md), [02-flows/screens.md](02-flows/screens.md) | End-to-end flows, screen inventory, wireframes |
 | 12 | [04-architecture/](04-architecture/) (start with `modules.md` for the core/module boundary) | System, engine worker contract, storage/jobs/realtime, security, deployment, NFRs |
-| 13 | [05-api/](05-api/) | `openapi.yaml` and API conventions |
-| 14 | [06-frontend/](06-frontend/) | Next.js architecture, what to reuse from the PoC, mock API, design system |
+| 13 | [05-api/](05-api/) | `openapi.yaml` (core), `openapi-pricing.yaml` (pricing module), API conventions |
+| 14 | [06-frontend/](06-frontend/) | Next.js architecture, what to reuse from the PoC, mock API (and its engine fakes), design system, the owner's design guidelines (when supplied) |
 | 15 | [07-backend/](07-backend/) | Java architecture, DB schema, decisions to make |
 | 16 | [08-delivery/](08-delivery/) | Milestones, task lists, testing |
-| 17 | [09-open-questions.md](09-open-questions.md) | What is assumed and must be validated |
+| 17 | [09-open-questions.md](09-open-questions.md) | What is still open, who decides, and by when |
 
 ## Decisions taken (Nov 2026, product owner)
 
@@ -83,11 +83,11 @@ decisions D01–D68 are in `docs/02-decisions.md` and still hold unless changed 
 | P08 | **Public sign-up with a limited free plan.** Billing is provider-agnostic (Paddle likely): entitlements and usage events in the backend, the payment provider behind an adapter. |
 | P09 | **Cloud-neutral deployment**: containers, Postgres, S3-compatible storage. The provider is chosen at deploy time. |
 | P10 | **Authentication is not decided.** The agent that starts the backend asks the owner (options in `07-backend/decisions-to-make.md`). The frontend codes against an auth adapter. |
-| P11 | **Frontend first, against a mock API** that implements `openapi.yaml`, keeps CRUD state itself and uses the **real Python engine** for computation. The Java backend replaces the mock by changing a base URL. |
+| P11 | *(Refined by P38, P39: phases; in phase 1 the mock uses the PoC engine API plus fakes.)* **Frontend first, against a mock API** that implements `openapi.yaml`, keeps CRUD state itself and uses the **real Python engine** for computation. The Java backend replaces the mock by changing a base URL. |
 | P12 | Frontend: **React + Next.js**. Backend: **Java** (D62). Engine: **Python workers** (D61). |
 | P13 | "Needs input" is a state of a **run and its BoQ revision**, not of a job. A job always ends (succeeded, failed or cancelled); answering questions starts a new run. (Refines doc 10.) |
 | P14 | **Item texts live on the classification's codes.** A firm's BoQ item is a number plus a written description that is priced. The text is the code's `description`, a template with blanks the engine fills per line; the line shows it instead of the rule set's short line text. Classification still never changes a number (BR-02, BR-11). |
-| P15 | **What isn't in the models is the user's to add.** The engine does not guess missing work. The app says so plainly on the sheet, at submit and in exports, and makes manual lines easy (BR-12). |
+| P15 | **What isn't in the models is the user's to add.** The engine does not guess missing work. The app says so plainly on the sheet, when a version is saved and in exports, and makes manual lines easy (BR-12). |
 | P16 | **A setup wizard in v1** for a new org's first rule set, classification and dictionary (F16). "Start from your last BoQ" comes after v1. |
 | P17 | **Sign-up lands in a default tier.** Paid tiers are levels by active projects, seats, or both; the commercial model is undecided, so entitlements stay data (refines P08). |
 | P18 | **The setup wizard is required on first start** of a new org, for its rule set and classification (and names). It must be finishable in minutes with suggested answers (refines P16). |
@@ -98,7 +98,7 @@ decisions D01–D68 are in `docs/02-decisions.md` and still hold unless changed 
 | P23 | **UI: shadcn/ui** (Tailwind + Radix) with **one monospace typeface**; very clean, no visual noise, modern (settles the FE-001 styling question). |
 | P24 | **Guided preset editing and Excel templates.** New rule sets and classifications start in guided mode; every preset can be downloaded as an Excel template and uploaded back. |
 | P25 | **"How it is calculated" and the 3D model are central.** Every line explains its number in plain words; the model sits beside the sheet while editing and in revisions, with filters shared by both. |
-| P26 | **Public read-only share links** for BoQ revisions, revocable, with expiry. |
+| P26 | **Public read-only share links** for BoQ versions, revocable, with expiry. |
 | P27 | **Platform admin console** for the operator: all orgs, users, seats, usage and activation, metadata only (no project content); support messages later. |
 | P28 | **No logged-in guests.** Three kinds of access: org users, vendor users (pricing module) and public share links (plus platform admins). |
 | P29 | **A BoQ is a living document until confirmed.** An always-editable working version; "Save version" locks labelled snapshots and work continues; "Confirm" marks the BoQ done (reopenable). Review and approval are optional per org, off by default. Archiving the project is separate. |
@@ -119,11 +119,12 @@ decisions D01–D68 are in `docs/02-decisions.md` and still hold unless changed 
 ## Where the code will live (target monorepo)
 
 ```
-apps/app          Next.js product frontend (new)
-apps/mock-api     Mock backend implementing openapi.yaml, delegating computation to the engine (new)
+apps/app          Next.js product frontend (new, phase 1; wired to Java in phase 3)
+apps/mock-api     Mock backend implementing the contracts (new, phase 1): computation through the
+                  PoC engine API plus engine fakes in phase 1, through the engine worker from phase 2
 apps/web          The PoC dev UI (kept as an engine developer tool until the product replaces it)
-services/api      Java backend (new, later)
-engine/           Python engine; gains worker.py (queue worker) and rpc.py (quick calls)
+services/api      Java backend (new, phase 2)
+engine/           Python engine; gains worker.py (queue worker) and rpc.py (quick calls) in phase 2
 packages/types    Engine contract (TS -> JSON Schema), unchanged role
 packages/pricing-ui  Pricing module frontend (optional, removable, P36)
 packages/pricing-api openapi-pricing.yaml + its generated client (module only)
