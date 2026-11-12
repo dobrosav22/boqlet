@@ -1,0 +1,121 @@
+{
+  "sampleName": "Duplex (sample)",
+  "dashboard": {
+    "needsYou": "Needs you",
+    "nothingNeedsYou": "Nothing needs you right now.",
+    "open": "Open",
+    "projects": "Projects",
+    "newProject": "New project",
+    "emptyTitle": "Start your first project",
+    "emptyBody": "A project holds one building's models, bills of quantities and decisions. Create one, or explore a sample built from a real model.",
+    "createFirst": "Create your first project",
+    "trySample": "Try with a sample project"
+  },
+  "card": {
+    "sample": "Sample",
+    "archived": "Archived",
+    "boqs": "BoQs",
+    "questions": "Questions",
+    "inReview": "In review",
+    "lastActivity": "Last activity {when}"
+  },
+  "list": {
+    "title": "Projects",
+    "new": "New project",
+    "search": "Search projects",
+    "status": "Status",
+    "active": "Active",
+    "archived": "Archived",
+    "empty": "No projects here.",
+    "name": "Name",
+    "code": "Code",
+    "client": "Client",
+    "myRole": "My role",
+    "lastActivity": "Last activity",
+    "roles": {
+      "lead": "Lead",
+      "estimator": "Estimator",
+      "approver": "Approver",
+      "viewer": "Viewer"
+    }
+  },
+  "new": {
+    "title": "New project",
+    "name": "Project name",
+    "code": "Code",
+    "client": "Client",
+    "address": "Address",
+    "country": "Country",
+    "currency": "Currency",
+    "units": "Units",
+    "metric": "Metric",
+    "imperial": "Imperial",
+    "optional": "Optional",
+    "defaultsNote": "New BoQs start from your organisation's default rule set, dictionary and classification. You can change them per project or per BoQ.",
+    "create": "Create project"
+  },
+  "header": {
+    "archived": "This project is archived: everything is read-only. A lead can restore it in Settings.",
+    "nav": "Project",
+    "sections": {
+      "overview": "Overview",
+      "models": "Models",
+      "boqs": "BoQs",
+      "decisions": "Decisions",
+      "library": "Library",
+      "activity": "Activity",
+      "settings": "Settings"
+    }
+  },
+  "overview": {
+    "models": "Models",
+    "noModels": "No models yet.",
+    "boqs": "Bills of quantities",
+    "noBoqs": "No BoQs yet.",
+    "activity": "Recent activity"
+  },
+  "activity": {
+    "empty": "Nothing has happened yet.",
+    "system": "System",
+    "notAllowed": "Only leads and approvers see the project's activity.",
+    "actions": {
+      "project_created": "Created the project",
+      "project_updated": "Changed the project's settings",
+      "project_archived": "Archived the project",
+      "project_restored": "Restored the project",
+      "project_member_added": "Added a member",
+      "project_member_role_changed": "Changed a member's role",
+      "project_member_removed": "Removed a member"
+    }
+  },
+  "settings": {
+    "general": "General",
+    "name": "Name",
+    "code": "Code",
+    "client": "Client",
+    "address": "Address",
+    "country": "Country",
+    "currency": "Currency",
+    "units": "Units",
+    "unitsHint": "Applies to future runs; existing runs keep their units.",
+    "metric": "Metric",
+    "imperial": "Imperial",
+    "save": "Save changes",
+    "saved": "Saved",
+    "members": "Members",
+    "membersNote": "Project members are people in your organisation. Send people outside it a share link instead.",
+    "memberEmail": "Email of a colleague",
+    "role": "Role",
+    "add": "Add",
+    "email": "Email",
+    "roleOf": "Role of {name}",
+    "remove": "Remove",
+    "notInOrg": "That person isn't in your organisation. Invite them to the organisation first, or send them a share link.",
+    "archiveTitle": "Archive project",
+    "archiveBody": "An archived project is read-only and doesn't count towards your plan's active projects. You can restore it later.",
+    "archive": "Archive project",
+    "restoreTitle": "Restore project",
+    "restoreBody": "Makes the project editable again, if your plan has room for another active project.",
+    "restore": "Restore project"
+  }
+}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
+import { useRelativeTime } from "@/i18n/use-relative-time";
 import { toast } from "sonner";
 import { api } from "@/api/client";
 import { isApiError } from "@/api/errors";
@@ -24,6 +25,7 @@ export function MembersSettings() {
   const t = useTranslations("settings.members");
   const roles = useTranslations("common.roles");
   const format = useFormatter();
+  const relativeTime = useRelativeTime();
   const message = useErrorMessage();
   const { org, role: myRole, can } = useOrg();
   const me = useMe();
@@ -159,7 +161,7 @@ export function MembersSettings() {
                     )}
                   </TableCell>
                   <TableCell className="tabular-nums">{format.dateTime(new Date(m.createdAt), { dateStyle: "medium" })}</TableCell>
-                  <TableCell className="tabular-nums">{m.lastActiveAt ? format.relativeTime(new Date(m.lastActiveAt)) : t("never")}</TableCell>
+                  <TableCell className="tabular-nums">{m.lastActiveAt ? relativeTime(m.lastActiveAt) : t("never")}</TableCell>
                   <TableCell className="text-right">
                     {canEdit && (
                       <Button variant="ghost" onClick={() => removeMember.mutate(m.user.id)} aria-label={t("removeOf", { name: m.user.name })}>

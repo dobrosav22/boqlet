@@ -57,6 +57,31 @@ export interface InvitationRec {
   createdAt: string;
   acceptedBy?: string;
 }
+export type ProjectRole = Schemas["ProjectRole"];
+export interface ProjectRec {
+  id: string;
+  orgId: string;
+  name: string;
+  code?: string;
+  client?: string;
+  location?: { address?: string; country?: string };
+  currency: string;
+  unitSystem: "metric" | "imperial";
+  locale: string;
+  status: "active" | "archived";
+  sample: boolean;
+  defaults: Schemas["ProjectDefaults"];
+  projectDictionaryId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface ProjectMemberRec {
+  projectId: string;
+  userId: string;
+  role: ProjectRole;
+  addedBy?: string;
+  createdAt: string;
+}
 export interface AuditRec {
   id: string;
   orgId: string | null;
@@ -79,6 +104,8 @@ export interface Db {
   presets: PresetRec[];
   presetVersions: PresetVersionRec[];
   invitations: InvitationRec[];
+  projects: ProjectRec[];
+  projectMembers: ProjectMemberRec[];
   audit: AuditRec[];
   /** Orgs being deleted (F01 §9): hidden everywhere, removed later. */
   deletedOrgIds: string[];
@@ -100,6 +127,8 @@ export function loadStore(): boolean {
   state = JSON.parse(readFileSync(file(), "utf8")) as Db;
   // Collections added after a db.json was written start empty.
   state.invitations ??= [];
+  state.projects ??= [];
+  state.projectMembers ??= [];
   state.deletedOrgIds ??= [];
   return true;
 }

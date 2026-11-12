@@ -22,10 +22,6 @@
     "title": "Platform admin",
     "placeholder": "The admin console is built in F19."
   },
-  "dashboard": {
-    "title": "Dashboard",
-    "placeholder": "Projects and what needs you appear here."
-  },
   "roles": {
     "owner": "Owner",
     "admin": "Admin",

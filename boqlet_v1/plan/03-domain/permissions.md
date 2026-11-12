@@ -57,6 +57,29 @@ Org owners and admins act as `lead` on every project. The creator of a project b
 
 ² Approvers confirm only when approval is on; otherwise confirming is the lead's.
 
+**Permission keys** in the `permissions` object of a `Project` (UI hints; the API enforces
+anyway). Every implementation returns exactly these keys, `false` for every write while the
+project is archived (added in FE-006):
+
+| Key | Rows above |
+|---|---|
+| `view` | See project, models, BoQs… |
+| `edit` | Edit project settings, defaults |
+| `archive` | Archive and restore (lead) |
+| `manageMembers` | Manage project members |
+| `editModels` | Create models, upload versions, edit scope |
+| `editBoqs` | Create BoQs, edit inputs, generate runs |
+| `answerQuestions` | Answer questions |
+| `editLines` | Edit lines, manual lines, import edits |
+| `editPresets` | Edit project-layer presets |
+| `saveVersion` | Save version (approval off) / submit for review (approval on) |
+| `approve` | Approve, request changes |
+| `confirm` | Confirm a BoQ |
+| `reopen` | Reopen a confirmed BoQ |
+| `share` | Create and edit share links |
+| `revokeShares` | Revoke any share link of the project |
+| `seeAudit` | Project audit log |
+
 Four-eyes (org setting `fourEyes`, plan feature `approvalWorkflow`, only with approval on): the
 user who submitted a version cannot approve or save it, even as lead.
 

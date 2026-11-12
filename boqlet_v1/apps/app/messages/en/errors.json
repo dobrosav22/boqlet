@@ -21,6 +21,9 @@
     "own_role": "You can't change your own role.",
     "email_mismatch": "This invitation was sent to another email address.",
     "confirm_mismatch": "Type the organisation's name exactly to confirm.",
-    "limit_reached": "Your plan's limit is reached."
+    "limit_reached": "Your plan's limit is reached.",
+    "project_archived": "The project is archived and read-only. Restore it to make changes.",
+    "not_org_member": "Only members of your organisation can join a project. Send a share link to people outside it.",
+    "last_lead": "A project needs at least one lead."
   }
 }

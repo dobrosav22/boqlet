@@ -184,7 +184,9 @@ export const orgHandlers: Handlers = {
     if (!self && target.role === "owner" && myRole !== "owner") throw forbidden("owner");
     if (target.role === "owner" && ownersOf(org.id).length === 1) throw conflict("last_owner", "An organisation needs at least one owner.");
     db().memberships.splice(db().memberships.indexOf(target), 1);
-    // Project memberships in this org go too (F01 §8); projects arrive in FE-006.
+    // Their project memberships in this org go too (F01 §8).
+    const orgProjects = new Set(db().projects.filter((p) => p.orgId === org.id).map((p) => p.id));
+    db().projectMembers = db().projectMembers.filter((m) => !(m.userId === target.userId && orgProjects.has(m.projectId)));
     persist();
     audit({ orgId: org.id, actorId: user!.id, action: "member.removed", subjectType: "user", subjectId: target.userId, data: { role: target.role, left: self } });
     changed("membership", target.userId, "deleted", [...orgMemberIds(org.id), target.userId]);

@@ -10,6 +10,7 @@ import path from "node:path";
 import { nowIso } from "./clock.js";
 import { seedId } from "./ids.js";
 import { PRESETS_DIR } from "./paths.js";
+import { insertProject } from "./handlers/projects.js";
 import type { Db, MembershipRec, OrgRec, PlanRec, PresetRec, PresetVersionRec, UserRec } from "./store.js";
 
 /** Placeholder limits from 00-product/05-plans-and-limits.md. A missing limit means unlimited. */
@@ -145,7 +146,9 @@ export function buildSeed(): Db {
     member("small", "olivia", "owner"),
   ];
   const { presets, presetVersions } = systemPresets(at);
-  return { version: 1, seededAt: at, users, orgs, memberships, plans: PLANS, presets, presetVersions, invitations: [], audit: [], deletedOrgIds: [] };
+  const store: Db = { version: 1, seededAt: at, users, orgs, memberships, plans: PLANS, presets, presetVersions, invitations: [], projects: [], projectMembers: [], audit: [], deletedOrgIds: [] };
+  seedProjects(store, at);
+  return store;
 }
 
 const readJson = (file: string) => JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>;
@@ -199,4 +202,27 @@ export function systemPresets(at: string) {
   const resolution = readJson(path.join(dir("settings"), "resolution.json"));
   add("resolution", String(resolution.id ?? "resolution-default"), String(resolution.name ?? "Default resolution settings"), resolution);
   return { presets, presetVersions };
+}
+
+/**
+ * Projects (mock-api.md "Seed data"): Duplex with its team, an empty project, and Small Firm at its
+ * one-project limit. Models, BoQs and the federated Office project come with FE-007 and FE-008.
+ */
+export const SEED_PROJECTS = {
+  duplex: seedId("project:duplex"),
+  empty: seedId("project:empty"),
+  smallHouse: seedId("project:small-house"),
+} as const;
+
+function seedProjects(store: Db, at: string) {
+  const org = (id: string) => store.orgs.find((o) => o.id === id)!;
+  const person = (id: string) => store.users.find((u) => u.id === id)!;
+  insertProject(org(SEED.orgs.studio), person(SEED.users.olivia), { name: "Duplex", code: "DPX-01", client: "NIBS sample", location: { country: "US" } }, { at, id: SEED_PROJECTS.duplex, store });
+  store.projectMembers.push(
+    { projectId: SEED_PROJECTS.duplex, userId: SEED.users.marko, role: "estimator", addedBy: SEED.users.olivia, createdAt: at },
+    { projectId: SEED_PROJECTS.duplex, userId: SEED.users.ana, role: "approver", addedBy: SEED.users.olivia, createdAt: at },
+    { projectId: SEED_PROJECTS.duplex, userId: SEED.users.victor, role: "viewer", addedBy: SEED.users.olivia, createdAt: at },
+  );
+  insertProject(org(SEED.orgs.studio), person(SEED.users.olivia), { name: "Empty project" }, { at, id: SEED_PROJECTS.empty, store });
+  insertProject(org(SEED.orgs.small), person(SEED.users.olivia), { name: "Small Firm house" }, { at, id: SEED_PROJECTS.smallHouse, store });
 }
