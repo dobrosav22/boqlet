@@ -34,8 +34,16 @@ function lastActivityAt(projectId: string) {
 
 function listItem(project: ProjectRec, userId: string) {
   const last = lastActivityAt(project.id) ?? project.updatedAt;
-  // Counts grow as models (FE-007), BoQs (FE-008), questions (FE-010) and reviews (FE-031) arrive.
-  return { ...projectView(project, userId), counts: { models: 0, boqs: 0, blockingQuestions: 0, revisionsInReview: 0, confirmedBoqs: 0 }, lastActivityAt: last };
+  // Questions (FE-010) and reviews (FE-031) are counted when they arrive.
+  const boqs = db().boqs.filter((b) => b.projectId === project.id && !b.archived);
+  const counts = {
+    models: db().models.filter((m) => m.projectId === project.id && !m.archived).length,
+    boqs: boqs.length,
+    blockingQuestions: 0,
+    revisionsInReview: 0,
+    confirmedBoqs: boqs.filter((b) => b.status === "confirmed").length,
+  };
+  return { ...projectView(project, userId), counts, lastActivityAt: last };
 }
 
 /**

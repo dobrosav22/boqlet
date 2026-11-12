@@ -6,13 +6,15 @@ import { coreHandlers } from "./handlers/core.js";
 import { orgHandlers } from "./handlers/orgs.js";
 import { projectHandlers } from "./handlers/projects.js";
 import { modelHandlers } from "./handlers/models.js";
+import { presetHandlers } from "./handlers/presets.js";
+import { boqHandlers } from "./handlers/boqs.js";
 import { apiRouter, type Handlers } from "./router.js";
 import { buildSeed } from "./seed.js";
 import { loadSpec } from "@ifc-boq/api/spec";
 import { loadStore, replaceStore } from "./store.js";
 
 /** All handlers, by operationId. Each task adds its file here. */
-export const handlers: Handlers = { ...coreHandlers, ...orgHandlers, ...projectHandlers, ...modelHandlers };
+export const handlers: Handlers = { ...coreHandlers, ...orgHandlers, ...projectHandlers, ...modelHandlers, ...presetHandlers, ...boqHandlers };
 
 /** Builds the mock: loads (or seeds) the store and the contract. Used by the server and the tests. */
 export async function createApp(opts: { reseed?: boolean } = {}) {

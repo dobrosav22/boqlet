@@ -76,7 +76,7 @@ export function apiRouter(spec: Spec, handlers: Handlers) {
       const query: Record<string, unknown> = {};
       const paramErrors: unknown[] = [];
       ((op.raw.parameters as Json[]) ?? []).forEach((rawParam, i) => {
-        const { value: p, pointer } = deref(spec.doc, rawParam, `${op.pointer}/parameters/${i}`);
+        const { value: p, pointer } = deref(spec.doc, rawParam, op.parameterPointers[i]!);
         const where = p.in as string;
         if (where !== "path" && where !== "query") return;
         const name = p.name as string;
@@ -88,9 +88,7 @@ export function apiRouter(spec: Spec, handlers: Handlers) {
           return;
         }
         if (schema) {
-          // Inline parameters are reached through the operation; referenced ones through components.
-          const schemaPointer = rawParam.$ref ? `${pointer}/schema` : `${op.pointer}/parameters/${i}/schema`;
-          const validate = spec.validator(schemaPointer);
+          const validate = spec.validator(`${pointer}/schema`);
           if (!validate(value)) paramErrors.push({ name, errors: describeErrors(validate.errors) });
         }
         if (where === "query") query[name] = value;

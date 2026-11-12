@@ -1,0 +1,177 @@
+{
+  "list": {
+    "title": "Bills of quantities",
+    "new": "New BoQ",
+    "empty": "No BoQs yet. A BoQ takes chosen model versions and measures them under a rule set.",
+    "emptyNoModels": "Add a model and upload a version first: a BoQ is built from ready model versions.",
+    "showArchived": "Show archived",
+    "archived": "Archived",
+    "name": "Name",
+    "version": "Version",
+    "state": "State",
+    "lines": "Lines",
+    "updated": "Updated",
+    "notGenerated": "Not generated yet"
+  },
+  "create": {
+    "title": "New BoQ",
+    "fromModelTitle": "Generate a BoQ",
+    "description": "The project's presets are preselected. You can change every input later in Setup.",
+    "name": "Name",
+    "namePlaceholder": "Tender BoQ",
+    "notes": "Description",
+    "optional": "Optional",
+    "models": "Models",
+    "noReadyModels": "No model has a ready version yet.",
+    "ruleSet": "Rule set",
+    "classifications": "Classifications",
+    "create": "Create BoQ",
+    "createAndGenerate": "Create and generate",
+    "cancel": "Cancel",
+    "projectDefault": "The project's default"
+  },
+  "status": {
+    "working": "Working",
+    "confirmed": "Confirmed",
+    "draft": "Working",
+    "in_review": "In review",
+    "approved": "Approved",
+    "issued": "Saved",
+    "archived": "Archived"
+  },
+  "run": {
+    "status": {
+      "queued": "Queued",
+      "running": "Running",
+      "complete": "Complete",
+      "needs_input": "Needs input",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "stages": {
+      "load": "Loading models",
+      "names": "Resolving names",
+      "measure": "Measuring",
+      "federate": "Combining models",
+      "rules": "Applying rules",
+      "classify": "Classifying",
+      "export": "Writing the result",
+      "index": "Indexing lines"
+    },
+    "waiting": "Waiting to start",
+    "notGenerated": "Not generated yet",
+    "summary": "{lines, plural, one {# line} other {# lines}} · {flagged, plural, =0 {nothing to confirm} other {# to confirm}} · generated {when}",
+    "needsInput": "{count, plural, one {# question needs} other {# questions need}} an answer before this BoQ is complete",
+    "openQuestions": "Open questions",
+    "failed": "Generating failed: {message}",
+    "lastGood": "The last complete run is still shown.",
+    "pending": "Inputs changed since this run: {what}. Generate again to see the effect.",
+    "pendingItems": {
+      "inputs_models": "models",
+      "inputs_ruleSet": "rule set",
+      "inputs_classifications": "classifications",
+      "inputs_dictionaries": "dictionaries",
+      "inputs_federation": "federation settings",
+      "inputs_resolution": "resolution settings",
+      "decisions": "answers",
+      "adjustments": "line edits"
+    },
+    "newModelVersion": "A newer model version is available",
+    "useIt": "Review in Setup",
+    "errors": {
+      "engine_unavailable": "the processing service is not available. Try again in a moment.",
+      "run_error": "the engine could not build this BoQ."
+    }
+  },
+  "actions": {
+    "generate": "Generate",
+    "regenerate": "Generate again",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "saveVersion": "Save version",
+    "saveBlockedPending": "Generate again before saving: the inputs changed since the last run.",
+    "saveBlockedNoRun": "Generate the BoQ before saving a version.",
+    "more": "More actions",
+    "archive": "Archive BoQ",
+    "restore": "Restore",
+    "archivedBanner": "This BoQ is archived: it is hidden from the list and read-only. A lead can restore it."
+  },
+  "tabs": {
+    "label": "BoQ",
+    "sheet": "Sheet",
+    "questions": "Questions",
+    "setup": "Setup",
+    "versions": "Versions"
+  },
+  "sheet": {
+    "empty": "Generate the BoQ to see its lines.",
+    "elements": "Elements",
+    "measured": "Measured",
+    "lines": "Lines",
+    "flagged": "To confirm",
+    "questions": "Questions",
+    "blocking": "Blocking",
+    "warnings": "Warnings",
+    "duration": "Duration",
+    "seconds": "{s} s"
+  },
+  "questions": {
+    "none": "No questions in the current run.",
+    "count": "{count, plural, one {# question} other {# questions}}, {blocking} blocking."
+  },
+  "setup": {
+    "readOnly": "These inputs can't be changed: only a lead or estimator edits the working version of an active BoQ.",
+    "models": "Models",
+    "use": "Use",
+    "model": "Model",
+    "version": "Version",
+    "discipline": "Discipline",
+    "scope": "Scope",
+    "wholeModel": "Whole model",
+    "scopeRules": "{count, plural, one {# scope rule} other {# scope rules}}",
+    "versionOption": "v{number} · {file}",
+    "newer": "v{number} available",
+    "useNewer": "Use v{number}",
+    "noReadyVersion": "No ready version",
+    "ruleSet": "Rule set",
+    "basedOn": "Based on {name}",
+    "versionLatest": "v{number} (latest)",
+    "versionPinned": "v{number}",
+    "classifications": "Classifications",
+    "classificationsHint": "The first one is the default grouping of the sheet.",
+    "dictionaries": "Dictionaries",
+    "dictionariesHint": "Most general first. The project dictionary is always the last layer.",
+    "projectLayer": "Project",
+    "fixed": "Always last",
+    "add": "Add…",
+    "remove": "Remove",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "none": "None",
+    "unavailable": "{name}: needs its code list first",
+    "unavailableReason": {
+      "code_list_not_downloaded": "The code list has to be downloaded first."
+    },
+    "advanced": "Advanced",
+    "federation": "Federation settings",
+    "resolution": "Resolution settings",
+    "orgDefault": "Default",
+    "layers": {
+      "system": "System",
+      "org": "Organisation",
+      "project": "Project"
+    },
+    "saving": "Saving…"
+  },
+  "versions": {
+    "runs": "Runs of this version",
+    "noRuns": "No runs yet.",
+    "when": "When",
+    "by": "By",
+    "status": "Status",
+    "lines": "Lines",
+    "flagged": "To confirm",
+    "duration": "Duration",
+    "current": "Current"
+  }
+}

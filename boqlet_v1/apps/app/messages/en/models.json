@@ -101,7 +101,8 @@
       "no_quantities": "No quantities in the file",
       "unassigned_storey": "Not on a storey",
       "proxy_element": "Generic proxy elements"
-    }
+    },
+    "generateBoq": "Generate a BoQ"
   },
   "names": {
     "title": "Names in the model",

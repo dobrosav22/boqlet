@@ -55,11 +55,14 @@ if (useMock) {
   // A private PoC engine for the suite (phase 1; the worker from EN-001): no auto-reload, own port.
   const productRoot = path.resolve(here, "..");
   const python = path.join(productRoot, "engine", ".venv", process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
+  dataDir = mkdtempSync(path.join(os.tmpdir(), "boqlet-suite-"));
   let engineUrl = process.env.POC_ENGINE_URL;
   if (!engineUrl && existsSync(python)) {
     const enginePort = await freePort();
+    // Presets the mock saves for runs (`mock-<versionId>`) go to the suite's folder, not presets/user.
     engineProcess = spawn(python, ["-m", "uvicorn", "ifc_boq.api:app", "--host", "127.0.0.1", "--port", String(enginePort), "--log-level", "warning"], {
       cwd: path.join(productRoot, "engine"),
+      env: { ...process.env, IFC_BOQ_USER_PRESETS: path.join(dataDir, "engine-presets") },
       stdio: ["ignore", "ignore", "inherit"],
     });
     engineUrl = `http://127.0.0.1:${enginePort}`;
@@ -68,7 +71,6 @@ if (useMock) {
     console.warn("[suites] no engine venv (npm run setup:engine): scenarios that parse or run will fail");
   }
   const port = await freePort();
-  dataDir = mkdtempSync(path.join(os.tmpdir(), "boqlet-suite-"));
   mock = spawn(process.execPath, [path.join(productRoot, "node_modules", "tsx", "dist", "cli.mjs"), "src/server.ts", "--reseed"], {
     cwd: path.join(productRoot, "apps", "mock-api"),
     env: { ...process.env, MOCK_PORT: String(port), MOCK_DATA_DIR: dataDir, MOCK_PUBLIC_URL: `http://localhost:${port}`, ...(engineUrl ? { POC_ENGINE_URL: engineUrl } : {}) },

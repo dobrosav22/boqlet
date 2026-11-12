@@ -128,6 +128,56 @@ export interface JobRec {
   startedAt?: string;
   finishedAt?: string;
 }
+export type RevisionInputs = Schemas["RevisionInputs"];
+export interface BoqRec {
+  id: string;
+  projectId: string;
+  name: string;
+  description?: string;
+  status: "working" | "confirmed";
+  currentRevisionId: string;
+  latestIssuedRevisionId: string | null;
+  archived: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface RevisionRec {
+  id: string;
+  boqId: string;
+  number: number;
+  status: Schemas["RevisionStatus"];
+  inputs: RevisionInputs;
+  currentRunId: string | null;
+  basedOnRevisionId: string | null;
+  createdAt: string;
+}
+export interface RunRec {
+  id: string;
+  revisionId: string;
+  jobId: string;
+  status: Schemas["RunStatus"];
+  /** What the run was asked for: the inputs as they were, the project dictionary appended, the decisions used. */
+  request: { inputs: RevisionInputs; projectDictionaryVersionId: string | null; decisionsHash: string };
+  stats?: Schemas["Run"]["stats"];
+  models?: unknown[];
+  building?: unknown;
+  classifications?: { id: string; name: string }[];
+  engineVersion?: string;
+  error?: { code: string; message: string };
+  /** Storage key of the full `BoqResult` (gzip). */
+  resultKey?: string;
+  createdBy: string;
+  createdAt: string;
+  finishedAt?: string;
+}
+/** Processing time used (BR-62), counted against `processingMinutesPerMonth`. */
+export interface UsageRec {
+  orgId: string;
+  kind: "parse" | "run" | "preview";
+  ms: number;
+  at: string;
+}
 export interface NotificationRec {
   id: string;
   userId: string;
@@ -167,6 +217,10 @@ export interface Db {
   models: ModelRec[];
   modelVersions: ModelVersionRec[];
   jobs: JobRec[];
+  boqs: BoqRec[];
+  revisions: RevisionRec[];
+  runs: RunRec[];
+  usage: UsageRec[];
   notifications: NotificationRec[];
   audit: AuditRec[];
   /** Orgs being deleted (F01 §9): hidden everywhere, removed later. */
@@ -194,6 +248,10 @@ export function loadStore(): boolean {
   state.models ??= [];
   state.modelVersions ??= [];
   state.jobs ??= [];
+  state.boqs ??= [];
+  state.revisions ??= [];
+  state.runs ??= [];
+  state.usage ??= [];
   state.notifications ??= [];
   state.deletedOrgIds ??= [];
   return true;

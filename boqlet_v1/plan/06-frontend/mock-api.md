@@ -74,7 +74,12 @@ If the worker HTTP transport is not ready yet, the mock can call the PoC dev API
 - parse: `POST /api/models` (multipart, synchronous). Simulate progress stages on a timer.
 - run: write the resolved preset docs with `PUT /api/presets/{kind}/{id}` under ids
   `mock-<presetVersionId>` (saved in `presets/user/`), then `POST /api/runs` with those ids
-  and the decisions. Overrides and manual items are not supported on this path.
+  and the decisions. Overrides and manual items are not supported on this path. Shipped system presets
+  (version 1, seeded from `presets/`) are passed by their own id, not saved again; the project
+  dictionary's latest published version is appended as the last dictionary; the full `BoqResult` is
+  kept gzipped at `orgs/<orgId>/runs/<runId>/result.json.gz` in the blob folder (FE-008). The suites'
+  private engine saves these presets in the suite's temp folder (`IFC_BOQ_USER_PRESETS`), not
+  `presets/user`.
 - names, check, code lists: the matching PoC endpoints.
 - check details (F03 §5, the elements of each verification check): the PoC API has no endpoint for
   them, so `PocEngine.checks` reads `verification.checks` from the engine's cache

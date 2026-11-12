@@ -72,7 +72,9 @@
     "noModels": "No models yet.",
     "boqs": "Bills of quantities",
     "noBoqs": "No BoQs yet.",
-    "activity": "Recent activity"
+    "activity": "Recent activity",
+    "allModels": "All models",
+    "allBoqs": "All BoQs"
   },
   "activity": {
     "empty": "Nothing has happened yet.",
@@ -85,7 +87,20 @@
       "project_restored": "Restored the project",
       "project_member_added": "Added a member",
       "project_member_role_changed": "Changed a member's role",
-      "project_member_removed": "Removed a member"
+      "project_member_removed": "Removed a member",
+      "model_created": "Added a model",
+      "model_updated": "Changed a model",
+      "model_archived": "Removed a model",
+      "model_version_created": "Uploaded a model version",
+      "model_version_deleted": "Deleted a model version",
+      "boq_created": "Created a BoQ",
+      "boq_updated": "Renamed a BoQ",
+      "boq_archived": "Archived a BoQ",
+      "boq_restored": "Restored a BoQ",
+      "revision_inputs_changed": "Changed a BoQ's inputs",
+      "run_created": "Started generating a BoQ",
+      "run_finished": "Generated a BoQ",
+      "run_failed": "Generating a BoQ failed"
     }
   },
   "settings": {

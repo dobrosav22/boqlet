@@ -26,6 +26,8 @@ export interface Operation {
   secured: boolean;
   raw: Json;
   pointer: string;
+  /** JSON pointer of each entry of `raw.parameters` (path-level ones first, then the operation's). */
+  parameterPointers: string[];
 }
 
 export interface Spec {
@@ -68,6 +70,10 @@ export async function loadSpec(file = CONTRACT_PATH): Promise<Spec> {
         secured: security ? security.length > 0 : globalSecured,
         raw: { ...raw, parameters: [...((item.parameters as unknown[]) ?? []), ...((raw.parameters as unknown[]) ?? [])] },
         pointer: `#/paths/${escapePointer(path)}/${method}`,
+        parameterPointers: [
+          ...((item.parameters as unknown[]) ?? []).map((_p, i) => `#/paths/${escapePointer(path)}/parameters/${i}`),
+          ...((raw.parameters as unknown[]) ?? []).map((_p, i) => `#/paths/${escapePointer(path)}/${method}/parameters/${i}`),
+        ],
       });
     }
   }

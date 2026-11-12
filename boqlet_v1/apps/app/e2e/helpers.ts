@@ -72,3 +72,30 @@ export async function signInAsUser(page: Page, user: DevUser) {
     if (!window.sessionStorage.getItem("boqlet-mock-session")) window.sessionStorage.setItem("boqlet-mock-session", value);
   }, JSON.stringify(session));
 }
+
+/** A JSON call to the mock API as `user`. */
+export async function apiAs<T>(user: DevUser, method: string, path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${MOCK_URL}/api/v1${path}`, {
+    method,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${user.token}` },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`${method} ${path} answered ${res.status}: ${await res.text()}`);
+  return (await res.json()) as T;
+}
+
+/** A model with one uploaded version, through the API (signed upload), waited until ready. */
+export async function modelWithVersion(user: DevUser, projectId: string, name: string, bytes: Uint8Array, fileName: string) {
+  const model = await apiAs<{ id: string }>(user, "POST", `/projects/${projectId}/models`, { name, discipline: "architecture" });
+  const { version, upload } = await apiAs<{ version: { id: string }; upload: { method: string; url: string; headers: Record<string, string> } }>(user, "POST", `/models/${model.id}/versions`, { fileName, sizeBytes: bytes.byteLength });
+  const put = await fetch(upload.url, { method: upload.method, headers: upload.headers, body: new Blob([bytes as BlobPart]) });
+  if (!put.ok) throw new Error(`upload answered ${put.status}`);
+  await apiAs(user, "POST", `/model-versions/${version.id}/complete`, {});
+  const deadline = Date.now() + 180_000;
+  for (;;) {
+    const v = await apiAs<{ status: string }>(user, "GET", `/model-versions/${version.id}`);
+    if (v.status === "ready") return { modelId: model.id, versionId: version.id };
+    if (v.status === "failed" || Date.now() > deadline) throw new Error(`version ${version.id} is ${v.status}`);
+    await new Promise((r) => setTimeout(r, 500));
+  }
+}

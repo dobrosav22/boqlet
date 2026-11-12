@@ -1,12 +1,16 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useModel, useModelVersion } from "@/api/hooks/models";
 import { useErrorMessage } from "@/components/errors/use-error-message";
 import { InputCheckReport } from "@/features/models/input-check-report";
 import { NamesPreview } from "@/features/models/names-preview";
 import { VersionStatus } from "@/features/models/version-status";
+import { Button } from "@/components/ui/button";
+import { CreateBoqDialog } from "@/features/boqs/create-boq-dialog";
+import { useOrg } from "@/features/orgs/org-context";
+import { useProjectScope } from "@/features/projects/project-context";
 
 /** S10: one version: live processing, then the input-check report and the names preview (F03 §5). */
 export default function ModelVersionPage({ params }: { params: Promise<{ modelId: string; versionId: string }> }) {
@@ -16,6 +20,9 @@ export default function ModelVersionPage({ params }: { params: Promise<{ modelId
   const message = useErrorMessage();
   const model = useModel(modelId);
   const version = useModelVersion(versionId);
+  const { org } = useOrg();
+  const { project, can } = useProjectScope();
+  const [generating, setGenerating] = useState(false);
 
   if (version.isError) return <p role="alert" className="text-error">{message(version.error)}</p>;
   if (!version.data) return <div className="h-40" aria-busy="true" />;
@@ -35,7 +42,18 @@ export default function ModelVersionPage({ params }: { params: Promise<{ modelId
           {v.identicalToVersion && <Meta label={t("identical")} value={t("identicalTo", { number: v.identicalToVersion })} />}
         </dl>
       </div>
-      <VersionStatus version={v} detailed />
+      <div className="flex items-start gap-6">
+        <VersionStatus version={v} detailed />
+        {v.status === "ready" && can("editBoqs") && (
+          // F04 §1 "From a model": presets are chosen per BoQ, never per upload.
+          <Button className="ml-auto" onClick={() => setGenerating(true)} data-testid="generate-boq-from-model">
+            {t("generateBoq")}
+          </Button>
+        )}
+      </div>
+      {can("editBoqs") && (
+        <CreateBoqDialog orgSlug={org.slug} orgId={org.id} project={project} open={generating} onOpenChange={setGenerating} fromModel={{ modelId, versionId: v.id }} />
+      )}
       {v.status === "ready" && v.summary && (
         <>
           <InputCheckReport summary={v.summary} />

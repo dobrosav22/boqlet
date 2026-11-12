@@ -23,15 +23,9 @@ describe("ModelVersion (upload, parse, failure, dedupe: scenarios/models.test.ts
   it.todo("a failed parse with a retryable error goes back to queued on retry (needs a corrupt-file fixture)");
 });
 
-describe("Job", () => {
-  it.todo("run jobs: queued → running → succeeded; a job never needs input (P13) (FE-008; parse jobs: scenarios/models.test.ts)");
-  it.todo("queued or running → cancelled by the user (FE-008)");
-});
-
-describe("Run", () => {
-  it.todo("queued → running → complete, or needs_input when blocking questions remain (FE-008)");
-  it.todo("finished runs are immutable; the revision's currentRunId moves to the newest finished run (FE-008)");
-});
+// Job (run jobs: queued → running → succeeded, never needs input, P13; cancelled by the user) and
+// Run (queued → running → complete | needs_input; immutable once finished; currentRunId moves to the
+// newest finished run) are covered in scenarios/boqs.test.ts (FE-008).
 
 describe("BoqRevision", () => {
   it.todo("draft → issued on save version; the next draft is created with the same inputs (FE-031)");

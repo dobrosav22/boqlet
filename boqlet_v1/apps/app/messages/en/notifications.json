@@ -1,6 +1,8 @@
 {
   "open": "Open",
   "kinds": {
-    "model_version_ready": "{model} v{version} is ready"
+    "model_version_ready": "{model} v{version} is ready",
+    "run_needs_input": "{boq}: {count, plural, one {# question needs} other {# questions need}} an answer",
+    "job_failed": "{boq}: generating failed"
   }
 }

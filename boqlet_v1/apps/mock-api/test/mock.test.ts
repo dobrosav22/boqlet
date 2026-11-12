@@ -184,3 +184,15 @@ describe("dev endpoints and storage", () => {
     expect(await res.json()).toMatchObject({ planId: "professional" });
   });
 });
+
+describe("parameters of operations under a path with its own parameters", () => {
+  it("validates an inline query parameter against its own schema (listPresets ?kind=, FE-008 fix)", async () => {
+    const res = await api(`/orgs/${SEED.orgs.studio}/presets?kind=classification&layer=system`, { headers: as(SEED.users.olivia) });
+    expect(res.status).toBe(200);
+    const presets = (await res.json()) as { kind: string; layer: string }[];
+    expect(presets.length).toBeGreaterThan(0);
+    expect(presets.every((p) => p.kind === "classification" && p.layer === "system")).toBe(true);
+    const bad = await api(`/orgs/${SEED.orgs.studio}/presets?kind=system`, { headers: as(SEED.users.olivia) });
+    expect(bad.status).toBe(400);
+  });
+});

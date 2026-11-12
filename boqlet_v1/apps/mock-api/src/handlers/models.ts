@@ -17,6 +17,7 @@ import { visibleProject, writableProject } from "../projects.js";
 import { json, noContent, type Handlers } from "../router.js";
 import { db, persist, type ModelRec, type ModelVersionRec, type UserRec } from "../store.js";
 import { planLimits } from "./orgs.js";
+import { revisionLabel } from "./boqs.js";
 
 const STAGES = ["download", "read", "geometry", "verify", "write"] as const;
 const MESSAGES: Record<string, string> = {
@@ -50,8 +51,19 @@ export function versionView(v: ModelVersionRec) {
     ...(v.note ? { note: v.note } : {}),
     uploadedBy: userRef(v.uploadedBy),
     uploadedAt: v.uploadedAt,
-    usedBy: [], // revisions referencing it arrive with BoQs (FE-008)
+    usedBy: usedBy(v.id),
   };
+}
+
+/** Revisions whose inputs or runs use the version. */
+function usedBy(versionId: string) {
+  const runRevisions = new Set(db().runs.filter((r) => r.request.inputs.models.some((m) => m.modelVersionId === versionId)).map((r) => r.revisionId));
+  return db()
+    .revisions.filter((r) => runRevisions.has(r.id) || r.inputs.models.some((m) => m.modelVersionId === versionId))
+    .map((r) => {
+      const boq = db().boqs.find((b) => b.id === r.boqId)!;
+      return { boqId: boq.id, boqName: boq.name, revisionId: r.id, label: revisionLabel(r.number), status: r.status };
+    });
 }
 
 const versionsOf = (modelId: string) => db().modelVersions.filter((v) => v.modelId === modelId && !v.archived).sort((a, b) => a.number - b.number);
@@ -279,8 +291,9 @@ export const modelHandlers: Handlers = {
 
   deleteModelVersion({ user, params }) {
     const { version, project } = versionOf(user!, params.versionId!, true);
-    // Referenced by a run → archived (hidden from pickers); runs arrive with FE-008.
-    db().modelVersions.splice(db().modelVersions.indexOf(version), 1);
+    // Used by a BoQ → archived (hidden from pickers, runs keep it); otherwise removed.
+    if (usedBy(version.id).length) version.archived = true;
+    else db().modelVersions.splice(db().modelVersions.indexOf(version), 1);
     persist();
     audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "model_version.deleted", subjectType: "modelVersion", subjectId: version.id });
     changed(project.id, "modelVersion", version.id, "deleted");
