@@ -5,6 +5,7 @@ import { getLocale } from "next-intl/server";
 import "@fontsource-variable/jetbrains-mono";
 import "@fontsource-variable/inter-tight";
 import "./globals.css";
+import { AuthProvider } from "@/auth";
 import { ThemeProvider } from "@/components/theme-provider";
 import { APP_NAME } from "@/config";
 
@@ -16,7 +17,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang={locale} suppressHydrationWarning>
       <body className="min-h-dvh antialiased">
         <NextIntlClientProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </ThemeProvider>
         </NextIntlClientProvider>
       </body>
     </html>

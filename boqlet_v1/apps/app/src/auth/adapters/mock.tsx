@@ -1,0 +1,114 @@
+"use client";
+
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Wordmark } from "@/components/shell/wordmark";
+import { Button } from "@/components/ui/button";
+import { safeReturnTo, type AuthAdapter, type Session } from "../AuthAdapter";
+import { readMockSession, subscribeMockSession, writeMockSession } from "./mock-session";
+
+/** A seeded user as the mock's `GET /_dev/users` lists them. */
+interface DevUser {
+  id: string;
+  name: string;
+  email: string;
+  token: string;
+  platformRole: string | null;
+  memberships: { orgSlug?: string; role: string }[];
+}
+
+const DEV_USERS_URL = "/_dev/users";
+
+function go(path: string) {
+  window.location.assign(path);
+}
+
+/**
+ * Mock auth (phase 1): a sign-in page that lists the mock's seeded users; the token is
+ * `mock:<userId>`. Replaced by the real provider's adapter after BE-000 (FE-043).
+ */
+export const mockAuthAdapter: AuthAdapter = {
+  id: "mock",
+  useSession(): Session {
+    const session = useSyncExternalStore(subscribeMockSession, readMockSession, () => undefined);
+    if (session === undefined) return { status: "loading" };
+    return session ? { status: "authenticated", name: session.name, email: session.email } : { status: "anonymous" };
+  },
+  async getAccessToken() {
+    return readMockSession()?.token ?? null;
+  },
+  async signIn(opts) {
+    go(`/sign-in${opts?.returnTo ? `?returnTo=${encodeURIComponent(opts.returnTo)}` : ""}`);
+  },
+  async signUp(opts) {
+    // The mock has no sign-up: new people are seeded or invited (FE-005 adds invitations).
+    go(`/sign-in${opts?.returnTo ? `?returnTo=${encodeURIComponent(opts.returnTo)}` : ""}`);
+  },
+  async signOut() {
+    writeMockSession(null);
+    go("/sign-in");
+  },
+  SignInPage: MockSignInPage,
+};
+
+function MockSignInPage() {
+  const t = useTranslations("auth");
+  const roles = useTranslations("common.roles");
+  const router = useRouter();
+  const returnTo = safeReturnTo(useSearchParams().get("returnTo"));
+  const [users, setUsers] = useState<DevUser[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    fetch(DEV_USERS_URL)
+      .then((r) => (r.ok ? (r.json() as Promise<DevUser[]>) : Promise.reject(new Error(String(r.status)))))
+      .then((list) => alive && setUsers(list))
+      .catch(() => alive && setFailed(true));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  function pick(user: DevUser) {
+    writeMockSession({ token: user.token, userId: user.id, name: user.name, email: user.email });
+    router.replace(returnTo);
+  }
+
+  return (
+    <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-6 px-8 py-16">
+      <Wordmark className="text-display-sm" />
+      <div className="flex flex-col gap-1">
+        <h1 className="text-title">{t("signIn.title")}</h1>
+        <p className="prose-text text-muted-foreground">{t("mock.intro")}</p>
+      </div>
+      {failed && (
+        <p role="alert" className="text-error">
+          {t("mock.unreachable")}
+        </p>
+      )}
+      {!users && !failed && <p className="text-muted-foreground">{t("mock.loading")}</p>}
+      {users && (
+        <ul className="flex flex-col divide-y divide-border border-y border-border" data-testid="mock-users">
+          {users.map((user) => (
+            <li key={user.id} className="flex items-center gap-4 py-2">
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate">{user.name}</span>
+                <span className="label-caps truncate text-muted-foreground">
+                  {user.platformRole
+                    ? t("mock.platformAdmin")
+                    : user.memberships.map((m) => t("mock.membership", { org: m.orgSlug ?? "", role: roles.has(m.role) ? roles(m.role) : m.role })).join(" · ") ||
+                      t("mock.noOrg")}
+                </span>
+              </div>
+              <Button variant="outline" onClick={() => pick(user)} data-testid={`sign-in-as-${user.email}`}>
+                {t("mock.signInAs")}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </main>
+  );
+}

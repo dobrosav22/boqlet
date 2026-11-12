@@ -1,0 +1,24 @@
+/**
+ * Every TanStack Query key, in one place (architecture.md, data layer rule 2). The first element
+ * names the resource; `invalidation.ts` maps realtime events onto these.
+ */
+export const keys = {
+  me: () => ["me"] as const,
+  plans: () => ["plans"] as const,
+  org: (orgId: string) => ["org", orgId] as const,
+  orgs: () => ["orgs"] as const,
+  members: (orgId: string) => ["members", orgId] as const,
+  project: (projectId: string) => ["project", projectId] as const,
+  projects: (orgId?: string) => (orgId ? (["projects", orgId] as const) : (["projects"] as const)),
+  models: (projectId: string) => ["models", projectId] as const,
+  model: (modelId: string) => ["model", modelId] as const,
+  modelVersion: (versionId: string) => ["modelVersion", versionId] as const,
+  boq: (boqId: string) => ["boq", boqId] as const,
+  boqs: (projectId: string) => ["boqs", projectId] as const,
+  revision: (revisionId: string) => ["revision", revisionId] as const,
+  runs: (revisionId: string) => ["runs", revisionId] as const,
+  run: (runId: string) => ["run", runId] as const,
+  job: (jobId: string) => ["job", jobId] as const,
+  jobProgress: (jobId: string) => ["jobProgress", jobId] as const,
+  notifications: () => ["notifications"] as const,
+};

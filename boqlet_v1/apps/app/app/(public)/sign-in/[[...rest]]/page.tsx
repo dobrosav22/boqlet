@@ -1,14 +1,10 @@
-import { useTranslations } from "next-intl";
-import { Wordmark } from "@/components/shell/wordmark";
+"use client";
 
-/** Placeholder: the auth adapter's sign-in page arrives in FE-004. */
+import { Suspense } from "react";
+import { authAdapter } from "@/auth";
+
+/** S01: the adapter's sign-in page (the mock lists the seeded users). */
 export default function SignInPage() {
-  const t = useTranslations("common.signIn");
-  return (
-    <main className="mx-auto flex min-h-dvh max-w-3xl flex-col justify-center gap-6 px-8">
-      <Wordmark className="text-display-sm" />
-      <h1 className="text-title">{t("title")}</h1>
-      <p className="prose-text text-muted-foreground">{t("placeholder")}</p>
-    </main>
-  );
+  const Page = authAdapter.SignInPage;
+  return <Suspense>{Page ? <Page /> : null}</Suspense>;
 }

@@ -13,5 +13,9 @@
     "dark": "Dark",
     "system": "Follow the system"
   },
-  "home": "{appName} home"
+  "home": "{appName} home",
+  "user": {
+    "menu": "Account menu",
+    "signOut": "Sign out"
+  }
 }

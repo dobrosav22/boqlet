@@ -14,7 +14,11 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@ifc-boq/api"],
   async rewrites() {
     if (process.env.NODE_ENV === "production" && !process.env.API_PROXY_TARGET) return [];
-    return [{ source: "/api/v1/:path*", destination: `${apiTarget}/api/v1/:path*` }];
+    return [
+      { source: "/api/v1/:path*", destination: `${apiTarget}/api/v1/:path*` },
+      // The mock's dev endpoints (seeded users for the mock sign-in page); never in production.
+      { source: "/_dev/:path*", destination: `${apiTarget}/_dev/:path*` },
+    ];
   },
 };
 

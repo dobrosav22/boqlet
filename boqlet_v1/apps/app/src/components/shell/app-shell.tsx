@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { APP_NAME } from "@/config";
 import { LeftNav } from "./left-nav";
 import { ThemeSwitch } from "./theme-switch";
+import { UserMenu } from "./user-menu";
 import { Wordmark } from "./wordmark";
 
 /**
@@ -26,6 +27,7 @@ export async function AppShell({ org, children }: { org: string; children: React
         </Link>
         <div className="flex-1" />
         <ThemeSwitch />
+        <UserMenu />
       </header>
       <aside className="border-r border-border">
         <LeftNav org={org} />

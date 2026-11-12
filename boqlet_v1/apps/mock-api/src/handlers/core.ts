@@ -1,4 +1,4 @@
-import { streamSSE } from "hono/streaming";
+import { SSEStreamingApi } from "hono/streaming";
 import { subscribe } from "../events.js";
 import { json, type Handlers } from "../router.js";
 import { db } from "../store.js";
@@ -20,7 +20,13 @@ export const coreHandlers: Handlers = {
 
   streamEvents({ c, user }) {
     const lastEventId = c.req.header("Last-Event-ID") ?? c.req.query("lastEventId") ?? null;
-    return streamSSE(c, async (stream) => {
+    // Built by hand rather than with streamSSE: its `Cache-Control: no-cache` lacks `no-transform`,
+    // and without it proxies and compression (the Next dev rewrite gzips) buffer the stream.
+    // `X-Accel-Buffering` does the same for nginx-style ingresses. Headers are set before the
+    // response exists because @hono/node-server snapshots them.
+    const { readable, writable } = new TransformStream();
+    const stream = new SSEStreamingApi(writable, readable);
+    void (async () => {
       const queue: Promise<void>[] = [];
       const off = subscribe(
         user!.id,
@@ -30,13 +36,24 @@ export const coreHandlers: Handlers = {
         lastEventId,
       );
       stream.onAbort(off);
-      // Heartbeat comments every 25 s (conventions.md); the loop ends when the client goes away.
-      while (!stream.aborted && !stream.closed) {
-        await Promise.all(queue.splice(0));
-        await stream.write(": ping\n\n");
-        await stream.sleep(25_000);
+      try {
+        // Heartbeat comments every 25 s (conventions.md); the loop ends when the client goes away.
+        while (!stream.aborted && !stream.closed) {
+          await Promise.all(queue.splice(0));
+          await stream.write(": ping\n\n");
+          await stream.sleep(25_000);
+        }
+      } catch {
+        /* client gone */
+      } finally {
+        off();
+        void stream.close().catch(() => {});
       }
-      off();
-    });
+    })();
+    c.header("Content-Type", "text/event-stream");
+    c.header("Cache-Control", "no-cache, no-transform");
+    c.header("Connection", "keep-alive");
+    c.header("X-Accel-Buffering", "no");
+    return c.newResponse(stream.responseReadable);
   },
 };

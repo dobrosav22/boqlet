@@ -16,12 +16,7 @@
   },
   "home": {
     "title": "IFC → BoQ",
-    "body": "Bills of quantities from building models, every number explained.",
-    "signIn": "Sign in"
-  },
-  "signIn": {
-    "title": "Sign in",
-    "placeholder": "Sign-in arrives with the auth adapter."
+    "noOrg": "You are not in an organisation yet."
   },
   "admin": {
     "title": "Platform admin",
@@ -30,5 +25,11 @@
   "dashboard": {
     "title": "Dashboard",
     "placeholder": "Projects and what needs you appear here."
+  },
+  "roles": {
+    "owner": "Owner",
+    "admin": "Admin",
+    "library_editor": "Library editor",
+    "member": "Member"
   }
 }

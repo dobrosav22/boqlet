@@ -104,6 +104,9 @@ data: {"jobId":"…","type":"run","subjectType":"run","subjectId":"…","project
 Events: `job.progress`, `job.finished`, `notification.created`, `entity.changed`
 (payloads in `04-architecture/storage-jobs-realtime.md`). Reconnect with `Last-Event-ID`.
 Heartbeat comments every 25 s. Clients treat events as hints to refetch.
+The response carries `Cache-Control: no-cache, no-transform` and `X-Accel-Buffering: no`:
+without `no-transform`, compressing proxies (the Next dev rewrite among them) buffer the stream and
+events arrive late or never (found in FE-004).
 
 ## Files
 
