@@ -39,7 +39,8 @@ production builds) moves time for deadline tests.
 
 ## CI pipeline
 
-GitHub Actions, `.github/workflows/ci.yml` at the repository root (TS-001). Until FE-046 every
+GitHub Actions, `.github/workflows/ci.yml` at the repository root (TS-001), triggered on pushes to
+`v_1` (the build branch, P46) and `main`. Until FE-046 every
 product job runs with `working-directory: boqlet_v1`. Jobs run on Ubuntu; the scripts must also
 run on the owner's Windows machine (`sessions.md`).
 
@@ -68,7 +69,7 @@ run on the owner's Windows machine (`sessions.md`).
 - Audit events written for new write actions.
 - Docs: `docs/11` "Done" row added (project rule); the build log's Current position updated;
   if a milestone was completed, its build-log entry written and the plan status table updated.
-- Committed and pushed to `main` with the task id in the message; nothing red committed.
+- Committed and pushed to `v_1` with the task id in the message; nothing red committed.
 
 ## Core without modules
 

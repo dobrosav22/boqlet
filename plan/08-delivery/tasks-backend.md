@@ -134,11 +134,11 @@ retention, audit retention per plan.
 - Set up staging as code (the tool chosen in D8; recorded in the build log):
   - the services and configuration of deployment.md, with managed Postgres and object storage;
   - the engine worker pools and rpc.
-- CI deploys `main` to staging after the suites pass. Seed staging with the corpus reference
+- CI deploys `v_1` to staging after the suites pass (`main` after the release, P46). Seed staging with the corpus reference
   projects.
 - Leave BE-025 and BE-026 ready to run, so phase 3 can use them.
 **Accept:**
-- staging runs Java + worker + web from `main`;
+- staging runs Java + worker + web from `v_1`;
 - the contract and scenario suites pass against staging;
 - a Duplex BoQ is generated on staging.
 

@@ -16,7 +16,7 @@ every session, in every phase, starts with the prompt in `08-delivery/sessions.m
 that file: it says how to start, what to decide yourself and what to ask, when to stop and how
 to hand over.
 
-1. Read this README (decisions P01–P45 are settled; don't reopen them),
+1. Read this README (decisions P01–P46 are settled; don't reopen them),
    `08-delivery/sessions.md`, and `10-build-log.md` "Current position" (where the build
    stands, the next task, and your role).
 2. `08-delivery/milestones.md`: phases, milestones, exit criteria.
@@ -29,7 +29,7 @@ to hand over.
 3. Take the next task of your phase in order from `08-delivery/tasks-frontend.md`,
    `tasks-backend.md` or `tasks-engine.md`. Read the specs the task names, build only that, and
    meet its acceptance criteria and the definition of done in `08-delivery/testing.md`.
-4. Commit straight to `main` (P40). After every task, record it in
+4. Commit straight to the build branch **`v_1`** (P40, P46). After every task, record it in
    `docs/11-roadmap-and-open-questions.md` ("Done") and in the build log's Current position. At
    the end of a milestone, write its build-log entry and update the status table here.
 5. If a spec is silent or contradictory, or a decision is the owner's, add it to
@@ -125,12 +125,13 @@ decisions D01–D68 are in `docs/02-decisions.md` and still hold unless changed 
 | P37 | **Release 1 is the full v1**: every v1 acceptance criterion (00-product/03). The pricing module stays optional inside it. |
 | P38 | **Three sequential phases by two agents.** Phase 1: the frontend agent builds the whole app and the mock API (the backend's executable spec). Phase 2: the backend agent makes the platform decisions (BE-000), builds the real engine changes and the Java backend against the same contract and scenario suites. Phase 3: the frontend agent wires the app to Java, removes the fakes, hardens and releases. Refines P11. |
 | P39 | **Engine (Python) work belongs to the backend agent, in phase 2.** In phase 1 the mock runs the proof-of-concept engine API and fakes the engine features that don't exist yet, never measuring; each fake names the task that replaces it (`06-frontend/mock-api.md`). |
-| P40 | **Everyone commits straight to `main`**, small commits; the phases don't overlap. |
+| P40 | *(Branch refined by P46.)* **Everyone commits straight to the build branch**, small commits, no feature branches; the phases don't overlap. |
 | P41 | **The owner sets the visual direction**; it is recorded in `06-frontend/design-guidelines.md` (P43), which overrides `design-system.md`. |
 | P42 | **The setup wizard's questions come from the rule set's data.** Every yes/no question that switches BoQ items on or off forms one checklist, with the follow-ups of what was switched on; the measuring questions for walls, openings, roofs, windows and doors and line splitting are marked in the rule set (`setupSteps`, six screens for "As modelled"). Step 2 lists only the BoQ items the answers switch on. F16. |
 | P43 | **The product is called boqlet** (always lowercase). **Visual direction:** warm paper and ink, JetBrains Mono for the UI and Inter Tight for display, 2 px corners, colour only where it means something (blue accent and "derived", orange "to confirm", yellow "manual" and selection, red errors, no green), poster compositions only in the wizard, onboarding, sign-in, share page and dashboard cards, the dimension line as a recurring device, light theme default plus dark. Details and tokens in `06-frontend/design-guidelines.md`. |
 | P44 | **One product root: `boqlet_v1/`.** All product code is built there, as one npm workspace. The first task (FE-000) moves the proof of concept (engine, contract types, presets, fixtures, scripts, PoC UI, docs, this plan) into it, so nothing ever refers across two roots; the PoC demo deployment stays pointed into it. The last structural task (FE-046) removes the PoC leftovers and makes `boqlet_v1/` the repository root. Paths in `plan/` are relative to the product root. |
 | P45 | **Agents work on their own from task to task and milestone to milestone**, by `08-delivery/sessions.md`. They stop only for an owner decision that blocks every remaining task, at the end of a phase, or before an irreversible step. Implementation decisions and deviations are written in `10-build-log.md`, which, with its "Current position", is the handover between sessions and agents. |
+| P46 | **The build happens on the branch `v_1`**, made from `main`. `main` keeps the proof of concept and its live demo untouched until the release: FE-047 tags `main` as `poc-final` and merges `v_1` into it. CI runs on both branches; staging deploys from `v_1` until the release, production from `main` after it. |
 
 ## Where the code lives (P44)
 
@@ -170,8 +171,9 @@ Outside the product root, at the repository root (until FE-046):
 ```
 
 After FE-046 the same tree sits at the repository root, without `apps/web`, the PoC dev API
-(`engine/ifc_boq/api.py`, `store.py`) and the demo deployment. The last PoC commit is tagged
-`poc-final`.
+(`engine/ifc_boq/api.py`, `store.py`) and the demo deployment. All of this happens on the build
+branch `v_1` (P46); `main` keeps the proof of concept until FE-047 tags it `poc-final` and
+merges `v_1` into it.
 
 ## Status
 

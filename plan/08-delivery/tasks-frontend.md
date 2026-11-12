@@ -59,8 +59,8 @@ the product needs sits under one root. File contents don't change, except the pa
     - `npm run dev:poc` serves the PoC with the Duplex sample;
     - `VITE_DEPLOYED=1 npm run build:poc` builds.
   - The engine's Python loads `api/index.py` from the repository root without errors.
-  - After the push, the demo URL still works. The agent checks it with a logged-in `vercel`
-    CLI if there is one; otherwise the owner checks (`09-open-questions.md` "Needed by").
+  - The live demo is not affected: it deploys from `main`, and the build is on `v_1` (P46). If
+    Vercel builds previews of `v_1`, the preview builds.
 
 ### FE-001 Contract package
 - Move `plan/05-api/openapi.yaml` to `packages/api/openapi.yaml` and `plan/05-api/openapi-pricing.yaml`
@@ -375,8 +375,6 @@ After FE-041…FE-045 and BE-025, BE-026, TS-002…TS-004 are green, and before 
   - the fakes table in `mock-api.md` is empty (FE-042);
   - `git grep -n "8787\|ifc_boq.api\|apps/web\|dev:poc"` finds only the PoC itself and
     history docs.
-- **Tag** the last commit that still has the PoC as `poc-final` and push the tag. The demo can
-  be redeployed from it.
 - **Delete:**
   - `apps/web/` (the PoC UI and its Guide);
   - the PoC dev API: `engine/ifc_boq/api.py` and `store.py`, the `serve` command in
@@ -409,11 +407,17 @@ After FE-041…FE-045 and BE-025, BE-026, TS-002…TS-004 are green, and before 
     suites against the mock and Java, the Java build and the Playwright smoke on staging;
   - a fresh clone runs `npm ci` and `npm run test` green;
   - `git ls-files boqlet_v1` is empty;
-  - the owner is told to remove or repoint the Vercel demo project (`09-open-questions.md`).
+  - the live demo on `main` is still untouched (the merge happens in FE-047).
 
 ### FE-047 Production release (04-architecture/deployment.md)
 - Needs from the owner (`09-open-questions.md` "Needed by"): the production account and region
   (D8), the domain, and the provider secrets for auth (D1), email (D6) and billing (D7).
+- **Merge into `main`** (P46), once the owner has given the go in the session:
+  - tag the current `main` (the proof of concept) `poc-final` and push the tag; the demo can be
+    redeployed from it;
+  - merge `v_1` into `main` (`git merge --no-ff v_1`), push, and check CI on `main` is green;
+  - tell the owner to remove or repoint the Vercel demo project (`main` no longer has it);
+  - from now on staging and production deploy from `main`; `v_1` stays as it is.
 - Deploy `main` to production with the services and configuration in deployment.md:
   - migrations run before the API takes traffic;
   - the pricing module is switched on or off as the owner says (P32).

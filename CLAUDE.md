@@ -117,8 +117,9 @@ DURAARK, the Auckland OpenIFC repository, Schependomlaan): no engine errors, out
 against the contract; quantities checked only for the Duplex and the buildingSMART samples.
 What was run and what is still uncovered: `docs/12-ifc-corpus-catalogue.md`.
 
-The product to build on top of this is fully specified in `plan/` (decisions P01–P45, phases,
+The product to build on top of this is fully specified in `plan/` (decisions P01–P46, phases,
 milestones, tasks). **The build has not started; wait for the owner's go-ahead**, then follow
 `plan/README.md` "Start here" and `plan/08-delivery/sessions.md`. Where the build stands, and
 what agents decided along the way, is in `plan/10-build-log.md`. Every session starts with the
-prompt in `sessions.md`.
+prompt in `sessions.md`. The build happens on the branch `v_1` (P46); `main` keeps the proof of
+concept and its live demo until the release.

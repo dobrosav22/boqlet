@@ -4,7 +4,8 @@ Release 1 is the **full v1** (P37): every v1 acceptance criterion in `00-product
 The pricing module (P36) is optional inside it and is built last in each phase.
 
 The build runs in **three sequential phases** by **two agents** (P38): a frontend agent and a
-backend agent. They never work at the same time, so everyone commits straight to `main` (P40). Sessions
+backend agent. They never work at the same time, so everyone commits straight to the build branch `v_1` (P40, P46); `main` keeps the proof of
+concept and its demo until the release merges `v_1` into it (FE-047). Sessions
 run by `sessions.md` and hand over through `../10-build-log.md` (P45). All paths are relative
 to the product root `boqlet_v1/` (P44).
 
@@ -46,7 +47,7 @@ that replaces it. The frontend agent does not change `engine/`.
 | **ME** | Real engine | EN-001…EN-008, EN-010…EN-013 (EN-009 in M6, EN-P1 with MP2) | Every engine task's acceptance; `npm run test:engine` green incl. the Duplex test; the mock switched from the PoC API and its fakes to the worker (each fake deleted as its task lands) |
 | **M5** | Backend core (Java) | BE-001…BE-012, BE-027, BE-031 | Contract and scenario suites green for the core tags against Java |
 | **M6** | Queue workers and realtime | EN-009, BE-013…BE-015 | Jobs flow through Postgres; heartbeat re-queue tested; SSE across two API instances |
-| **M7** | Sharing, admin, notifications, entitlements, billing, staging | BE-020…BE-024, BE-029, BE-030, BE-032 | Core contract suite fully green against Java; isolation suite green; `main` deploys to staging (BE-032) |
+| **M7** | Sharing, admin, notifications, entitlements, billing, staging | BE-020…BE-024, BE-029, BE-030, BE-032 | Core contract suite fully green against Java; isolation suite green; `v_1` deploys to staging (BE-032) |
 | **MP2** | Pricing module (optional) | EN-P1, BE-P1…BE-P4 | `openapi-pricing.yaml` suites green against Java; core-only build still green |
 
 **Phase 2 is done** when the same contract and scenario suites that passed against the mock pass
@@ -57,11 +58,11 @@ against Java unchanged, the engine has no open EN task, and staging runs Java + 
 | # | Milestone | Contents | Exit criteria |
 |---|---|---|---|
 | **M8a** | Wire up | FE-041…FE-043 | The app runs against Java on staging with the real auth adapter; every "(fake)" criterion from phase 1 re-checked green on the real engine; UI adjusted where real behaviour differs |
-| **M8** | Hardening, new root, release | FE-044, FE-045, BE-025, BE-026, TS-002…TS-004, then FE-046, FE-047 | All v1 acceptance criteria pass on staging; NFR targets measured; `boqlet_v1/` is the repository root and nothing of the PoC is left (FE-046); production deployed and tagged `v1.0.0` (FE-047) |
+| **M8** | Hardening, new root, release | FE-044, FE-045, BE-025, BE-026, TS-002…TS-004, then FE-046, FE-047 | All v1 acceptance criteria pass on staging; NFR targets measured; `boqlet_v1/` is the repository root and nothing of the PoC is left (FE-046); `v_1` merged into `main`, production deployed from `main` and tagged `v1.0.0` (FE-047) |
 
 BE-025 and BE-026 (observability, staging acceptance) are infrastructure the backend agent leaves
 ready at the end of phase 2; the frontend agent runs them in M8. If phase 3 finds a backend bug,
-it is fixed on `main` with a test, by whichever agent is active, and noted in `docs/11`.
+it is fixed on `v_1` with a test, by whichever agent is active, and noted in `docs/11`.
 
 ## Rules for every task
 
