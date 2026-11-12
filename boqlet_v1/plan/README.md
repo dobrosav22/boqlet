@@ -11,8 +11,9 @@ product to build. When they disagree about the *product*, `plan/` wins. When the
 
 ## Start here (a new session)
 
-**Build status: not started.** Do not start building until the owner says so. When they do,
-every session, in every phase, starts with the prompt in `08-delivery/sessions.md` and works by
+**Build status: in progress** (phase 1; the owner said go on 2026-11-12; live position in
+`10-build-log.md`). Every session, in every phase, starts with the prompt in
+`08-delivery/sessions.md` and works by
 that file: it says how to start, what to decide yourself and what to ask, when to stop and how
 to hand over.
 
@@ -185,4 +186,4 @@ merges `v_1` into it.
 | Frontend, backend specs (06–07) | Written; backend decisions open on purpose |
 | Delivery (08) | Phases, milestones, task lists, session rules and build log written (P37–P40, P44, P45) |
 | Design (06) | Design guidelines decided (P43); wordmark SVG still to come from the owner |
-| **Build** | **Not started.** Next: phase 1, FE-000 (frontend role), when the owner says go. Live position: `10-build-log.md` |
+| **Build** | **Phase 1 in progress.** M0 (consolidation, contract, scaffolding) done 2026-11-12; next M1, FE-005. Live position: `10-build-log.md` |
