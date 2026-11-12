@@ -116,6 +116,6 @@ DURAARK, the Auckland OpenIFC repository, Schependomlaan): no engine errors, out
 against the contract; quantities checked only for the Duplex and the buildingSMART samples.
 What was run and what is still uncovered: `docs/12-ifc-corpus-catalogue.md`.
 
-The product to build on top of this is fully specified in `plan/` (decisions P01–P42, phases,
+The product to build on top of this is fully specified in `plan/` (decisions P01–P43, phases,
 milestones, tasks). **The build has not started; wait for the owner's go-ahead**, then follow
 `plan/README.md` "Start here".

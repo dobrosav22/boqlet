@@ -32,7 +32,7 @@ because the frontend is built against it.
 
 Engine features the plan needs but the proof-of-concept engine doesn't have yet. Each fake lives
 in `apps/mock-api/src/engine/fakes/<name>.ts`, is behind the `engine` interface, and is deleted
-when its task lands in phase 2 (FE-054 checks the table is empty). Fakes **never measure**
+when its task lands in phase 2 (FE-042 checks the table is empty). Fakes **never measure**
 (BR-01): they only rearrange, relabel or apply values a person entered. Criteria that depend on
 a fake are marked "(fake)" in phase-1 test runs and re-checked in phase 3.
 

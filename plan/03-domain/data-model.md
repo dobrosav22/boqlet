@@ -92,7 +92,7 @@ guests (P28): outsiders get share links (F18).
 | settings.defaultCurrency | string | ISO 4217 |
 | settings.defaultUnitSystem | `metric` \| `imperial` | |
 | settings.approvalRequired | boolean | default false; saving a version needs review and approval (F09 §4, P29) |
-| settings.numberFormat | `{decimal: "." \| ",", thousands: "," \| "." \| " " \| "'" \| ""}`? | overrides the locale's defaults (P35) |
+| settings.numberFormat | `{decimal: "." \| ",", thousands: "," \| "." \| " " \| "\u202F" \| "'" \| ""}` | default for a new org: thousands `\u202F` (narrow no-break space), decimal from the locale (P35, P43) |
 | settings.dateFormat | string? | e.g. `dd.MM.yyyy`; overrides the locale's default |
 | settings.defaultLanguage | string | UI language for new members, default `en` |
 | settings.publicLinksAllowed | boolean | default true (F18) |

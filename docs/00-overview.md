@@ -34,8 +34,9 @@ getBoq(models, rules, classifications, dictionaries, decisions) -> BoqResult
 
 ## Who it is for
 
-Not decided (see open questions). Candidates: quantity surveying (QS) firms (daily use),
-contractors pricing tenders (bursts), designers checking costs (light use). The product is
+Decided in the product plan (`plan/README.md`, P01): the firm that produces the BoQ, design
+and engineering firms first, QS firms on the same flows. Contractors and suppliers appear only as
+vendors in the optional pricing module (P32–P36); the product does no tendering (P34). The product is
 international: no country's standard is the default.
 
 ## What this repository does today

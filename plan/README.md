@@ -1,6 +1,6 @@
 # plan/ — specification of the deployment-ready product
 
-This folder specifies the product built on top of the proof of concept in this repository.
+This folder specifies **boqlet**, the product built on top of the proof of concept in this repository.
 It is written for **coding agents** (and the people steering them) who build the frontend
 (Next.js/React) and then the backend (Java), with the existing Python engine as the
 computation worker.
@@ -13,7 +13,7 @@ product to build. When they disagree about the *product*, `plan/` wins. When the
 
 **Build status: not started.** Do not start building until the owner says so. When they do:
 
-1. Read this README (decisions P01–P42 are settled; don't reopen them), then
+1. Read this README (decisions P01–P43 are settled; don't reopen them), then
    `08-delivery/milestones.md` (phases, milestones, exit criteria).
 2. Find the current phase and milestone in the status table below. **Phase 1** belongs to the
    frontend agent, **phase 2** to the backend agent (it starts with BE-000: ask the owner D1–D9
@@ -28,8 +28,8 @@ product to build. When they disagree about the *product*, `plan/` wins. When the
 
 Rules that catch people out: the core never depends on the pricing module (P36,
 `04-architecture/modules.md`); only the engine computes quantities (BR-01), and in phase 1 the
-mock fakes engine features without measuring (`06-frontend/mock-api.md`); the look follows the
-owner's `06-frontend/design-guidelines.md` when it exists (P41).
+mock fakes engine features without measuring (`06-frontend/mock-api.md`); the look follows
+`06-frontend/design-guidelines.md` (P43).
 
 ## How to use this folder
 
@@ -95,7 +95,7 @@ decisions D01–D68 are in `docs/02-decisions.md` and still hold unless changed 
 | P20 | **The BoQ is fully editable**: overwrite quantity, text and unit, move lines between sections, reorder, exclude, add lines anywhere. Edits are kept across regenerations and model versions and always shown as edits. The BoQ Excel can be edited and imported back. |
 | P21 | *(Refined by P33, P34, P36: price requests became offer requests in the pricing module.)* **Vendors are accounts linked to orgs by invitation** (one vendor, many orgs, always free). Anyone working on a project can send the whole BoQ or a part to vendors for prices (price request); the formal tender stays as the advanced path. Any revision can be sent, frozen at sending, unless the org requires issued ones (refines P02, BR-40). |
 | P22 | **One active session per account.** Signing in elsewhere shows where the account is open and asks to end that session first. Discourages account sharing. |
-| P23 | **UI: shadcn/ui** (Tailwind + Radix) with **one monospace typeface**; very clean, no visual noise, modern (settles the FE-001 styling question). |
+| P23 | **UI: shadcn/ui** (Tailwind + Base UI, from preset `b38miVKzY`; Radix would also do) with a monospace face for the UI; very clean, no visual noise, modern. Look in `06-frontend/design-guidelines.md` (P43). |
 | P24 | **Guided preset editing and Excel templates.** New rule sets and classifications start in guided mode; every preset can be downloaded as an Excel template and uploaded back. |
 | P25 | **"How it is calculated" and the 3D model are central.** Every line explains its number in plain words; the model sits beside the sheet while editing and in revisions, with filters shared by both. |
 | P26 | **Public read-only share links** for BoQ versions, revocable, with expiry. |
@@ -113,8 +113,9 @@ decisions D01–D68 are in `docs/02-decisions.md` and still hold unless changed 
 | P38 | **Three sequential phases by two agents.** Phase 1: the frontend agent builds the whole app and the mock API (the backend's executable spec). Phase 2: the backend agent makes the platform decisions (BE-000), builds the real engine changes and the Java backend against the same contract and scenario suites. Phase 3: the frontend agent wires the app to Java, removes the fakes, hardens and releases. Refines P11. |
 | P39 | **Engine (Python) work belongs to the backend agent, in phase 2.** In phase 1 the mock runs the proof-of-concept engine API and fakes the engine features that don't exist yet, never measuring; each fake names the task that replaces it (`06-frontend/mock-api.md`). |
 | P40 | **Everyone commits straight to `main`**, small commits; the phases don't overlap. |
-| P41 | **The owner supplies the design guidelines** (`06-frontend/design-guidelines.md`), which override `design-system.md`. The typeface is decided there; JetBrains Mono is the fallback. |
+| P41 | **The owner sets the visual direction**; it is recorded in `06-frontend/design-guidelines.md` (P43), which overrides `design-system.md`. |
 | P42 | **The setup wizard's questions come from the rule set's data.** Every yes/no question that switches BoQ items on or off forms one checklist, with the follow-ups of what was switched on; the measuring questions for walls, openings, roofs, windows and doors and line splitting are marked in the rule set (`setupSteps`, six screens for "As modelled"). Step 2 lists only the BoQ items the answers switch on. F16. |
+| P43 | **The product is called boqlet** (always lowercase). **Visual direction:** warm paper and ink, JetBrains Mono for the UI and Inter Tight for display, 2 px corners, colour only where it means something (blue accent and "derived", orange "to confirm", yellow "manual" and selection, red errors, no green), poster compositions only in the wizard, onboarding, sign-in, share page and dashboard cards, the dimension line as a recurring device, light theme default plus dark. Details and tokens in `06-frontend/design-guidelines.md`. |
 
 ## Where the code will live (target monorepo)
 
@@ -142,5 +143,5 @@ docs/             Engine and PoC documentation
 | Architecture, API (04–05) | Written; `openapi.yaml` (core) and `openapi-pricing.yaml` (pricing module) cover every endpoint; the core never references the module (`04-architecture/modules.md`) |
 | Frontend, backend specs (06–07) | Written; backend decisions open on purpose |
 | Delivery (08) | Phases, milestones and task lists written (P37–P40) |
-| Design (06) | Provisional design system; owner's design guidelines pending (P41) |
+| Design (06) | Design guidelines decided (P43); wordmark SVG still to come from the owner |
 | **Build** | **Not started.** Next: phase 1, M0 (frontend agent), when the owner says go |

@@ -24,10 +24,10 @@ that replaces it. The frontend agent does not change `engine/`.
 | # | Milestone | Contents | Exit criteria |
 |---|---|---|---|
 | **M0** | Contract and scaffolding | FE-001…FE-004, TS-001 | `packages/api/openapi.yaml` lints; Next app and mock start with `npm run dev:app`; mock answers `GET /me` for seeded users and runs the Duplex through the PoC engine; CI runs lint, typecheck, engine tests, contract tests |
-| **M1** | Core loop | FE-005…FE-016, FE-042…FE-045 | FL-1 and FL-2 up to "run complete" end to end; v1 criterion 1 (Duplex reproduction) on the mock; sheet, questions, viewer, line edits, manual lines, explanations, sessions |
-| **M2** | Library and setup | FE-017…FE-021, FE-040, FE-041, FE-046 | FL-6 and the setup wizard work; v1 criteria 7 and 12 on the mock |
-| **M3** | Versions, exports, sharing, notifications | FE-022…FE-028, FE-048, FE-049 | FL-2, FL-3, FL-9, FL-11 work; v1 criteria 3, 4, 5, 13, 15 on the mock |
-| **M4** | Admin console, extension points, co-editing | FE-050…FE-052 | FL-12 works; v1 criteria 16, 17 on the mock; the app builds with no module |
+| **M1** | Core loop | FE-005…FE-020 | FL-1 and FL-2 up to "run complete" end to end; v1 criterion 1 (Duplex reproduction) on the mock; sheet, questions, viewer, line edits, manual lines, explanations, sessions |
+| **M2** | Library and setup | FE-021…FE-028 | FL-6 and the setup wizard work; v1 criteria 7 and 12 on the mock |
+| **M3** | Versions, exports, sharing, notifications | FE-029…FE-037 | FL-2, FL-3, FL-9, FL-11 work; v1 criteria 3, 4, 5, 13, 15 on the mock |
+| **M4** | Admin console, extension points, co-editing | FE-038…FE-040 | FL-12 works; v1 criteria 16, 17 on the mock; the app builds with no module |
 | **MP1** | Pricing module on the mock (optional) | FE-P1…FE-P7, mock pricing plugin | FL-4, FL-5 work; v1 criterion 6; core suites pass with the module removed |
 
 **Phase 1 is done** when M0–M4 exit criteria hold on the mock, `tests/contract` and
@@ -54,8 +54,8 @@ against Java unchanged, the engine has no open EN task, and staging runs Java + 
 
 | # | Milestone | Contents | Exit criteria |
 |---|---|---|---|
-| **M8a** | Wire up | FE-053, FE-054, FE-037 | The app runs against Java on staging with the real auth adapter; every "(fake)" criterion from phase 1 re-checked green on the real engine; UI adjusted where real behaviour differs |
-| **M8** | Hardening and deploy | FE-038, FE-039, BE-025, BE-026, TS-002…TS-004 | All v1 acceptance criteria pass on staging; NFR targets measured; production deployed |
+| **M8a** | Wire up | FE-041…FE-043 | The app runs against Java on staging with the real auth adapter; every "(fake)" criterion from phase 1 re-checked green on the real engine; UI adjusted where real behaviour differs |
+| **M8** | Hardening and deploy | FE-044, FE-045, BE-025, BE-026, TS-002…TS-004 | All v1 acceptance criteria pass on staging; NFR targets measured; production deployed |
 
 BE-025 and BE-026 (observability, staging acceptance) are infrastructure the backend agent leaves
 ready at the end of phase 2; the frontend agent runs them in M8. If phase 3 finds a backend bug,

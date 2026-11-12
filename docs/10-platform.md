@@ -249,8 +249,9 @@ Accounts, companies and permissions with data separation; big-file handling with
 progress; security (encryption, access logs, GDPR in Europe); collaboration (comments,
 assignment, prepared / checked / approved flow); sending model problems back to designers via
 BCF; project history across revisions; pulling models from common data environments (Autodesk
-Construction Cloud, Trimble Connect); pricing with rate databases and tender comparison
-(arguably a second product); billing, onboarding, help, interface translations.
+Construction Cloud, Trimble Connect); billing, onboarding, help, interface translations. Pricing
+became an optional, removable module (firms' and vendors' own pricebooks and offer requests,
+`plan/` P32–P36); tendering and rate databases are out (P34).
 
 ## Recommended stack (from the stack discussion; backend now Java)
 

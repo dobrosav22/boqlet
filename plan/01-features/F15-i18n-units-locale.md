@@ -33,8 +33,10 @@
     (`margin-inline-start`) so it stays cheap later.
 
 11. **Org-customisable formats** (P35): currency, unit system, decimal and thousands
-    separators and date format are org settings (defaults from the org's locale) and can be set
-    per project. Nothing assumes a country: no market is built into rules, the wizard or the UI.
+    separators and date format are org settings and can be set per project. Default for a new
+    org: thousands separated by a narrow no-break space (U+202F, "3 800"), the decimal mark
+    from the locale ("12 450.75" in English, "12 450,75" in Serbian or German); see
+    `06-frontend/design-guidelines.md`. Nothing assumes a country: no market is built into rules, the wizard or the UI.
 
 ## Acceptance criteria
 

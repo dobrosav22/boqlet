@@ -9,7 +9,7 @@ when each is closed. **None of these blocks phase 1** (the frontend on the mock)
 
 | When | Must be answered | Who |
 |---|---|---|
-| Before phase 1 screens get their final look | Design guidelines and the typeface (P41, Q31) | Owner (`06-frontend/design-guidelines.md`) |
+| Before the first screens are reviewed (M1) | The boqlet wordmark as SVG (light and dark) and a favicon; until then it is set in the display face | Owner |
 | Start of phase 2 (BE-000) | Q16 auth provider, Q17 hosting and region, and D2–D9 in `07-backend/decisions-to-make.md` | Owner, asked by the backend agent |
 | Before public launch | Q18 and Q26 (tiers, limits, prices), Q19 and Q20 (legal) | Owner (+ lawyer) |
 | After pilots | Q1–Q3, Q7, Q8, Q10–Q15, Q23, Q24, Q27–Q30, Q32 | Owner, with pilot firms |
@@ -48,7 +48,7 @@ when each is closed. **None of these blocks phase 1** (the frontend on the mock)
 | Q29 | (Pricing module) Do vendors need company accounts (several people pricing for one vendor, shared offers)? | v1: one person per vendor account; the firm can invite colleagues of a vendor separately |
 | Q30 | Should a share link be able to carry the estimate (pricing module) for a client? | v1: never prices (BR-56); would be a module extension of the share page |
 | Q32 | (Pricing module) Should vendors' remembered matches be keyed by the firm's item numbers (as planned) or by the line text, when firms renumber their code lists? | Planned: item number + unit, text when no number (F20 §3) |
-| Q31 | Is one monospace font readable enough for long item texts in every target language, or should prose blocks use a proportional companion font? | Test with real item texts in the wizard usability test (v1 criterion 12) |
+| Q31 | ~~Is one monospace font readable enough for long texts?~~ | Closed by P43: prose in JetBrains Mono at 14 px / 1.6 with ~72-character lines, Inter Tight for display |
 
 ## Platform
 

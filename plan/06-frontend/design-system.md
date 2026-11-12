@@ -1,12 +1,13 @@
 # Design system
 
-**Provisional.** The owner's `design-guidelines.md` (P41) overrides this file wherever they
-differ; the typeface is decided there (JetBrains Mono is the fallback).
+**The look is decided in `design-guidelines.md` (P43)**: palette, tokens, typefaces, shapes,
+motion. That file wins wherever the two differ. This file keeps the principles and the
+component list.
 
 A work tool for professionals who read numbers all day. Very clean, no visual noise, modern,
-easy to use, keyboard friendly (P23). Built with **shadcn/ui** components (Tailwind CSS +
-Radix primitives, copied into the repo and restyled), set in **one monospace typeface**
-throughout. The PoC's "ruled sheet" look (a printed BoQ) is the visual reference for the sheet.
+easy to use, keyboard friendly (P23). Built with **shadcn/ui** components (preset `b38miVKzY`:
+Tailwind CSS + Base UI primitives, copied into the repo and restyled through tokens), set in a
+monospace face, with a display face for the expressive moments (design-guidelines.md). The PoC's "ruled sheet" look (a printed BoQ) is the visual reference for the sheet.
 
 ## Principles
 
@@ -22,8 +23,8 @@ throughout. The PoC's "ruled sheet" look (a printed BoQ) is the visual reference
 5. **Nothing hidden.** Flagged and unclassified lines are visible by default (BR-03). Filters
    show what they hide.
 6. **No visual noise.** Hairline borders instead of boxes and shadows; shadows only on
-   popovers and dialogs. One accent colour, used for the primary action and the current
-   selection only. No decorative icons, illustrations or gradients; an icon appears only where
+   popovers and dialogs. Colour is rare and means something (the status and accent rules in
+   design-guidelines.md). No decorative icons, illustrations or gradients; an icon appears only where
    it carries meaning, always with text or a tooltip. Generous whitespace around the work
    area, density inside tables.
 7. **Monospace everywhere, tuned for reading.** Numbers align without effort and the UI reads
@@ -32,16 +33,9 @@ throughout. The PoC's "ruled sheet" look (a printed BoQ) is the visual reference
 
 ## Tokens
 
-- Colour: neutral greys for chrome; one brand accent; semantic: `success`, `warning`,
-  `danger`, `info`; source colours: measured (neutral), derived (blue), manual (violet),
-  flagged (amber), overridden (orange outline). Light theme in v1. Tokens are ready for dark.
-- Type: **one monospace typeface** for everything, self-hosted (no runtime Google Fonts
-  dependency). Requirements: OFL or similar licence, Latin Extended and Cyrillic (č ć đ š ž,
-  Serbian, Russian, Ukrainian…), true italics optional, at least regular / medium / semibold.
-  Decided in `design-guidelines.md`; fallback **JetBrains Mono**. Sizes
-  12 / 13 / 14 / 16 / 20 / 24; headings differ by weight and size, not by another font.
-- Spacing 4 px grid. Radius 4 / 6. Elevation: two levels (popover, dialog).
-- Motion: 120–200 ms, reduced-motion respected.
+All tokens (colour for light and dark, data colours, type scale, radius 2 px, spacing 4 px grid,
+density, motion) are defined in `design-guidelines.md`. Components read them through CSS
+variables; no colour, size or font is hard-coded in a component.
 
 ## Components (build in `src/components`, document in Storybook or a `/_dev/ui` page)
 

@@ -35,8 +35,8 @@ answer only what is new, and show exactly what changed and why.
      (default 1%), group.
    - **Elements table:** GlobalId, model, change, changed fields (quantities, type, material,
      storey), lines affected.
-   - **Viewer:** colour mode "changes": added green, removed (ghost from the old version) red,
-     changed amber.
+   - **Viewer:** colour mode "changes" (design-guidelines.md): added blue, changed orange,
+     removed as a red ghost from the old version.
 5. **Matching rules** (engine diff): lines by `lineKey`; elements by GlobalId (and model).
    A line whose key changed because its rule's line key changed shows as removed + added with
    cause `rules_changed`. That is correct, and the UI explains it in the legend.
