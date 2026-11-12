@@ -103,6 +103,12 @@ Things the product build doesn't do yet, with the task that deals with each.
 - Project cards count BoQs, blocking questions and reviews as 0 until those exist (FE-008, FE-010, FE-031).
 - Project default presets can't be chosen yet; every project starts with As modelled and the global
   seed dictionary (preset pickers come with FE-008, starred presets with FE-021).
+- Models: scope rules can't be edited in the app yet (the selector UI comes with the Library, FE-021);
+  check rows don't open the viewer yet (FE-016, F03-AC5); multipart uploads over 100 MB and resuming an
+  interrupted upload are not built; abandoned `awaiting_upload` versions are not cleaned up after 24 h
+  (the mock's scheduler, M6); processing minutes are not counted (FE-019).
+- Phase-1 interim: the mock reads check details from the PoC engine's cache on the same machine, and
+  drops the `null` optional fields the PoC sends in names (the worker should omit them, EN-001).
 
 ## Suggested next steps
 
@@ -169,6 +175,7 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-11-12 | dc24b65 | FE-007: F03 on the mock and in the app: models, versions uploaded straight to signed URLs with progress, header check (`not_ifc` fails without a job), content dedupe across the org, the parse job through the PoC engine with live stages over SSE, failure and retry, the input-check report (counts by class, checks with their elements, storeys), names preview, the ready notification as a toast; 6 shared F03 scenarios through mock + engine, 4 e2e flows; CI installs the engine for e2e and suites |
 | 2026-11-12 | 2500f97 | FE-006: F02 on the mock and in the app: dashboard (needs-you list, project cards with generated compositions, empty state with the sample project), projects list, new project with the `activeProjects` limit, project overview, settings (members from the org only, archive and restore), activity; project visibility and the `permissions` keys (now listed in 03-domain/permissions.md); archived projects refuse writes with `409 project_archived`; 7 shared F02 scenarios, 6 e2e flows |
 | 2026-11-12 | 8d00621 | FE-005: F01 on the mock and in the app: onboarding (create org), invitations (send, resend, withdraw, accept with email check, 14-day expiry), members (roles, remove, leave, last-owner rule), account page, org settings (general, members), org switcher, start-page routing; seat limit answered with 402 and the limit dialog; audit events; 13 shared F01 scenarios and 8 e2e flows |
 | 2026-11-12 | dfa66f0 | TS-001: `tests/contract` and `tests/scenarios` (Vitest over the generated client, `API_URL` selects the backend, `npm run test:contract:mock` starts a fresh mock): every tag's operations refuse requests without credentials, `GET /me` per seeded user, plans, validation codes, event-stream headers (171 tests); one scenario group per state machine (clock scenario runs, transitions listed as todos with their tasks); CI runs both suites and the mock's Duplex run through the PoC engine. **M0 done.** |
