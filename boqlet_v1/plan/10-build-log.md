@@ -22,8 +22,8 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M1 (core loop) |
 | Role | Frontend agent |
-| Last task done | TS-001 Shared contract and scenario suites, CI (dfa66f0); milestone M0 complete |
-| Next task | FE-005 Onboarding, orgs, members, sessions (F01), milestone M1 |
+| Last task done | FE-005 Onboarding, orgs, members, sessions (F01) (8d00621); the session part is FE-012 |
+| Next task | FE-006 Projects and dashboard (F02) |
 | Waiting for the owner | — |
 | In progress (not committed) | — |
 | Notes for the next session | Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |

@@ -82,6 +82,20 @@ add a row here before you finish, even if nobody asked: this page is how nothing
 - `npm audit` reports a moderate advisory in Vite 5's bundled esbuild that affects only the dev
   server; upgrading to Vite 6+ is a breaking change left for later.
 
+## Known limitations of the product build (phase 1, `apps/app` + `apps/mock-api`)
+
+Things the product build doesn't do yet, with the task that deals with each.
+
+- The limit dialog (402) says which limit was reached but offers no upgrade path yet (FE-019, FE-035).
+- One active session per account (F01 §10, F01-AC5) is not built: signing in elsewhere doesn't ask
+  to take over (FE-012).
+- Deleting an org hides it at once; the 30-day removal of its data (BR-52) is not simulated by the
+  mock.
+- Sign-up in phase 1 is the mock's: any name and email, no verification (the real provider comes
+  after BE-000, FE-043).
+- Unknown fields are rejected only at the top level of a request body in the mock (nested objects
+  pass); Java should reject them at every level.
+
 ## Suggested next steps
 
 Engineering, roughly in order of value:
@@ -147,6 +161,7 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-11-12 | 8d00621 | FE-005: F01 on the mock and in the app: onboarding (create org), invitations (send, resend, withdraw, accept with email check, 14-day expiry), members (roles, remove, leave, last-owner rule), account page, org settings (general, members), org switcher, start-page routing; seat limit answered with 402 and the limit dialog; audit events; 13 shared F01 scenarios and 8 e2e flows |
 | 2026-11-12 | dfa66f0 | TS-001: `tests/contract` and `tests/scenarios` (Vitest over the generated client, `API_URL` selects the backend, `npm run test:contract:mock` starts a fresh mock): every tag's operations refuse requests without credentials, `GET /me` per seeded user, plans, validation codes, event-stream headers (171 tests); one scenario group per state machine (clock scenario runs, transitions listed as todos with their tasks); CI runs both suites and the mock's Duplex run through the PoC engine. **M0 done.** |
 | 2026-11-12 | 6888ec2 | FE-004: auth adapter interface and the mock adapter (sign-in page listing seeded users, token `mock:<userId>`), auth gate, user menu from `GET /me`; one SSE connection per tab with backoff and `Last-Event-ID`, the invalidation map; the mock's event stream sent with `no-transform` so the Next dev proxy doesn't buffer it |
 | 2026-11-12 | 2edb4ae | FE-003: `apps/mock-api` skeleton (Hono, port 4010): every request validated against `openapi.yaml` (400 `invalid_param`, `invalid_body`, `unknown_field`; 501 for operations not built yet; responses checked in dev), JSON store with the seed (plans, Studio Demo, Small Firm, six users, every shipped preset as a system preset), signed blob URLs, SSE bus with `Last-Event-ID`, outbox, clock, `/_dev/*` endpoints, the `Engine` interface with `PocEngine`; `npm run dev:app` starts engine + mock + app |
