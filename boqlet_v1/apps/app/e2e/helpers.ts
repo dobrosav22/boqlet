@@ -99,3 +99,26 @@ export async function modelWithVersion(user: DevUser, projectId: string, name: s
     await new Promise((r) => setTimeout(r, 500));
   }
 }
+
+/**
+ * A Studio Demo project with the Duplex and a BoQ under the given classifications (slugs), generated
+ * and finished. Returns the workspace URL and the run.
+ */
+export async function generatedDuplexBoq(bytes: Uint8Array, classificationSlugs: string[] = ["acme-cost-codes", "demo-trades"]) {
+  const olivia = await devUser("olivia");
+  const me = await apiAs<{ memberships: { org: { id: string; slug: string } }[] }>(olivia, "GET", "/me");
+  const org = me.memberships.find((m) => m.org.slug === "studio-demo")!.org;
+  const project = await apiAs<{ id: string }>(olivia, "POST", `/orgs/${org.id}/projects`, { name: `Sheet ${unique("p")}` });
+  await modelWithVersion(olivia, project.id, "Architecture", bytes, "Duplex_A.ifc");
+  const presets = await apiAs<{ slug: string; kind: string; latestPublishedVersion?: { id: string } }[]>(olivia, "GET", `/orgs/${org.id}/presets?kind=classification`);
+  const classificationVersionIds = classificationSlugs.map((s) => presets.find((p) => p.slug === s)!.latestPublishedVersion!.id);
+  const boq = await apiAs<{ id: string; currentRevision: { id: string } }>(olivia, "POST", `/projects/${project.id}/boqs`, { name: "Tender BoQ", inputs: { classificationVersionIds } });
+  const { run } = await apiAs<{ run: { id: string } }>(olivia, "POST", `/revisions/${boq.currentRevision.id}/runs`);
+  const deadline = Date.now() + 120_000;
+  for (;;) {
+    const r = await apiAs<{ id: string; status: string; stats?: { lines?: number } }>(olivia, "GET", `/runs/${run.id}`);
+    if (r.status !== "queued" && r.status !== "running") return { url: `/studio-demo/projects/${project.id}/boqs/${boq.id}`, run: r, olivia };
+    if (Date.now() > deadline) throw new Error(`run ${run.id} still ${r.status}`);
+    await new Promise((res) => setTimeout(res, 300));
+  }
+}

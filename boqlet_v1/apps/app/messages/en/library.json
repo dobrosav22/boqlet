@@ -1,0 +1,284 @@
+{
+  "names": {
+    "storey_elevation": {
+      "label": "Storey elevation"
+    },
+    "length": {
+      "label": "Length",
+      "help": "Along the element's axis"
+    },
+    "width": {
+      "label": "Width"
+    },
+    "height": {
+      "label": "Height"
+    },
+    "thickness": {
+      "label": "Thickness"
+    },
+    "depth": {
+      "label": "Depth"
+    },
+    "diameter": {
+      "label": "Diameter"
+    },
+    "cross_section_area": {
+      "label": "Cross-section area"
+    },
+    "slope": {
+      "label": "Slope"
+    },
+    "elevation_base": {
+      "label": "Base elevation"
+    },
+    "elevation_top": {
+      "label": "Top elevation"
+    },
+    "profile_girth": {
+      "label": "Profile girth",
+      "help": "Developed width of a profile (flashings, gutters)"
+    },
+    "gross_area": {
+      "label": "Gross area",
+      "help": "Main face, before openings"
+    },
+    "net_area": {
+      "label": "Net area",
+      "help": "Main face, after all openings"
+    },
+    "footprint_area": {
+      "label": "Plan area",
+      "help": "Projection on plan"
+    },
+    "developed_area": {
+      "label": "Developed area",
+      "help": "True sloped or unfolded area (roofs, stairs)"
+    },
+    "floor_area": {
+      "label": "Room floor area",
+      "help": "Rooms only"
+    },
+    "ceiling_area": {
+      "label": "Room ceiling area",
+      "help": "Rooms only"
+    },
+    "wall_area": {
+      "label": "Room wall area",
+      "help": "Rooms only, before openings"
+    },
+    "wall_area_net": {
+      "label": "Room wall area, net",
+      "help": "Rooms only, less doors and windows"
+    },
+    "skirting_length": {
+      "label": "Room skirting length",
+      "help": "Rooms only, perimeter less door widths"
+    },
+    "gross_volume": {
+      "label": "Gross volume",
+      "help": "Before openings"
+    },
+    "net_volume": {
+      "label": "Net volume",
+      "help": "After openings"
+    },
+    "perimeter": {
+      "label": "Perimeter"
+    },
+    "mass": {
+      "label": "Mass",
+      "help": "Reported in the model, if any"
+    },
+    "nominal_mass_per_length": {
+      "label": "Nominal mass per metre",
+      "help": "From the section designation"
+    },
+    "density": {
+      "label": "Density"
+    },
+    "bar_diameter": {
+      "label": "Bar diameter"
+    },
+    "bar_count": {
+      "label": "Bar count"
+    },
+    "bar_length": {
+      "label": "Bar length",
+      "help": "Per bar"
+    },
+    "insulation_thickness": {
+      "label": "Insulation thickness"
+    },
+    "connection_count": {
+      "label": "Connection count"
+    },
+    "ifc_class": {
+      "label": "IFC class",
+      "help": "e.g. \"IfcWall\""
+    },
+    "predefined_type": {
+      "label": "Predefined type",
+      "help": "e.g. \"FLOORING\""
+    },
+    "type_name": {
+      "label": "Type name"
+    },
+    "family": {
+      "label": "Measurement family",
+      "help": "linear, planar, volumetric, countable…"
+    },
+    "family_name": {
+      "label": "Family name",
+      "help": "Authoring-tool family, e.g. a Revit family"
+    },
+    "name": {
+      "label": "Name"
+    },
+    "material": {
+      "label": "Material",
+      "help": "Dictionary term, e.g. use UNDER([Material], \"concrete\")"
+    },
+    "material_raw": {
+      "label": "Material as in the model"
+    },
+    "element_type": {
+      "label": "Element type",
+      "help": "Dictionary term from the type name"
+    },
+    "strength_class": {
+      "label": "Strength class",
+      "help": "e.g. \"C30/37\""
+    },
+    "space_type": {
+      "label": "Room type",
+      "help": "Dictionary term from the room name"
+    },
+    "discipline": {
+      "label": "Discipline"
+    },
+    "storey": {
+      "label": "Storey"
+    },
+    "space": {
+      "label": "Room"
+    },
+    "space_name": {
+      "label": "Room name"
+    },
+    "zone": {
+      "label": "Zone"
+    },
+    "status": {
+      "label": "Status",
+      "help": "new, existing, demolish, temporary"
+    },
+    "is_external": {
+      "label": "External",
+      "help": "true / false"
+    },
+    "load_bearing": {
+      "label": "Load bearing",
+      "help": "true / false"
+    },
+    "system": {
+      "label": "System"
+    },
+    "profile": {
+      "label": "Profile",
+      "help": "Section designation, e.g. \"IPE200\""
+    },
+    "nominal_size": {
+      "label": "Nominal size",
+      "help": "e.g. \"DN50\""
+    },
+    "tag": {
+      "label": "Tag"
+    },
+    "guid": {
+      "label": "GlobalId"
+    },
+    "openings": {
+      "label": "Openings",
+      "help": "Doors, windows and voids in the element"
+    },
+    "layers": {
+      "label": "Layers",
+      "help": "Material layers of the build-up"
+    },
+    "faces": {
+      "label": "Faces",
+      "help": "Sides of the element (walls: side a and b, with the room on each)"
+    },
+    "children": {
+      "label": "Parts",
+      "help": "Parts of an assembly (stair flights, roof slabs)"
+    },
+    "kind": {
+      "label": "Opening kind",
+      "help": "\"door\", \"window\", \"void\" or \"recess\""
+    },
+    "area": {
+      "label": "Area"
+    },
+    "volume": {
+      "label": "Volume"
+    },
+    "side": {
+      "label": "Face side",
+      "help": "\"a\", \"b\", \"top\", \"bottom\", \"edge\""
+    },
+    "index": {
+      "label": "Layer number",
+      "help": "0 = first layer"
+    },
+    "function": {
+      "label": "Layer function",
+      "help": "structure, insulation, finish, membrane, air_gap"
+    },
+    "qty": {
+      "label": "Line quantity",
+      "help": "The source line's quantity"
+    },
+    "unit": {
+      "label": "Line unit"
+    },
+    "building": {
+      "label": "Building",
+      "help": "Whole-building values; the log says whether each is from the model or derived"
+    },
+    "gross_floor_area": {
+      "label": "Gross floor area",
+      "help": "Building: floor slab plan areas, or the model's own value"
+    },
+    "net_floor_area": {
+      "label": "Net floor area",
+      "help": "Building: sum of room floor areas, or the model's own value"
+    },
+    "space_volume": {
+      "label": "Volume of rooms",
+      "help": "Building: sum of room volumes"
+    },
+    "model": {
+      "label": "Model"
+    },
+    "embedded": {
+      "label": "Elements passing through",
+      "help": "Columns and beams through a slab or wall"
+    },
+    "filling_class": {
+      "label": "Filling class",
+      "help": "IFC class of the door or window in an opening"
+    },
+    "keys": {
+      "label": "Line key",
+      "help": "The values that split the source line, e.g. Line key › Type name"
+    },
+    "storeys": {
+      "label": "Number of storeys"
+    }
+  },
+  "formula": {
+    "unclosed": "“{text}” has no closing ]",
+    "unknown": "Unknown name {label}. Pick one from Names."
+  }
+}

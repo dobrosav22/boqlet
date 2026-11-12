@@ -22,7 +22,11 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   timeout: 60_000,
   use: { baseURL: `http://localhost:${port}`, trace: "retain-on-failure" },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: /\.perf\.spec\.ts$/ },
+    // Frame-rate measurements mean something only on an idle machine: they run after every other test.
+    { name: "perf", use: { ...devices["Desktop Chrome"] }, testMatch: /\.perf\.spec\.ts$/, dependencies: ["chromium"] },
+  ],
   webServer: [
     {
       // The PoC engine API (phase 1): models are parsed through it (FE-007).

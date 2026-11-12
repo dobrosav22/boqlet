@@ -10,16 +10,18 @@ import { DimensionRule } from "@/components/dimension-rule";
 import { BoqHeader } from "@/features/boqs/boq-header";
 import { RunHistory } from "@/features/boqs/run-history";
 import { SetupTab } from "@/features/boqs/setup-tab";
+import { LogTab } from "@/features/boq-sheet/log-tab";
+import { Sheet } from "@/features/boq-sheet/sheet";
 import { useOrg } from "@/features/orgs/org-context";
 import { useProjectScope } from "@/features/projects/project-context";
 import { cn } from "@/lib/utils";
 
-const TABS = ["sheet", "questions", "setup", "versions"] as const;
+const TABS = ["sheet", "questions", "log", "setup", "versions"] as const;
 type Tab = (typeof TABS)[number];
 
 /**
- * S12: the BoQ workspace. FE-008 builds the header, Setup and the run history; the sheet (FE-009)
- * and questions (FE-010) tabs show the current run's figures until then.
+ * S12: the BoQ workspace: header, Sheet (FE-009), Log, Setup and the run history (FE-008); the
+ * questions tab shows the current run's counts until FE-010.
  */
 export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: string }> }) {
   const { boqId } = use(params);
@@ -53,7 +55,8 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
           </Link>
         ))}
       </nav>
-      {tab === "sheet" && <RunFigures run={current} />}
+      {tab === "sheet" && (current ? <Sheet key={current.id} run={current} /> : <RunFigures run={current} />)}
+      {tab === "log" && <LogTab key={current?.id ?? "none"} run={current} />}
       {tab === "questions" && <QuestionCounts run={current} />}
       {tab === "setup" && <SetupTab boq={boq.data} orgId={org.id} />}
       {tab === "versions" && <RunHistory runs={runs.data} currentRunId={current?.id} />}
@@ -61,7 +64,7 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
   );
 }
 
-/** The current run's figures (the sheet itself arrives with FE-009). */
+/** Before the first run: what to do; the sheet appears once a run is complete. */
 function RunFigures({ run }: { run: Run | undefined }) {
   const t = useTranslations("boqs.sheet");
   const format = useFormatter();

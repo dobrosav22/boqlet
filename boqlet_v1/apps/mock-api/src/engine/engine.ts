@@ -44,7 +44,8 @@ export interface Engine {
   run(input: RunInput): Promise<RunOutput>;
   savePreset(kind: PresetFolder, id: string, doc: unknown): Promise<void>;
   deletePreset(kind: PresetFolder, id: string): Promise<void>;
-  checkPreset(kind: PresetFolder, doc: unknown, library?: unknown[]): Promise<{ ok: boolean; problems: string[] }>;
+  /** Problems in a preset document; for a rule-set patch also the flattened rule set. */
+  checkPreset(kind: PresetFolder, doc: unknown, library?: unknown[]): Promise<{ ok: boolean; problems: string[]; flattened?: unknown }>;
   /** Distinct names in a parsed model and how the dictionaries (most general first) resolve them. */
   names(engineModelId: string, dictionaries: unknown[]): Promise<{ names: unknown[] }>;
   /** The verification checks of a parsed model, with their elements (F03 §5). */
@@ -112,7 +113,7 @@ export class PocEngine implements Engine {
   }
 
   checkPreset(kind: PresetFolder, doc: unknown, library: unknown[] = []) {
-    return this.call<{ ok: boolean; problems: string[] }>("POST", `/api/presets/${kind}/check`, JSON.stringify({ doc, library }));
+    return this.call<{ ok: boolean; problems: string[]; flattened?: unknown }>("POST", `/api/presets/${kind}/check`, JSON.stringify({ doc, library }));
   }
 
   async names(engineModelId: string, dictionaries: unknown[]) {

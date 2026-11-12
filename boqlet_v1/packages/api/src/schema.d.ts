@@ -3324,7 +3324,22 @@ export interface components {
             /** Format: date-time */
             finishedAt?: string;
         };
-        RunLine: components["schemas"]["BoqLine"] & {
+        /** @description An engine BoqLine (boq-result.schema.json, BoqLine) plus its place in the run. Its fields are listed one by one because the generated BoqLine schema allows no other properties, so an allOf with it could never validate (FE-009). */
+        RunLine: {
+            key: components["schemas"]["key"];
+            ruleId: components["schemas"]["ruleId"];
+            ruleKind: components["schemas"]["ruleKind"];
+            description: components["schemas"]["description"];
+            unit: components["schemas"]["Unit"];
+            quantity: components["schemas"]["quantity"];
+            source: components["schemas"]["LineSource"];
+            family?: components["schemas"]["ElementFamily"];
+            keys: components["schemas"]["keys"];
+            trace: components["schemas"]["trace"];
+            codes: components["schemas"]["codes"];
+            location?: components["schemas"]["location"];
+            tags: components["schemas"]["tags"];
+            notes: components["schemas"]["notes"];
             sortIndex: number;
             /** @description Position number in its section, e.g. 5.3 (P30); frozen in saved versions */
             positionNo?: string;
@@ -3747,11 +3762,36 @@ export interface components {
             tags?: string[];
             enabled?: components["schemas"]["Value<boolean>"];
         };
+        key: string;
+        ruleId: string;
+        /** @enum {string} */
+        ruleKind: "item" | "derived" | "manual";
+        description: string;
+        quantity: number | null;
         /**
          * @description Where a line's quantity comes from.
          * @enum {string}
          */
         LineSource: "measured" | "derived" | "manual" | "flagged";
+        /** @description Values of the rule's lineKey fields for this line. */
+        keys: {
+            [key: string]: string | number | boolean | null;
+        };
+        /** @description Why this number: the formula, the parameter values used, and every element's share. */
+        trace: {
+            formula: string;
+            params: {
+                [key: string]: unknown;
+            };
+            elements: {
+                guid: string;
+                name?: string;
+                quantity: number | null;
+                note?: string;
+                model?: string;
+            }[];
+            sourceLine?: string;
+        };
         /** @description What each BoQ line carries per system (see engine.ts BoqLine.codes). */
         LineCode: {
             system: string;
@@ -3766,45 +3806,15 @@ export interface components {
             source: "decision" | "map" | "ifc" | "default";
             mapRuleId?: string;
         };
-        BoqLine: {
-            key: string;
-            ruleId: string;
-            /** @enum {string} */
-            ruleKind: "item" | "derived" | "manual";
-            description: string;
-            unit: components["schemas"]["Unit"];
-            quantity: number | null;
-            source: components["schemas"]["LineSource"];
-            family?: components["schemas"]["ElementFamily"];
-            /** @description Values of the rule's lineKey fields for this line. */
-            keys: {
-                [key: string]: string | number | boolean | null;
-            };
-            /** @description Why this number: the formula, the parameter values used, and every element's share. */
-            trace: {
-                formula: string;
-                params: {
-                    [key: string]: unknown;
-                };
-                elements: {
-                    guid: string;
-                    name?: string;
-                    quantity: number | null;
-                    note?: string;
-                    model?: string;
-                }[];
-                sourceLine?: string;
-            };
-            codes: {
-                [key: string]: components["schemas"]["LineCode"];
-            };
-            location?: {
-                storey?: string;
-                storeys?: string[];
-            };
-            tags: string[];
-            notes: string[];
+        codes: {
+            [key: string]: components["schemas"]["LineCode"];
         };
+        location: {
+            storey?: string;
+            storeys?: string[];
+        };
+        tags: string[];
+        notes: string[];
         /**
          * @description Calculation log: an ordered, human-readable record of what the engine did. Meant for developers and for users checking a number; not a debug dump.
          * @enum {string}

@@ -3,7 +3,8 @@
  * (system, org, and one project's), their versions. Editing, publishing and preview come with the
  * Library tasks (FE-021…FE-025).
  */
-import { notFound } from "../http.js";
+import { engine, EngineUnavailable } from "../engine/engine.js";
+import { HttpError, notFound } from "../http.js";
 import { memberOrg, orgPermissions } from "../permissions.js";
 import { visibleProject } from "../projects.js";
 import { json, type Handlers } from "../router.js";
@@ -102,6 +103,31 @@ export const presetHandlers: Handlers = {
   getPreset({ user, params }) {
     const { preset, canEdit } = visiblePreset(user!, params.presetId!);
     return json(presetView(preset, canEdit));
+  },
+
+  async getPresetVersion({ user, params }) {
+    const version = db().presetVersions.find((v) => v.id === params.presetVersionId);
+    if (!version) throw notFound("preset version");
+    const { preset } = visiblePreset(user!, version.presetId);
+    // A rule-set patch also comes flattened (the engine resolves `extends`), e.g. for slot labels.
+    let flattened: unknown;
+    const doc = version.doc as { extends?: string } | null;
+    if (preset.kind === "rule_set" && doc?.extends) {
+      try {
+        flattened = (await engine().checkPreset("rules", doc)).flattened ?? undefined;
+      } catch (e) {
+        if (e instanceof EngineUnavailable) throw new HttpError(503, "engine_unavailable", "The processing service is not available. Try again.");
+        flattened = undefined;
+      }
+    }
+    return json({
+      ...versionInfo(version),
+      presetId: version.presetId,
+      doc: version.doc,
+      extendsVersionId: version.extendsVersionId,
+      problems: version.problems,
+      ...(flattened ? { flattened } : {}),
+    });
   },
 
   listPresetVersions({ user, params }) {

@@ -101,7 +101,8 @@
     "sheet": "Sheet",
     "questions": "Questions",
     "setup": "Setup",
-    "versions": "Versions"
+    "versions": "Versions",
+    "log": "Log"
   },
   "sheet": {
     "empty": "Generate the BoQ to see its lines.",
@@ -113,7 +114,46 @@
     "blocking": "Blocking",
     "warnings": "Warnings",
     "duration": "Duration",
-    "seconds": "{s} s"
+    "seconds": "{s} s",
+    "loading": "Loading lines…",
+    "groupBy": "Group by",
+    "noGrouping": "No grouping",
+    "unclassified": "Unclassified",
+    "filters": "Filters",
+    "source": "Source",
+    "storey": "Storey",
+    "family": "Family",
+    "model": "Model",
+    "all": "All",
+    "search": "Search description or code",
+    "searchHint": "Press / to search",
+    "filtered": "Filtered: {shown} of {total} lines",
+    "clearFilters": "Clear filters",
+    "columns": "Columns",
+    "noMatches": "No line matches these filters.",
+    "groupLines": "{count, plural, one {# line} other {# lines}}",
+    "expand": "Expand {name}",
+    "collapse": "Collapse {name}",
+    "col": {
+      "item": "Item",
+      "description": "Description",
+      "unit": "Unit",
+      "quantity": "Quantity",
+      "source": "Source",
+      "storey": "Storey",
+      "family": "Family",
+      "tags": "Tags",
+      "notes": "Notes"
+    },
+    "sources": {
+      "measured": "Measured",
+      "derived": "Derived",
+      "manual": "Manual",
+      "flagged": "To confirm"
+    },
+    "toConfirm": "To confirm",
+    "tableLabel": "Bill of quantities",
+    "showingRun": "Showing the run of {when}."
   },
   "questions": {
     "none": "No questions in the current run.",
@@ -173,5 +213,77 @@
     "flagged": "To confirm",
     "duration": "Duration",
     "current": "Current"
+  },
+  "detail": {
+    "title": "Line detail",
+    "close": "Close",
+    "quantity": "Quantity",
+    "howCalculated": "How it is calculated",
+    "formula": "Formula",
+    "rawFormula": "As written",
+    "fromSetting": "From the setting “{name}”",
+    "parameters": "Settings used",
+    "noParameters": "No settings were used.",
+    "elements": "Elements",
+    "element": "Element",
+    "elementModel": "Model",
+    "share": "Share",
+    "note": "How",
+    "sumOfShares": "{count, plural, one {# element} other {# elements}}, together",
+    "noElements": "No model elements behind this line.",
+    "derivedFrom": "Derived from",
+    "codes": "Codes",
+    "codeSource": {
+      "map": "map rule",
+      "decision": "your answer",
+      "ifc": "from the model",
+      "default": "default"
+    },
+    "mapRule": "map rule {id}",
+    "location": "Location",
+    "storeys": "Storeys",
+    "notes": "Notes",
+    "tags": "Tags",
+    "log": "Log entries for this line",
+    "noLog": "No log entries for this line.",
+    "missing": "missing",
+    "yes": "yes",
+    "no": "no"
+  },
+  "warnings": {
+    "title": "{count, plural, one {# warning} other {# warnings}}",
+    "elements": "{count, plural, one {# element} other {# elements}}"
+  },
+  "log": {
+    "stage": "Stage",
+    "level": "Level",
+    "all": "All",
+    "lineKey": "Line",
+    "guid": "Element",
+    "rule": "Rule",
+    "message": "Message",
+    "seq": "No.",
+    "filterLine": "Line key",
+    "filterGuid": "Element GlobalId",
+    "loadMore": "Load more",
+    "empty": "No log entries match.",
+    "noRun": "Generate the BoQ to see its calculation log.",
+    "stages": {
+      "parse": "Parse",
+      "names": "Names",
+      "measure": "Measure",
+      "match": "Match",
+      "quantity": "Quantity",
+      "derived": "Derived",
+      "manual": "Manual",
+      "classify": "Classify",
+      "decision": "Decision",
+      "summary": "Summary"
+    },
+    "levels": {
+      "info": "Info",
+      "detail": "Detail",
+      "warning": "Warning"
+    }
   }
 }

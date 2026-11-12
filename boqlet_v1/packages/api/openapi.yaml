@@ -2949,19 +2949,35 @@ components:
         createdAt: { type: string, format: date-time }
         finishedAt: { type: string, format: date-time }
     RunLine:
-      allOf:
-        - $ref: "../types/schema/boq-result.schema.json#/definitions/BoqLine"
-        - type: object
-          required: [sortIndex]
+      type: object
+      description: >-
+        An engine BoqLine (boq-result.schema.json, BoqLine) plus its place in the run. Its fields are
+        listed one by one because the generated BoqLine schema allows no other properties, so an
+        allOf with it could never validate (FE-009).
+      required: [key, ruleId, ruleKind, description, unit, quantity, source, keys, trace, codes, tags, notes, sortIndex]
+      properties:
+        key: { $ref: "../types/schema/boq-result.schema.json#/definitions/BoqLine/properties/key" }
+        ruleId: { $ref: "../types/schema/boq-result.schema.json#/definitions/BoqLine/properties/ruleId" }
+        ruleKind: { $ref: "../types/schema/boq-result.schema.json#/definitions/BoqLine/properties/ruleKind" }
+        description: { $ref: "../types/schema/boq-result.schema.json#/definitions/BoqLine/properties/description" }
+        unit: { $ref: "../types/schema/boq-result.schema.json#/definitions/BoqLine/properties/unit" }
+        quantity: { $ref: "../types/schema/boq-result.schema.json#/definitions/BoqLine/properties/quantity" }
+        source: { $ref: "../types/schema/boq-result.schema.json#/definitions/BoqLine/properties/source" }
+        family: { $ref: "../types/schema/boq-result.schema.json#/definitions/BoqLine/properties/family" }
+        keys: { $ref: "../types/schema/boq-result.schema.json#/definitions/BoqLine/properties/keys" }
+        trace: { $ref: "../types/schema/boq-result.schema.json#/definitions/BoqLine/properties/trace" }
+        codes: { $ref: "../types/schema/boq-result.schema.json#/definitions/BoqLine/properties/codes" }
+        location: { $ref: "../types/schema/boq-result.schema.json#/definitions/BoqLine/properties/location" }
+        tags: { $ref: "../types/schema/boq-result.schema.json#/definitions/BoqLine/properties/tags" }
+        notes: { $ref: "../types/schema/boq-result.schema.json#/definitions/BoqLine/properties/notes" }
+        sortIndex: { type: integer }
+        positionNo: { type: string, description: "Position number in its section, e.g. 5.3 (P30); frozen in saved versions" }
+        overridden:
+          type: object
           properties:
-            sortIndex: { type: integer }
-            positionNo: { type: string, description: "Position number in its section, e.g. 5.3 (P30); frozen in saved versions" }
-            overridden:
-              type: object
-              properties:
-                engineQuantity: { type: [number, "null"] }
-                quantity: { type: [number, "null"] }
-                reason: { type: string }
+            engineQuantity: { type: [number, "null"] }
+            quantity: { type: [number, "null"] }
+            reason: { type: string }
     LineGroup:
       type: object
       required: [path, title, lineCount]
