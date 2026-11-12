@@ -1,0 +1,79 @@
+{
+  "title": "Settings",
+  "nav": {
+    "general": "General",
+    "members": "Members"
+  },
+  "general": {
+    "readOnly": "Only owners and admins can change these settings.",
+    "identity": "Organisation",
+    "name": "Name",
+    "slug": "Address",
+    "slugHint": "Changing it changes every link to your organisation.",
+    "slugTaken": "That address is taken.",
+    "slugInvalid": "Use 3 to 40 lower-case letters, digits and hyphens.",
+    "defaults": "Defaults for new projects",
+    "currency": "Currency",
+    "country": "Country",
+    "units": "Units",
+    "metric": "Metric",
+    "imperial": "Imperial",
+    "decimal": "Decimal mark",
+    "decimalPoint": "Point (12.5)",
+    "decimalComma": "Comma (12,5)",
+    "thousands": "Thousands separator",
+    "thousandsSep": {
+      "thin": "Narrow space (3 800)",
+      "space": "Space (3 800)",
+      "comma": "Comma (3,800)",
+      "point": "Point (3.800)",
+      "apostrophe": "Apostrophe (3'800)",
+      "none": "None (3800)"
+    },
+    "dateFormat": "Date format",
+    "dateFormatHint": "For example dd.MM.yyyy; empty uses the language's format.",
+    "workflow": "Sharing and approval",
+    "publicLinks": "Allow public share links",
+    "approval": "Saving a version needs review and approval",
+    "fourEyes": "Four eyes: the approver must be someone else",
+    "save": "Save changes",
+    "saved": "Saved",
+    "delete": {
+      "title": "Delete organisation",
+      "body": "Removes the organisation, its projects and models for everyone. Members are told. This can't be undone.",
+      "open": "Delete organisation…",
+      "confirmTitle": "Delete {org}?",
+      "confirmBody": "Type the organisation's name to confirm. Its data is removed within 30 days.",
+      "typeName": "Organisation name",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    }
+  },
+  "members": {
+    "email": "Email",
+    "role": "Role",
+    "invite": "Invite",
+    "invited": "Invitation sent to {email}",
+    "resent": "Invitation sent again",
+    "members": "Members",
+    "name": "Name",
+    "joined": "Joined",
+    "lastActive": "Last active",
+    "never": "—",
+    "roleOf": "Role of {name}",
+    "remove": "Remove",
+    "removeOf": "Remove {name}",
+    "invitations": "Invitations",
+    "noInvitations": "No open invitations.",
+    "status": "Status",
+    "expires": "Expires",
+    "resend": "Resend",
+    "revoke": "Withdraw",
+    "invitationStatus": {
+      "pending": "Pending",
+      "accepted": "Accepted",
+      "revoked": "Withdrawn",
+      "expired": "Expired"
+    }
+  }
+}

@@ -9,6 +9,8 @@ test("signing in as a seeded user, then switching users, changes GET /me", async
   const meOlivia = page.waitForResponse((r) => r.url().endsWith("/api/v1/me") && r.status() === 200);
   await page.getByTestId("sign-in-as-olivia@example.com").click();
   expect(((await (await meOlivia).json()) as { user: { name: string } }).user.name).toBe("Olivia Owner");
+  // Two orgs and none used before in this browser: the start page asks which one (F01 §3).
+  await page.getByTestId("org-picker").getByRole("link", { name: "Studio Demo" }).click();
   await expect(page).toHaveURL(/\/studio-demo$/);
   await expect(page.getByTestId("user-name")).toHaveText("Olivia Owner");
 
@@ -30,12 +32,12 @@ test("an anonymous visitor is sent to sign-in and comes back to the page afterwa
 });
 
 test("a realtime event invalidates the matching query", async ({ page }) => {
-  const olivia = await signInAs(page, "olivia");
+  const marko = await signInAs(page, "marko");
   await page.goto("/");
   await expect(page).toHaveURL(/\/studio-demo$/);
   await expect(page.locator("html")).toHaveAttribute("data-realtime", "open");
   const refetch = page.waitForRequest((r) => r.url().endsWith("/api/v1/me"));
-  await emit("entity.changed", { entityType: "user", entityId: olivia.id, change: "updated" }, [olivia.id]);
+  await emit("entity.changed", { entityType: "user", entityId: marko.id, change: "updated" }, [marko.id]);
   await refetch;
 });
 

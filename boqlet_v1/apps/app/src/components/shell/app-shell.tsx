@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { APP_NAME } from "@/config";
+import { OrgSwitcher } from "@/features/orgs/org-switcher";
 import { LeftNav } from "./left-nav";
 import { ThemeSwitch } from "./theme-switch";
 import { UserMenu } from "./user-menu";
@@ -25,6 +26,8 @@ export async function AppShell({ org, children }: { org: string; children: React
         <Link href={`/${org}`} aria-label={t("home", { appName: APP_NAME })} data-testid="wordmark">
           <Wordmark />
         </Link>
+        <span className="h-5 w-px bg-border" aria-hidden />
+        <OrgSwitcher />
         <div className="flex-1" />
         <ThemeSwitch />
         <UserMenu />

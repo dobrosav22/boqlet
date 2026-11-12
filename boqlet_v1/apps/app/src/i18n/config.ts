@@ -10,7 +10,7 @@ export const LOCALE_COOKIE = "boqlet-locale";
  * Message namespaces: one JSON file per namespace in `messages/<locale>/` (F15). A new namespace is
  * added here and as `messages/en/<name>.json`; modules bring their own (registered later, P36).
  */
-export const NAMESPACES = ["common", "shell", "errors", "units", "auth"] as const;
+export const NAMESPACES = ["common", "shell", "errors", "units", "auth", "orgs", "settings", "account"] as const;
 
 export function isLocale(value: string | undefined): value is Locale {
   return !!value && (LOCALES as readonly string[]).includes(value);

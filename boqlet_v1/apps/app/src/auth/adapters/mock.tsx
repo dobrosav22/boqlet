@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Wordmark } from "@/components/shell/wordmark";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { safeReturnTo, type AuthAdapter, type Session } from "../AuthAdapter";
 import { readMockSession, subscribeMockSession, writeMockSession } from "./mock-session";
 
@@ -24,6 +25,14 @@ function go(path: string) {
   window.location.assign(path);
 }
 
+function signInUrl(opts?: { returnTo?: string; email?: string }) {
+  const q = new URLSearchParams();
+  if (opts?.returnTo) q.set("returnTo", opts.returnTo);
+  if (opts?.email) q.set("email", opts.email);
+  const s = q.toString();
+  return `/sign-in${s ? `?${s}` : ""}`;
+}
+
 /**
  * Mock auth (phase 1): a sign-in page that lists the mock's seeded users; the token is
  * `mock:<userId>`. Replaced by the real provider's adapter after BE-000 (FE-043).
@@ -39,15 +48,15 @@ export const mockAuthAdapter: AuthAdapter = {
     return readMockSession()?.token ?? null;
   },
   async signIn(opts) {
-    go(`/sign-in${opts?.returnTo ? `?returnTo=${encodeURIComponent(opts.returnTo)}` : ""}`);
+    go(signInUrl(opts));
   },
   async signUp(opts) {
-    // The mock has no sign-up: new people are seeded or invited (FE-005 adds invitations).
-    go(`/sign-in${opts?.returnTo ? `?returnTo=${encodeURIComponent(opts.returnTo)}` : ""}`);
+    // One page for both: the mock's sign-in page has the sign-up form below the seeded users.
+    go(signInUrl(opts));
   },
-  async signOut() {
+  async signOut(opts) {
     writeMockSession(null);
-    go("/sign-in");
+    go(signInUrl({ returnTo: opts?.returnTo }));
   },
   SignInPage: MockSignInPage,
 };
@@ -56,9 +65,21 @@ function MockSignInPage() {
   const t = useTranslations("auth");
   const roles = useTranslations("common.roles");
   const router = useRouter();
-  const returnTo = safeReturnTo(useSearchParams().get("returnTo"));
+  const search = useSearchParams();
+  const returnTo = safeReturnTo(search.get("returnTo"));
   const [users, setUsers] = useState<DevUser[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState(search.get("email") ?? "");
+  const [signUpFailed, setSignUpFailed] = useState(false);
+
+  async function signUp(e: React.FormEvent) {
+    e.preventDefault();
+    setSignUpFailed(false);
+    const res = await fetch(DEV_USERS_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email }) });
+    if (!res.ok) return setSignUpFailed(true);
+    pick((await res.json()) as DevUser);
+  }
 
   useEffect(() => {
     let alive = true;
@@ -108,6 +129,26 @@ function MockSignInPage() {
             </li>
           ))}
         </ul>
+      )}
+      {/* Shown once the page is interactive (the users list has loaded), so a submit never runs before hydration. */}
+      {(users || failed) && (
+      <form onSubmit={signUp} className="flex flex-col gap-3 border-t border-border pt-6" data-testid="mock-sign-up">
+        <h2 className="label-caps text-muted-foreground">{t("mock.signUpTitle")}</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <Input aria-label={t("mock.name")} placeholder={t("mock.name")} value={name} onChange={(e) => setName(e.target.value)} required data-testid="sign-up-name" />
+          <Input aria-label={t("mock.email")} placeholder={t("mock.email")} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required data-testid="sign-up-email" />
+        </div>
+        {signUpFailed && (
+          <p role="alert" className="text-error">
+            {t("mock.signUpFailed")}
+          </p>
+        )}
+        <div>
+          <Button type="submit" data-testid="sign-up-submit">
+            {t("mock.signUp")}
+          </Button>
+        </div>
+      </form>
       )}
     </main>
   );

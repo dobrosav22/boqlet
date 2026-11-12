@@ -29,3 +29,14 @@ export async function user(key: SeedUser): Promise<TestUser> {
   if (!found) throw new Error(`seeded user ${key} not found`);
   return found;
 }
+
+/** A new person, as if they signed up (F01). Mock: `POST /_dev/users`; Java: after BE-000. */
+export async function signUp(name: string, email: string): Promise<TestUser> {
+  if (TARGET !== "mock") throw new Error(`no sign-up strategy for target ${TARGET} yet (BE-000)`);
+  const res = await fetch(`${ROOT_URL}/_dev/users`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email }) });
+  if (!res.ok) throw new Error(`sign-up answered ${res.status}`);
+  return (await res.json()) as TestUser;
+}
+
+/** A unique email for one test run. */
+export const uniqueEmail = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}@example.com`;

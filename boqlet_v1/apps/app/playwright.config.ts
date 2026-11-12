@@ -20,6 +20,7 @@ export default defineConfig({
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   // The dev server compiles a route on its first visit; that can take several seconds.
   expect: { timeout: 15_000 },
+  timeout: 60_000,
   use: { baseURL: `http://localhost:${port}`, trace: "retain-on-failure" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [

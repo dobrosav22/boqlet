@@ -1,6 +1,7 @@
 import { SSEStreamingApi } from "hono/streaming";
 import { subscribe } from "../events.js";
 import { json, type Handlers } from "../router.js";
+import { orgVisible } from "../permissions.js";
 import { db } from "../store.js";
 
 /** FE-003: who am I, the plans, and the event stream. Later tasks add their own handler files. */
@@ -8,7 +9,7 @@ export const coreHandlers: Handlers = {
   getMe({ user }) {
     const store = db();
     const memberships = store.memberships
-      .filter((m) => m.userId === user!.id)
+      .filter((m) => m.userId === user!.id && orgVisible(m.orgId))
       .map((m) => ({ org: store.orgs.find((o) => o.id === m.orgId)!, role: m.role }))
       .filter((m) => m.org);
     return json({ user, memberships, modules: {} });

@@ -941,13 +941,13 @@ export interface components {
     schemas: {
         ModuleSettings: {
             /** @default true */
-            membersCanInviteVendors: boolean;
+            membersCanInviteVendors?: boolean;
             /** @default false */
-            membersCanEditPricebooks: boolean;
+            membersCanEditPricebooks?: boolean;
             /** @default false */
-            offersFromSavedVersionsOnly: boolean;
+            offersFromSavedVersionsOnly?: boolean;
             /** @default 12 */
-            stalePriceMonths: number;
+            stalePriceMonths?: number;
         };
         VendorProfile: {
             company: string;
@@ -1190,7 +1190,7 @@ export interface components {
             textSystem?: string;
             currency?: string;
             /** @default true */
-            allowPartial: boolean;
+            allowPartial?: boolean;
         };
         OfferRequest: {
             /** Format: uuid */

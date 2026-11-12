@@ -2252,7 +2252,7 @@ components:
           description: Overrides the locale's separators (P35)
           properties:
             decimal: { type: string, enum: [".", ","] }
-            thousands: { type: string, enum: [",", ".", " ", "'", ""] }
+            thousands: { type: string, enum: [",", ".", " ", " ", "'", ""], description: "U+202F (narrow no-break space) is the default for new orgs (F15)" }
         dateFormat: { type: string, description: "e.g. dd.MM.yyyy (P35)" }
         defaultLanguage: { type: string, default: en }
     OrgCreate:

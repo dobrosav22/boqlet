@@ -19,7 +19,8 @@ export interface AuthAdapter {
   getAccessToken(): Promise<string | null>;
   signIn(opts?: { returnTo?: string; email?: string }): Promise<void>;
   signUp(opts?: { returnTo?: string; email?: string }): Promise<void>;
-  signOut(): Promise<void>;
+  /** Signs out; `returnTo` is where to come back after the next sign-in. */
+  signOut(opts?: { returnTo?: string }): Promise<void>;
   /** Optional embedded UI for providers that render forms in-app. */
   SignInPage?: ComponentType;
   SignUpPage?: ComponentType;

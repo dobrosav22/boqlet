@@ -1,0 +1,44 @@
+{
+  "switcher": {
+    "label": "Organisations",
+    "current": "Current organisation",
+    "create": "New organisation"
+  },
+  "start": {
+    "pick": "Choose an organisation"
+  },
+  "onboarding": {
+    "step": "NO. 01 — YOUR FIRM",
+    "title": "Create your organisation",
+    "intro": "Your firm's space for projects, models and bills of quantities. You can invite colleagues next.",
+    "name": "Organisation name",
+    "slug": "Address",
+    "slugHint": "Your organisation's address: /{slug}",
+    "slugTaken": "That address is taken. Choose another one.",
+    "slugInvalid": "Use 3 to 40 lower-case letters, digits and hyphens.",
+    "currency": "Currency",
+    "country": "Country",
+    "units": "Units",
+    "metric": "Metric",
+    "imperial": "Imperial",
+    "optional": "Optional",
+    "create": "Create organisation"
+  },
+  "invite": {
+    "loading": "Loading the invitation…",
+    "notFound": "This invitation link doesn't exist. Ask for a new one.",
+    "label": "INVITATION",
+    "title": "Join {org}",
+    "body": "This invitation is for {email}, as {role}.",
+    "signInFirst": "Sign in or sign up with that email address to accept.",
+    "signIn": "Sign in to accept",
+    "mismatch": "You're signed in as {signedIn}, but the invitation is for {invited}. Sign in with that address to accept.",
+    "otherAccount": "Sign in with another account",
+    "accept": "Accept and join",
+    "status": {
+      "accepted": "This invitation has already been accepted.",
+      "revoked": "This invitation was withdrawn. Ask for a new one.",
+      "expired": "This invitation has expired. Ask for a new one."
+    }
+  }
+}

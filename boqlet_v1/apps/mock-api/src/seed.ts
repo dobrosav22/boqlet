@@ -145,7 +145,7 @@ export function buildSeed(): Db {
     member("small", "olivia", "owner"),
   ];
   const { presets, presetVersions } = systemPresets(at);
-  return { version: 1, seededAt: at, users, orgs, memberships, plans: PLANS, presets, presetVersions, audit: [] };
+  return { version: 1, seededAt: at, users, orgs, memberships, plans: PLANS, presets, presetVersions, invitations: [], audit: [], deletedOrgIds: [] };
 }
 
 const readJson = (file: string) => JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>;

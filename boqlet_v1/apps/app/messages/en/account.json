@@ -1,0 +1,18 @@
+{
+  "home": "Back to the start",
+  "title": "Account",
+  "profile": "Profile",
+  "name": "Name",
+  "email": "Email",
+  "emailHint": "Change it with your sign-in provider.",
+  "language": "Language",
+  "languages": {
+    "en": "English",
+    "en-XA": "Pseudo-locale (layout testing)"
+  },
+  "save": "Save",
+  "saved": "Saved",
+  "orgs": "My organisations",
+  "noOrgs": "You're not in an organisation.",
+  "leave": "Leave"
+}

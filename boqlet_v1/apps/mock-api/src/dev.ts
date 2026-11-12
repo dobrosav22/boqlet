@@ -8,6 +8,7 @@ import { advance, clockOffsetMs, now, resetClock, setNow } from "./clock.js";
 import { emit } from "./events.js";
 import { listOutbox, readOutboxHtml } from "./outbox.js";
 import { buildSeed } from "./seed.js";
+import { newId } from "./ids.js";
 import { db, flush, persist, replaceStore } from "./store.js";
 
 export function devRoutes() {
@@ -27,6 +28,21 @@ export function devRoutes() {
           .map((m) => ({ orgId: m.orgId, orgSlug: store.orgs.find((o) => o.id === m.orgId)?.slug, role: m.role })),
       })),
     );
+  });
+
+  // Sign-up in the mock (F01): a new person, or the existing one with that email.
+  dev.post("/_dev/users", async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { name?: string; email?: string };
+    const email = (body.email ?? "").trim();
+    const name = (body.name ?? "").trim();
+    if (!/^[^@\s]+@[^@\s]+$/.test(email) || !name) return c.json({ code: "invalid_body", message: "name and email are required" }, 400);
+    let u = db().users.find((x) => x.email.toLowerCase() === email.toLowerCase());
+    if (!u) {
+      u = { id: newId(), email, name, locale: "en" };
+      db().users.push(u);
+      persist();
+    }
+    return c.json({ id: u.id, name: u.name, email: u.email, platformRole: null, token: `mock:${u.id}`, memberships: [] }, 201);
   });
 
   const clock = new Hono();

@@ -1,8 +1,13 @@
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/shell/app-shell";
+import { OrgProvider } from "@/features/orgs/org-context";
 
-/** Org chrome. FE-005 resolves the org by slug from `GET /me` and 404s for orgs the user isn't in. */
+/** Org chrome: the org is resolved by slug from `GET /me`; orgs the user isn't in show 404. */
 export default async function OrgLayout({ children, params }: { children: ReactNode; params: Promise<{ org: string }> }) {
   const { org } = await params;
-  return <AppShell org={org}>{children}</AppShell>;
+  return (
+    <OrgProvider slug={org}>
+      <AppShell org={org}>{children}</AppShell>
+    </OrgProvider>
+  );
 }

@@ -2293,13 +2293,13 @@ export interface components {
         };
         ShareInclude: {
             /** @default true */
-            lineDetail: boolean;
+            lineDetail?: boolean;
             /** @default true */
-            viewer: boolean;
+            viewer?: boolean;
             /** @default false */
-            log: boolean;
+            log?: boolean;
             /** @default false */
-            excel: boolean;
+            excel?: boolean;
             /** @description classification id */
             groupBy?: string;
         };
@@ -2614,23 +2614,26 @@ export interface components {
             defaultUnitSystem?: "metric" | "imperial";
             defaultCountry?: string;
             /** @default true */
-            publicLinksAllowed: boolean;
+            publicLinksAllowed?: boolean;
             /**
              * @description Saving a version needs review and approval (F09 §4, P29)
              * @default false
              */
-            approvalRequired: boolean;
+            approvalRequired?: boolean;
             /** @description Overrides the locale's separators (P35) */
             numberFormat?: {
                 /** @enum {string} */
                 decimal?: "." | ",";
-                /** @enum {string} */
-                thousands?: "," | "." | " " | "'" | "";
+                /**
+                 * @description U+202F (narrow no-break space) is the default for new orgs (F15)
+                 * @enum {string}
+                 */
+                thousands?: "," | "." | " " | " " | "'" | "";
             };
             /** @description e.g. dd.MM.yyyy (P35) */
             dateFormat?: string;
             /** @default en */
-            defaultLanguage: string;
+            defaultLanguage?: string;
         };
         OrgCreate: {
             name: string;

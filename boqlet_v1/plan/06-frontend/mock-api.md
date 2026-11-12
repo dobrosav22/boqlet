@@ -57,7 +57,7 @@ Everything in `openapi.yaml`, with these simplifications:
 
 | Area | Mock behaviour |
 |---|---|
-| Auth | `Bearer mock:<userId>`; `GET /_dev/users` lists seeded users for the mock sign-in page |
+| Auth | `Bearer mock:<userId>`; `GET /_dev/users` lists seeded users for the mock sign-in page; `POST /_dev/users {name, email}` signs up a new person (F01, FE-005) |
 | Permissions | Full (same matrix, `03-domain/permissions.md`). This is where frontend gating gets tested |
 | Entitlements | Full checks and `402` errors from the seeded plans |
 | Billing | `manual` adapter: checkout returns `/_dev/checkout?plan=…`, which switches the plan immediately |

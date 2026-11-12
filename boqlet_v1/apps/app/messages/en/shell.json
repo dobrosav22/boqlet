@@ -16,6 +16,7 @@
   "home": "{appName} home",
   "user": {
     "menu": "Account menu",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "account": "Account"
   }
 }

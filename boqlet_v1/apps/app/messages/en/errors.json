@@ -13,6 +13,14 @@
     "deadline_passed": "The deadline has passed.",
     "not_found": "Not found, or you don't have access.",
     "forbidden": "You don't have permission to do this.",
-    "validation_failed": "Some values are not valid. Check the form and try again."
+    "validation_failed": "Some values are not valid. Check the form and try again.",
+    "slug_taken": "That address is taken. Choose another one.",
+    "already_member": "That person is already a member.",
+    "already_invited": "That person already has a pending invitation. Resend it instead.",
+    "last_owner": "An organisation needs at least one owner. Make someone else owner first.",
+    "own_role": "You can't change your own role.",
+    "email_mismatch": "This invitation was sent to another email address.",
+    "confirm_mismatch": "Type the organisation's name exactly to confirm.",
+    "limit_reached": "Your plan's limit is reached."
   }
 }

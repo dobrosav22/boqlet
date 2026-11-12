@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMe } from "@/api/hooks/me";
@@ -50,6 +51,9 @@ export function UserMenu() {
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
+        <DropdownMenuItem render={<Link href="/account" />} data-testid="account-link">
+          {t("account")}
+        </DropdownMenuItem>
         <DropdownMenuItem
           data-testid="sign-out"
           onClick={() => {

@@ -3,13 +3,14 @@ import { cors } from "hono/cors";
 import { blobPath, getBlob, putBlob, verifySignature } from "./blobs.js";
 import { devRoutes } from "./dev.js";
 import { coreHandlers } from "./handlers/core.js";
+import { orgHandlers } from "./handlers/orgs.js";
 import { apiRouter, type Handlers } from "./router.js";
 import { buildSeed } from "./seed.js";
 import { loadSpec } from "@ifc-boq/api/spec";
 import { loadStore, replaceStore } from "./store.js";
 
 /** All handlers, by operationId. Each task adds its file here. */
-export const handlers: Handlers = { ...coreHandlers };
+export const handlers: Handlers = { ...coreHandlers, ...orgHandlers };
 
 /** Builds the mock: loads (or seeds) the store and the contract. Used by the server and the tests. */
 export async function createApp(opts: { reseed?: boolean } = {}) {

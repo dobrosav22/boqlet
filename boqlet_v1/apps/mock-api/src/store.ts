@@ -45,6 +45,18 @@ export interface PresetVersionRec {
   createdAt: string;
   publishedAt?: string;
 }
+export interface InvitationRec {
+  id: string;
+  orgId: string;
+  email: string;
+  role: OrgRole;
+  token: string;
+  status: "pending" | "accepted" | "revoked";
+  expiresAt: string;
+  invitedBy: string;
+  createdAt: string;
+  acceptedBy?: string;
+}
 export interface AuditRec {
   id: string;
   orgId: string | null;
@@ -66,7 +78,10 @@ export interface Db {
   plans: PlanRec[];
   presets: PresetRec[];
   presetVersions: PresetVersionRec[];
+  invitations: InvitationRec[];
   audit: AuditRec[];
+  /** Orgs being deleted (F01 §9): hidden everywhere, removed later. */
+  deletedOrgIds: string[];
 }
 
 let state: Db | null = null;
@@ -83,6 +98,9 @@ export function db(): Db {
 export function loadStore(): boolean {
   if (!existsSync(file())) return false;
   state = JSON.parse(readFileSync(file(), "utf8")) as Db;
+  // Collections added after a db.json was written start empty.
+  state.invitations ??= [];
+  state.deletedOrgIds ??= [];
   return true;
 }
 

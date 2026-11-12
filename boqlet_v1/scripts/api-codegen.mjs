@@ -22,7 +22,8 @@ const header =
 
 let drift = false;
 for (const { spec, out } of targets) {
-  const ast = await openapiTS(pathToFileURL(spec), { alphabetize: false, exportType: false });
+  // defaultNonNullable off: a field with a `default` stays optional (clients may omit it in requests).
+  const ast = await openapiTS(pathToFileURL(spec), { alphabetize: false, exportType: false, defaultNonNullable: false });
   const text = (header + astToString(ast)).replace(/\r\n/g, "\n");
   const rel = path.relative(root, out).split(path.sep).join("/");
   if (check) {
