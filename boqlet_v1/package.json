@@ -1,8 +1,8 @@
 {
-  "name": "ifc-boq",
+  "name": "boqlet",
   "private": true,
   "version": "0.1.0",
-  "description": "IFC -> Bill of Quantities. React web app + Python engine. Seed of the future FE/BE monorepo.",
+  "description": "boqlet: IFC -> Bill of Quantities. Product root (P44): PoC web app + Python engine today, the product apps and services as they are built.",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -10,10 +10,10 @@
   "scripts": {
     "postinstall": "node scripts/setup-engine.mjs",
     "setup:engine": "node scripts/setup-engine.mjs --force",
-    "dev": "concurrently -k -n engine,web -c blue,green \"npm:dev:engine\" \"npm:dev:web\"",
+    "dev:poc": "concurrently -k -n engine,web -c blue,green \"npm:dev:engine\" \"npm:dev:web\"",
     "dev:engine": "node scripts/run-engine.mjs serve",
     "dev:web": "npm run dev -w @ifc-boq/web",
-    "build": "npm run build -w @ifc-boq/web",
+    "build:poc": "npm run build -w @ifc-boq/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run typecheck && npm run test:engine",
     "test:engine": "node scripts/run-engine.mjs test",

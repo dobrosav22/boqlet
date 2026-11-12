@@ -1,10 +1,13 @@
-# IFC to BoQ
+# boqlet
+
+**This folder is the product root** (`boqlet_v1/`). Run every command below in it.
 
 Drop a building model (IFC), choose how to measure and how to code the result, and get a Bill
 of Quantities in Excel. Every quantity shows its formula, the values used and the elements behind it.
 
-This is a development build: a React app with a local Python engine. It is the starting point
-of the full product monorepo.
+Today this is the proof of concept (a React dev app with a local Python engine) inside the
+product monorepo; the product being built around it is specified in `plan/` (where the build
+stands: `plan/10-build-log.md`).
 
 ## Requirements
 
@@ -16,7 +19,7 @@ of the full product monorepo.
 
 ```bash
 npm install
-npm run dev
+npm run dev:poc
 ```
 
 Open http://localhost:5173, drop `fixtures/ifc/Ifc2x3_Duplex_Architecture.ifc` on the left

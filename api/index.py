@@ -1,7 +1,7 @@
-"""Vercel entry point: the engine's API (engine/ifc_boq/api.py) as one Python function.
+"""Vercel entry point: the engine's API (boqlet_v1/engine/ifc_boq/api.py) as one Python function.
 
-Used only by the demo deployment (vercel.json, docs/17). Locally the engine runs with
-`npm run dev` and never loads this file.
+Used only by the demo deployment (vercel.json, boqlet_v1/docs/17). Locally the engine runs with
+`npm run dev:poc` in boqlet_v1/ and never loads this file.
 
 A Vercel function can only write to /tmp, and /tmp belongs to one instance: parsed models, runs and
 Library saves live there until the instance is recycled (a few minutes without traffic). The web
@@ -13,7 +13,7 @@ from pathlib import Path
 from urllib.parse import parse_qsl, urlencode
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "engine"))
+sys.path.insert(0, str(ROOT / "boqlet_v1" / "engine"))
 
 os.environ.setdefault("IFC_BOQ_CACHE", "/tmp/ifc-boq/cache")
 os.environ.setdefault("IFC_BOQ_USER_PRESETS", "/tmp/ifc-boq/presets-user")

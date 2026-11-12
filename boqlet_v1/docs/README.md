@@ -42,6 +42,6 @@ organise them; when they disagree, the numbered docs are newer.
 ## Conventions in these docs
 
 - "Engine" means the Python package in `engine/ifc_boq`. "Contract" means `packages/types`.
-- Code paths are relative to the repository root.
+- Code paths are relative to the product root `boqlet_v1/` (P44), where every command runs too.
 - Values in presets and examples are illustrative placeholders, never taken from a licensed standard.
 - Prices, market shares and licence terms were checked in early October 2026 and will age.

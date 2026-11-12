@@ -72,10 +72,10 @@ A development build that proves the engine on a real file and lets developers po
 
 ## How to run
 
-See the root `README.md` (people) and `CLAUDE.md` (agents). Short version:
+See `README.md` (people) and `CLAUDE.md` (agents) in the product root `boqlet_v1/`. Short version, run in `boqlet_v1/`:
 
 ```bash
-npm install && npm run dev      # http://localhost:5173
+npm install && npm run dev:poc  # http://localhost:5173
 npm run test                    # typecheck + engine tests
 ```
 

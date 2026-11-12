@@ -6,12 +6,14 @@ as a worker behind the Java backend.
 
 ## What gets deployed
 
-One Vercel project from this repository, everything on one domain:
+One Vercel project from this repository, everything on one domain. The deployment files stay at the
+**repository root** (Vercel needs them there) and point into the product root `boqlet_v1/` (P44); every
+other path in this document is relative to `boqlet_v1/`.
 
 | Part | What runs | Configured in |
 |---|---|---|
-| Web app | `apps/web`, built with Vite into static files | `vercel.json`: install, build, output |
-| Engine | The engine's FastAPI app as one Python function (`api/index.py`); every `/api/*` request goes to it | `vercel.json`: `functions`, `rewrites` |
+| Web app | `apps/web`, built with Vite into static files (`cd boqlet_v1 && npm run build:poc`; output `boqlet_v1/apps/web/dist`) | `vercel.json` (repository root): install, build, output |
+| Engine | The engine's FastAPI app as one Python function (`api/index.py` at the repository root, which loads `boqlet_v1/engine`); every `/api/*` request goes to it | `vercel.json`: `functions`, `rewrites` |
 | Python packages | The engine's runtime packages | `requirements.txt` at the repository root (keep in sync with `engine/requirements.txt`) |
 
 The build sets `VITE_DEPLOYED=1` and `VITE_MAX_UPLOAD_MB=4.4`. With them the app shows a demo note
@@ -30,7 +32,7 @@ as `__path`).
 ## Deploying
 
 1. In Vercel: **Add New › Project**, import this GitHub repository. Keep the root directory at the
-   repository root; everything else comes from `vercel.json`. **Deploy**.
+   repository root (not `boqlet_v1/`); everything else comes from `vercel.json`. **Deploy**.
    With the CLI instead: `npx vercel` (a preview), then `npx vercel --prod`.
 2. Wait for the build: about a minute for the web app, a few more for the Python packages
    (ifcopenshell is large).
@@ -79,8 +81,9 @@ geometry 475 KB: well inside Vercel's limits (4.5 MB per response).
 - The upload limit shown in the app is `VITE_MAX_UPLOAD_MB` in `vercel.json` (`buildCommand`).
 - Files the function does not need are left out with `excludeFiles` in `vercel.json` (tests,
   fixtures, docs, the web sources, `node_modules`). A new folder the engine reads at runtime must not
-  be excluded there.
-- To test the deployed setup locally: build with the two `VITE_` variables, serve the engine with
-  `engine/.venv/Scripts/python -m uvicorn api.index:app --port 8787` (with `IFC_BOQ_CACHE` and
+  be excluded there. Its patterns start with `boqlet_v1/`.
+- To test the deployed setup locally: build with the two `VITE_` variables (`npm run build:poc` in
+  `boqlet_v1/`), serve the engine from the repository root with
+  `boqlet_v1/engine/.venv/Scripts/python -m uvicorn api.index:app --port 8787` (with `IFC_BOQ_CACHE` and
   `IFC_BOQ_USER_PRESETS` pointing to a temporary folder), and `npx vite preview` the web app, which
   proxies `/api` to port 8787.

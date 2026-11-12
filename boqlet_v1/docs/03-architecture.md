@@ -28,7 +28,7 @@ without being rewritten.
   installs `engine/requirements.txt` and the engine package (editable). It writes a hash stamp
   and only reinstalls when `requirements.txt` or `pyproject.toml` change. It never fails the npm
   install; if Python is missing it prints instructions.
-- `npm run dev` runs `scripts/run-engine.mjs serve` (uvicorn with reload on `engine/ifc_boq`)
+- `npm run dev:poc` runs `scripts/run-engine.mjs serve` (uvicorn with reload on `engine/ifc_boq`)
   and Vite together via `concurrently`.
 - The API is **synchronous on purpose**: upload parses in the request; a run executes in the
   request. Fine for files up to tens of MB. Uploads are capped by `IFC_BOQ_MAX_UPLOAD_MB` (300).

@@ -36,7 +36,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     res = await fetch(path, init);
   } catch {
-    throw new Error(DEPLOYED ? "The engine did not answer. Try again in a moment." : "The engine is not reachable. Start it with `npm run dev` (it runs on port 8787).");
+    throw new Error(DEPLOYED ? "The engine did not answer. Try again in a moment." : "The engine is not reachable. Start it with `npm run dev:poc` (it runs on port 8787).");
   }
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`;
@@ -48,7 +48,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
     }
     if (res.status === 413 && MAX_UPLOAD_MB) detail = tooLarge("The file");
     else if (res.status === 502 || res.status === 504)
-      detail = DEPLOYED ? "The engine took too long or stopped. Try again; very large models may not fit this demo." : "The engine is not running. Start it with `npm run dev`.";
+      detail = DEPLOYED ? "The engine took too long or stopped. Try again; very large models may not fit this demo." : "The engine is not running. Start it with `npm run dev:poc`.";
     throw new Error(detail);
   }
   return (await res.json()) as T;

@@ -72,7 +72,7 @@ add a row here before you finish, even if nobody asked: this page is how nothing
   them), and Library saves are temporary.
 - `engine/.cache` grows with every upload and run; delete it freely.
 - On Windows, uvicorn's auto-reload stops the old engine worker with a Ctrl+C console event. When
-  `npm run dev` runs without a console window (started by an IDE task or a background tool rather than a
+  `npm run dev:poc` runs without a console window (started by an IDE task or a background tool rather than a
   terminal), the event never arrives: the reload hangs and the old worker keeps serving the old code
   (new endpoints answer "Not Found"). Run it in a terminal, or restart it after engine changes and end
   any leftover `python.exe ... spawn_main` processes.
