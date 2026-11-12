@@ -95,6 +95,14 @@ Things the product build doesn't do yet, with the task that deals with each.
   after BE-000, FE-043).
 - Unknown fields are rejected only at the top level of a request body in the mock (nested objects
   pass); Java should reject them at every level.
+- The sample project (FL-1 step 5) is created empty: its Duplex model, BoQ and answered questions are
+  copied in once models, BoQs and questions exist in the mock (FE-007, FE-008, FE-010).
+- The dashboard's "Needs you" list is always empty: its items (reviews, runs needing input, new model
+  versions, failed jobs) arrive with their features; F02-AC5 (a review request within 5 s) is checked
+  in FE-031.
+- Project cards count BoQs, blocking questions and reviews as 0 until those exist (FE-008, FE-010, FE-031).
+- Project default presets can't be chosen yet; every project starts with As modelled and the global
+  seed dictionary (preset pickers come with FE-008, starred presets with FE-021).
 
 ## Suggested next steps
 
@@ -161,6 +169,7 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-11-12 | 2500f97 | FE-006: F02 on the mock and in the app: dashboard (needs-you list, project cards with generated compositions, empty state with the sample project), projects list, new project with the `activeProjects` limit, project overview, settings (members from the org only, archive and restore), activity; project visibility and the `permissions` keys (now listed in 03-domain/permissions.md); archived projects refuse writes with `409 project_archived`; 7 shared F02 scenarios, 6 e2e flows |
 | 2026-11-12 | 8d00621 | FE-005: F01 on the mock and in the app: onboarding (create org), invitations (send, resend, withdraw, accept with email check, 14-day expiry), members (roles, remove, leave, last-owner rule), account page, org settings (general, members), org switcher, start-page routing; seat limit answered with 402 and the limit dialog; audit events; 13 shared F01 scenarios and 8 e2e flows |
 | 2026-11-12 | dfa66f0 | TS-001: `tests/contract` and `tests/scenarios` (Vitest over the generated client, `API_URL` selects the backend, `npm run test:contract:mock` starts a fresh mock): every tag's operations refuse requests without credentials, `GET /me` per seeded user, plans, validation codes, event-stream headers (171 tests); one scenario group per state machine (clock scenario runs, transitions listed as todos with their tasks); CI runs both suites and the mock's Duplex run through the PoC engine. **M0 done.** |
 | 2026-11-12 | 6888ec2 | FE-004: auth adapter interface and the mock adapter (sign-in page listing seeded users, token `mock:<userId>`), auth gate, user menu from `GET /me`; one SSE connection per tab with backoff and `Last-Event-ID`, the invalidation map; the mock's event stream sent with `no-transform` so the Next dev proxy doesn't buffer it |
