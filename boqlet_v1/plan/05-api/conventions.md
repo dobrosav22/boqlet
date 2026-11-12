@@ -8,8 +8,7 @@ them identically. Contract tests check them (08-delivery/testing.md).
 1. `openapi.yaml` is the single source of truth for HTTP. Engine shapes are `$ref`s into
    `packages/types/schema` (D64).
 2. Change the contract first, lint it
-   (`npx @redocly/cli lint <path>/openapi.yaml --config plan/05-api/redocly.yaml`), regenerate
-   the clients, then change code.
+   (`npm run api:lint`), regenerate the clients (`npm run api:gen`), then change code.
 3. The frontend uses a client generated with `openapi-typescript` + `openapi-fetch`. The Java
    backend generates interfaces and DTOs with `openapi-generator` (spring or jaxrs-spec
    generator, interfaces only). The mock validates requests and responses against the file at

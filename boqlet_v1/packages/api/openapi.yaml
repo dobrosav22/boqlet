@@ -7,8 +7,6 @@ info:
     Conventions (auth, errors, pagination, idempotency, SSE) are in `plan/05-api/conventions.md`.
     Engine shapes are referenced from `packages/types/schema/*.schema.json` (generated from
     `packages/types/src`), never redefined here.
-    When this file moves to `packages/api/openapi.yaml` (task FE-001), change the
-    `../../packages/types/schema/` prefix to `../types/schema/`.
 servers:
   - url: /api/v1
 security:
@@ -613,7 +611,7 @@ paths:
                 draftDictionaries:
                   type: array
                   description: Unsaved dictionary docs (Library editor), most specific last
-                  items: { $ref: "../../packages/types/schema/dictionary.schema.json#/definitions/Dictionary" }
+                  items: { $ref: "../types/schema/dictionary.schema.json#/definitions/Dictionary" }
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/NamesResponse" } } } }
 
@@ -1237,7 +1235,7 @@ paths:
       tags: [runs]
       operationId: listWarnings
       responses:
-        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "../../packages/types/schema/boq-result.schema.json#/definitions/Warning" } } } } }
+        "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "../types/schema/boq-result.schema.json#/definitions/Warning" } } } } }
   /runs/{runId}/log:
     parameters: [{ $ref: "#/components/parameters/RunId" }]
     get:
@@ -2486,7 +2484,7 @@ components:
         projectId: { type: string, format: uuid }
         name: { type: string }
         discipline: { type: string }
-        scope: { $ref: "../../packages/types/schema/run-request.schema.json#/definitions/ModelScope" }
+        scope: { $ref: "../types/schema/run-request.schema.json#/definitions/ModelScope" }
         latestVersion: { $ref: "#/components/schemas/ModelVersion" }
         versionCount: { type: integer }
         archived: { type: boolean }
@@ -2496,13 +2494,13 @@ components:
       properties:
         name: { type: string }
         discipline: { type: string, description: "architecture, structure, mep, other federation keys, or 'detect'" }
-        scope: { $ref: "../../packages/types/schema/run-request.schema.json#/definitions/ModelScope" }
+        scope: { $ref: "../types/schema/run-request.schema.json#/definitions/ModelScope" }
     ModelUpdate:
       type: object
       properties:
         name: { type: string }
         discipline: { type: string }
-        scope: { $ref: "../../packages/types/schema/run-request.schema.json#/definitions/ModelScope" }
+        scope: { $ref: "../types/schema/run-request.schema.json#/definitions/ModelScope" }
     ModelVersionStatus: { type: string, enum: [awaiting_upload, queued, processing, ready, failed] }
     ModelVersion:
       type: object
@@ -2547,7 +2545,7 @@ components:
         checks: { type: object, description: "CheckCode → count", additionalProperties: { type: integer } }
         checkDetails:
           type: array
-          items: { $ref: "../../packages/types/schema/parsed-model.schema.json#/definitions/Check" }
+          items: { $ref: "../types/schema/parsed-model.schema.json#/definitions/Check" }
         parseMs: { type: integer }
     SceneIndex:
       type: object
@@ -2717,7 +2715,7 @@ components:
       type: object
       required: [codes, problems, stats]
       properties:
-        codes: { type: array, items: { $ref: "../../packages/types/schema/codelist.schema.json#/definitions/Code" } }
+        codes: { type: array, items: { $ref: "../types/schema/codelist.schema.json#/definitions/Code" } }
         problems: { type: array, items: { type: string } }
         stats:
           type: object
@@ -2771,7 +2769,7 @@ components:
         modelId: { type: string, format: uuid }
         modelVersionId: { type: string, format: uuid }
         discipline: { type: string }
-        scope: { $ref: "../../packages/types/schema/run-request.schema.json#/definitions/ModelScope" }
+        scope: { $ref: "../types/schema/run-request.schema.json#/definitions/ModelScope" }
         newerVersionAvailable: { type: [integer, "null"], description: Read-only hint }
     RevisionInputs:
       type: object
@@ -2885,7 +2883,7 @@ components:
       type: object
       required: [item]
       properties:
-        item: { $ref: "../../packages/types/schema/rule-set.schema.json#/definitions/ManualItem" }
+        item: { $ref: "../types/schema/rule-set.schema.json#/definitions/ManualItem" }
         codes:
           type: object
           description: "classification id → code, for the line's codes"
@@ -2927,8 +2925,8 @@ components:
             questions: { type: integer }
             blockingQuestions: { type: integer }
             warnings: { type: integer }
-        models: { type: array, items: { $ref: "../../packages/types/schema/boq-result.schema.json#/definitions/ModelReport" } }
-        building: { $ref: "../../packages/types/schema/boq-result.schema.json#/definitions/BuildingMeasures" }
+        models: { type: array, items: { $ref: "../types/schema/boq-result.schema.json#/definitions/ModelReport" } }
+        building: { $ref: "../types/schema/boq-result.schema.json#/definitions/BuildingMeasures" }
         snapshotVersions:
           type: object
           description: Which preset versions the run used
@@ -2952,7 +2950,7 @@ components:
         finishedAt: { type: string, format: date-time }
     RunLine:
       allOf:
-        - $ref: "../../packages/types/schema/boq-result.schema.json#/definitions/BoqLine"
+        - $ref: "../types/schema/boq-result.schema.json#/definitions/BoqLine"
         - type: object
           required: [sortIndex]
           properties:
@@ -2988,11 +2986,11 @@ components:
         - type: object
           properties:
             readableFormula: { type: string }
-            log: { type: array, items: { $ref: "../../packages/types/schema/boq-result.schema.json#/definitions/LogEntry" } }
+            log: { type: array, items: { $ref: "../types/schema/boq-result.schema.json#/definitions/LogEntry" } }
             reviewComments: { type: array, items: { $ref: "#/components/schemas/ReviewComment" } }
     QuestionWithDecision:
       allOf:
-        - $ref: "../../packages/types/schema/boq-result.schema.json#/definitions/Question"
+        - $ref: "../types/schema/boq-result.schema.json#/definitions/Question"
         - type: object
           properties:
             decision: { $ref: "#/components/schemas/Decision" }
@@ -3001,7 +2999,7 @@ components:
       type: object
       required: [items]
       properties:
-        items: { type: array, items: { $ref: "../../packages/types/schema/boq-result.schema.json#/definitions/LogEntry" } }
+        items: { type: array, items: { $ref: "../types/schema/boq-result.schema.json#/definitions/LogEntry" } }
         nextCursor: { type: [string, "null"] }
     ElementLines:
       type: object

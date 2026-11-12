@@ -49,7 +49,7 @@ Rules that catch people out:
    then the feature specs you are working on in `01-features/`.
 2. Take a task from `08-delivery/` (`tasks-frontend.md`, `tasks-backend.md`, `tasks-engine.md`).
    Every task names the spec sections it implements and its acceptance criteria.
-3. The HTTP contract is `05-api/openapi.yaml` (core) plus `05-api/openapi-pricing.yaml` (the optional pricing module). Frontend, mock API and Java backend all
+3. The HTTP contract is `packages/api/openapi.yaml` (core) plus `packages/pricing-api/openapi-pricing.yaml` (the optional pricing module; both moved from `05-api/` in FE-001). Frontend, mock API and Java backend all
    implement or consume exactly these files. Change the contract first, then the code.
 4. If a spec is silent or contradictory, do not guess on product behaviour: add the question to
    `09-open-questions.md` and ask the owner. Implementation details inside a module are yours.

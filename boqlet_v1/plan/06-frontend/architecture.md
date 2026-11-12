@@ -8,7 +8,7 @@ quantity computation (BR-01), no direct engine access. It talks to the API in `o
 
 | Concern | Choice | Notes |
 |---|---|---|
-| Framework | **Next.js (App Router)**, React 19, TypeScript strict | Pin the current stable version in FE-001. `output: "standalone"` for containers |
+| Framework | **Next.js (App Router)**, React 19, TypeScript strict | Next.js **16.4.6**, React **19.3.1** (pinned in FE-001). `output: "standalone"` for containers |
 | Data fetching | **TanStack Query v5** + `openapi-fetch` client generated with `openapi-typescript` | Server state lives only in the query cache |
 | Realtime | SSE via `@microsoft/fetch-event-source` (sends auth headers) | One connection per tab, in the app layout |
 | Tables | **TanStack Table v8 + TanStack Virtual** | BoQ sheet, comparison, decisions, audit |
@@ -21,6 +21,29 @@ quantity computation (BR-01), no direct engine access. It talks to the API in `o
 | Decimals | `big.js` | Pricing module amount display only; the backend computes the stored amounts (BR-47) |
 | Tests | Vitest + Testing Library; Playwright e2e against mock API + engine | 08-delivery/testing.md |
 | Lint | ESLint (next, typescript, `react/jsx-no-literals` or `i18next/no-literal-string` for UI text), Prettier | No literal UI strings (F15) |
+
+### Pinned versions
+
+Set in FE-001; change them deliberately and update this table.
+
+| Package | Version | Where |
+|---|---|---|
+| `next` | 16.4.6 | `apps/app` |
+| `react`, `react-dom` | 19.3.1 | `apps/app` (the PoC `apps/web` stays on React 18 until FE-046) |
+| `tailwindcss`, `@tailwindcss/postcss` | 4.3.5 | `apps/app` |
+| `@base-ui/react` | 1.9.0 | `apps/app` (shadcn/ui style `base-mira`, preset `b38miVKzY`) |
+| `shadcn` | 4.23.0 | `apps/app` (only for `shadcn/tailwind.css`; components are added with `npm run ui:add -w @ifc-boq/app -- <name>`, see below) |
+| `class-variance-authority`, `clsx`, `tailwind-merge`, `tw-animate-css`, `lucide-react` | 0.7.1, 2.1.1, 3.7.0, 1.4.0, 1.72.0 | `apps/app` |
+| `openapi-typescript` | 7.13.0 | product root (`npm run api:gen`) |
+| `openapi-fetch` | 0.17.0 | `packages/api`, `packages/pricing-api` |
+| `@redocly/cli` | 2.77.0 | product root (`npm run api:lint`) |
+| TypeScript | 5.x (5.9 installed) | every workspace |
+
+**shadcn components.** The registry's `base-mira` components import `cn` from an npm package
+named `cn`; this repo doesn't take that dependency. `apps/app/scripts/ui-add.mjs` fetches a
+component (and its registry dependencies) from `https://ui.shadcn.com/r/styles/base-mira/`,
+points `cn` at `src/lib/utils.ts` (the classic clsx + tailwind-merge helper) and prints any npm
+dependency still to add. Don't run `npx shadcn add` directly: it tries to install `cn`.
 
 ## Rendering model
 

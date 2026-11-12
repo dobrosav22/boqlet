@@ -39,6 +39,10 @@ npm run dev:poc      # PoC: engine on 127.0.0.1:8787 + web on http://localhost:5
 | `npm run test` | Typecheck all workspaces, then the engine tests (pytest). |
 | `npm run test:engine` | Engine tests only. Includes the Duplex acceptance test. |
 | `npm run typecheck` / `npm run build:poc` | Typecheck all workspaces / production build of the PoC web app. |
+| `npm run api:lint` | Lint both HTTP contracts (`packages/api/openapi.yaml`, `packages/pricing-api/openapi-pricing.yaml`). |
+| `npm run api:gen` / `npm run api:check` | Regenerate the clients' types from the contracts / fail if they are out of date (CI). Run `api:gen` after editing a contract. |
+| `npm run build:app` | Production build of the product app (`apps/app`, Next.js). |
+| `npm run ui:add -w @ifc-boq/app -- <name>` | Add a shadcn/ui component (style base-mira); never `npx shadcn add` (`plan/06-frontend/architecture.md`). |
 | `npm run boq -- <file.ifc> --out boq.xlsx` | Command-line run, no UI. `--help` for options. |
 | `npm run corpus -- <folder>` | Run every IFC in a folder; one summary row per file, schema-validated. Use before adding fixtures. |
 | `npm run catalogue` | Regenerate `docs/12-ifc-corpus-catalogue.md` from `fixtures/corpus/catalogue.json` (every IFC looked at, tagged). |

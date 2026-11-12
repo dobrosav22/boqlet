@@ -5,7 +5,7 @@ info:
   description: |
     The optional, removable pricing module (P32–P36): vendors (F17), pricebooks and estimates
     (F20), offer requests and offers (F11). Every path is under `/pricing/`. This file may
-    reference core components in `openapi.yaml`; the core file never references this one
+    reference core components in `packages/api/openapi.yaml` (as `../api/openapi.yaml#…`); the core file never references this one
     (04-architecture/modules.md). With the module off for an org, every endpoint answers
     `404` for that org. Conventions are those of `conventions.md`.
 servers:
@@ -22,13 +22,13 @@ tags:
 paths:
   # ───────────────────────────── module settings ─────────────────────────────
   /pricing/orgs/{orgId}/settings:
-    parameters: [{ $ref: "./openapi.yaml#/components/parameters/OrgId" }]
+    parameters: [{ $ref: "../api/openapi.yaml#/components/parameters/OrgId" }]
     get:
       tags: [pricing-vendors]
       operationId: getPricingSettings
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ModuleSettings" } } } }
-        "404": { $ref: "./openapi.yaml#/components/responses/NotFound" }
+        "404": { $ref: "../api/openapi.yaml#/components/responses/NotFound" }
     put:
       tags: [pricing-vendors]
       operationId: putPricingSettings
@@ -37,7 +37,7 @@ paths:
         content: { application/json: { schema: { $ref: "#/components/schemas/ModuleSettings" } } }
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ModuleSettings" } } } }
-        "403": { $ref: "./openapi.yaml#/components/responses/Forbidden" }
+        "403": { $ref: "../api/openapi.yaml#/components/responses/Forbidden" }
   /pricing/me:
     get:
       tags: [pricing-vendor-area]
@@ -58,7 +58,7 @@ paths:
 
   # ───────────────────────────── vendors (F17) ─────────────────────────────
   /pricing/orgs/{orgId}/vendors:
-    parameters: [{ $ref: "./openapi.yaml#/components/parameters/OrgId" }]
+    parameters: [{ $ref: "../api/openapi.yaml#/components/parameters/OrgId" }]
     get:
       tags: [pricing-vendors]
       operationId: listVendors
@@ -76,8 +76,8 @@ paths:
         content: { application/json: { schema: { $ref: "#/components/schemas/VendorInvite" } } }
       responses:
         "201": { description: Invited, content: { application/json: { schema: { $ref: "#/components/schemas/VendorLink" } } } }
-        "403": { $ref: "./openapi.yaml#/components/responses/Forbidden" }
-        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+        "403": { $ref: "../api/openapi.yaml#/components/responses/Forbidden" }
+        "409": { $ref: "../api/openapi.yaml#/components/responses/Conflict" }
   /pricing/vendor-links/{vendorLinkId}:
     parameters: [{ $ref: "#/components/parameters/VendorLinkId" }]
     get:
@@ -85,7 +85,7 @@ paths:
       operationId: getVendorLink
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/VendorLink" } } } }
-        "404": { $ref: "./openapi.yaml#/components/responses/NotFound" }
+        "404": { $ref: "../api/openapi.yaml#/components/responses/NotFound" }
     patch:
       tags: [pricing-vendors]
       operationId: updateVendorLink
@@ -106,7 +106,7 @@ paths:
       operationId: removeVendorLink
       responses:
         "204": { description: Removed }
-        "403": { $ref: "./openapi.yaml#/components/responses/Forbidden" }
+        "403": { $ref: "../api/openapi.yaml#/components/responses/Forbidden" }
   /pricing/vendor-links/{vendorLinkId}/resend:
     parameters: [{ $ref: "#/components/parameters/VendorLinkId" }]
     post:
@@ -115,7 +115,7 @@ paths:
       responses:
         "200": { description: Sent, content: { application/json: { schema: { $ref: "#/components/schemas/VendorLink" } } } }
   /pricing/vendor-invitations/{token}:
-    parameters: [{ $ref: "./openapi.yaml#/components/parameters/Token" }]
+    parameters: [{ $ref: "../api/openapi.yaml#/components/parameters/Token" }]
     get:
       tags: [pricing-vendors]
       operationId: previewVendorInvitation
@@ -133,15 +133,15 @@ paths:
                   email: { type: string }
                   companyName: { type: string }
                   status: { type: string, enum: [invited, active, removed] }
-        "404": { $ref: "./openapi.yaml#/components/responses/NotFound" }
+        "404": { $ref: "../api/openapi.yaml#/components/responses/NotFound" }
   /pricing/vendor-invitations/{token}/accept:
-    parameters: [{ $ref: "./openapi.yaml#/components/parameters/Token" }]
+    parameters: [{ $ref: "../api/openapi.yaml#/components/parameters/Token" }]
     post:
       tags: [pricing-vendors]
       operationId: acceptVendorInvitation
       responses:
         "200": { description: Linked, content: { application/json: { schema: { $ref: "#/components/schemas/VendorLink" } } } }
-        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+        "409": { $ref: "../api/openapi.yaml#/components/responses/Conflict" }
 
   # ───────────────────────────── vendor area: profile and firms ─────────────────────────────
   /pricing/vendor/profile:
@@ -189,7 +189,7 @@ paths:
 
   # ───────────────────────────── pricebooks (F20) ─────────────────────────────
   /pricing/orgs/{orgId}/pricebooks:
-    parameters: [{ $ref: "./openapi.yaml#/components/parameters/OrgId" }]
+    parameters: [{ $ref: "../api/openapi.yaml#/components/parameters/OrgId" }]
     get:
       tags: [pricing-pricebooks]
       operationId: listOrgPricebooks
@@ -225,7 +225,7 @@ paths:
       description: Owner (org members, or the vendor) or a firm the vendor shares this list with (read-only).
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Pricebook" } } } }
-        "404": { $ref: "./openapi.yaml#/components/responses/NotFound" }
+        "404": { $ref: "../api/openapi.yaml#/components/responses/NotFound" }
     patch:
       tags: [pricing-pricebooks]
       operationId: updatePricebook
@@ -265,8 +265,8 @@ paths:
       tags: [pricing-pricebooks]
       operationId: listPricebookItems
       parameters:
-        - { $ref: "./openapi.yaml#/components/parameters/Cursor" }
-        - { $ref: "./openapi.yaml#/components/parameters/Limit" }
+        - { $ref: "../api/openapi.yaml#/components/parameters/Cursor" }
+        - { $ref: "../api/openapi.yaml#/components/parameters/Limit" }
         - { name: q, in: query, schema: { type: string } }
         - { name: unit, in: query, schema: { type: string } }
         - { name: trade, in: query, schema: { type: string } }
@@ -298,7 +298,7 @@ paths:
                 delete: { type: array, items: { type: string, format: uuid } }
       responses:
         "200": { description: Applied, content: { application/json: { schema: { $ref: "#/components/schemas/Pricebook" } } } }
-        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+        "409": { $ref: "../api/openapi.yaml#/components/responses/Conflict" }
   /pricing/pricebooks/{pricebookId}/template.xlsx:
     parameters: [{ $ref: "#/components/parameters/PricebookId" }]
     get:
@@ -325,9 +325,9 @@ paths:
                 file: { type: string, format: binary }
       responses:
         "200": { description: Proposed changes, content: { application/json: { schema: { $ref: "#/components/schemas/PricebookImportResult" } } } }
-        "400": { $ref: "./openapi.yaml#/components/responses/BadRequest" }
+        "400": { $ref: "../api/openapi.yaml#/components/responses/BadRequest" }
   /pricing/orgs/{orgId}/price-search:
-    parameters: [{ $ref: "./openapi.yaml#/components/parameters/OrgId" }]
+    parameters: [{ $ref: "../api/openapi.yaml#/components/parameters/OrgId" }]
     get:
       tags: [pricing-estimates]
       operationId: searchPricesForOrg
@@ -336,7 +336,7 @@ paths:
         - { name: q, in: query, schema: { type: string } }
         - { name: unit, in: query, schema: { type: string } }
         - { name: trade, in: query, schema: { type: string } }
-        - { $ref: "./openapi.yaml#/components/parameters/Limit" }
+        - { $ref: "../api/openapi.yaml#/components/parameters/Limit" }
       responses:
         "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PriceSearchResult" } } } } }
   /pricing/vendor/price-search:
@@ -347,11 +347,11 @@ paths:
         - { name: q, in: query, schema: { type: string } }
         - { name: unit, in: query, schema: { type: string } }
         - { name: trade, in: query, schema: { type: string } }
-        - { $ref: "./openapi.yaml#/components/parameters/Limit" }
+        - { $ref: "../api/openapi.yaml#/components/parameters/Limit" }
       responses:
         "200": { description: OK, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PriceSearchResult" } } } } }
   /pricing/orgs/{orgId}/price-matches:
-    parameters: [{ $ref: "./openapi.yaml#/components/parameters/OrgId" }]
+    parameters: [{ $ref: "../api/openapi.yaml#/components/parameters/OrgId" }]
     get:
       tags: [pricing-estimates]
       operationId: listOrgPriceMatches
@@ -375,7 +375,7 @@ paths:
 
   # ───────────────────────────── estimates (F20 §2) ─────────────────────────────
   /pricing/boqs/{boqId}/estimate:
-    parameters: [{ $ref: "./openapi.yaml#/components/parameters/BoqId" }]
+    parameters: [{ $ref: "../api/openapi.yaml#/components/parameters/BoqId" }]
     get:
       tags: [pricing-estimates]
       operationId: getEstimate
@@ -397,9 +397,9 @@ paths:
                 exchangeRates: { type: object, additionalProperties: { type: string } }
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Estimate" } } } }
-        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+        "409": { $ref: "../api/openapi.yaml#/components/responses/Conflict" }
   /pricing/boqs/{boqId}/estimate/lines/batch:
-    parameters: [{ $ref: "./openapi.yaml#/components/parameters/BoqId" }]
+    parameters: [{ $ref: "../api/openapi.yaml#/components/parameters/BoqId" }]
     post:
       tags: [pricing-estimates]
       operationId: setEstimateLines
@@ -415,9 +415,9 @@ paths:
                 lines: { type: array, items: { $ref: "#/components/schemas/EstimateLineInput" } }
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Estimate" } } } }
-        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+        "409": { $ref: "../api/openapi.yaml#/components/responses/Conflict" }
   /pricing/boqs/{boqId}/estimate/fill-remembered:
-    parameters: [{ $ref: "./openapi.yaml#/components/parameters/BoqId" }]
+    parameters: [{ $ref: "../api/openapi.yaml#/components/parameters/BoqId" }]
     post:
       tags: [pricing-estimates]
       operationId: fillRememberedPrices
@@ -433,16 +433,16 @@ paths:
                   filled: { type: integer }
                   estimate: { $ref: "#/components/schemas/Estimate" }
   /pricing/boqs/{boqId}/estimate/export:
-    parameters: [{ $ref: "./openapi.yaml#/components/parameters/BoqId" }]
+    parameters: [{ $ref: "../api/openapi.yaml#/components/parameters/BoqId" }]
     post:
       tags: [pricing-estimates]
       operationId: exportEstimate
       responses:
-        "202": { $ref: "./openapi.yaml#/components/responses/JobAccepted" }
+        "202": { $ref: "../api/openapi.yaml#/components/responses/JobAccepted" }
 
   # ───────────────────────────── offer requests, firm side (F11) ─────────────────────────────
   /pricing/boqs/{boqId}/offer-requests:
-    parameters: [{ $ref: "./openapi.yaml#/components/parameters/BoqId" }]
+    parameters: [{ $ref: "../api/openapi.yaml#/components/parameters/BoqId" }]
     post:
       tags: [pricing-offers]
       operationId: sendOfferRequest
@@ -452,10 +452,10 @@ paths:
         content: { application/json: { schema: { $ref: "#/components/schemas/OfferRequestCreate" } } }
       responses:
         "201": { description: Sent, content: { application/json: { schema: { $ref: "#/components/schemas/OfferRequest" } } } }
-        "402": { $ref: "./openapi.yaml#/components/responses/LimitReached" }
-        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+        "402": { $ref: "../api/openapi.yaml#/components/responses/LimitReached" }
+        "409": { $ref: "../api/openapi.yaml#/components/responses/Conflict" }
   /pricing/projects/{projectId}/offer-requests:
-    parameters: [{ $ref: "./openapi.yaml#/components/parameters/ProjectId" }]
+    parameters: [{ $ref: "../api/openapi.yaml#/components/parameters/ProjectId" }]
     get:
       tags: [pricing-offers]
       operationId: listOfferRequests
@@ -471,7 +471,7 @@ paths:
       operationId: getOfferRequest
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/OfferRequest" } } } }
-        "404": { $ref: "./openapi.yaml#/components/responses/NotFound" }
+        "404": { $ref: "../api/openapi.yaml#/components/responses/NotFound" }
     patch:
       tags: [pricing-offers]
       operationId: updateOfferRequest
@@ -517,7 +517,7 @@ paths:
                       added: { type: array, items: { type: string } }
                       removed: { type: array, items: { type: string } }
                       changed: { type: array, items: { type: string } }
-        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+        "409": { $ref: "../api/openapi.yaml#/components/responses/Conflict" }
   /pricing/offer-requests/{offerRequestId}/close:
     parameters: [{ $ref: "#/components/parameters/OfferRequestId" }]
     post:
@@ -579,7 +579,7 @@ paths:
                 vendors: { type: array, items: { $ref: "#/components/schemas/VendorChoice" } }
       responses:
         "200": { description: Invited, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/OfferInvitation" } } } } }
-        "402": { $ref: "./openapi.yaml#/components/responses/LimitReached" }
+        "402": { $ref: "../api/openapi.yaml#/components/responses/LimitReached" }
   /pricing/offer-invitations/{invitationId}:
     parameters: [{ $ref: "#/components/parameters/OfferInvitationId" }]
     delete:
@@ -619,7 +619,7 @@ paths:
                 required: [attachment, upload]
                 properties:
                   attachment: { $ref: "#/components/schemas/Attachment" }
-                  upload: { $ref: "./openapi.yaml#/components/schemas/UploadInstructions" }
+                  upload: { $ref: "../api/openapi.yaml#/components/schemas/UploadInstructions" }
   /pricing/offer-requests/{offerRequestId}/comparison:
     parameters: [{ $ref: "#/components/parameters/OfferRequestId" }]
     get:
@@ -635,7 +635,7 @@ paths:
       tags: [pricing-offers]
       operationId: exportOfferComparison
       responses:
-        "202": { $ref: "./openapi.yaml#/components/responses/JobAccepted" }
+        "202": { $ref: "../api/openapi.yaml#/components/responses/JobAccepted" }
 
   # ───────────────────────────── offer requests, vendor side (F11) ─────────────────────────────
   /pricing/vendor/requests:
@@ -651,7 +651,7 @@ paths:
       operationId: getMyRequest
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/VendorRequestDetail" } } } }
-        "404": { $ref: "./openapi.yaml#/components/responses/NotFound" }
+        "404": { $ref: "../api/openapi.yaml#/components/responses/NotFound" }
   /pricing/vendor/requests/{invitationId}/lines:
     parameters: [{ $ref: "#/components/parameters/OfferInvitationId" }]
     get:
@@ -689,7 +689,7 @@ paths:
         content: { application/json: { schema: { $ref: "#/components/schemas/OfferSave" } } }
       responses:
         "200": { description: Saved, content: { application/json: { schema: { $ref: "#/components/schemas/Offer" } } } }
-        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+        "409": { $ref: "../api/openapi.yaml#/components/responses/Conflict" }
   /pricing/vendor/requests/{invitationId}/offer/fill:
     parameters: [{ $ref: "#/components/parameters/OfferInvitationId" }]
     post:
@@ -714,7 +714,7 @@ paths:
       operationId: submitMyOffer
       responses:
         "200": { description: Submitted, content: { application/json: { schema: { $ref: "#/components/schemas/Offer" } } } }
-        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+        "409": { $ref: "../api/openapi.yaml#/components/responses/Conflict" }
   /pricing/vendor/requests/{invitationId}/offer/withdraw:
     parameters: [{ $ref: "#/components/parameters/OfferInvitationId" }]
     post:
@@ -722,7 +722,7 @@ paths:
       operationId: withdrawMyOffer
       responses:
         "200": { description: Withdrawn, content: { application/json: { schema: { $ref: "#/components/schemas/Offer" } } } }
-        "409": { $ref: "./openapi.yaml#/components/responses/Conflict" }
+        "409": { $ref: "../api/openapi.yaml#/components/responses/Conflict" }
   /pricing/vendor/requests/{invitationId}/request.xlsx:
     parameters: [{ $ref: "#/components/parameters/OfferInvitationId" }]
     get:
@@ -745,7 +745,7 @@ paths:
               properties:
                 file: { type: string, format: binary }
       responses:
-        "202": { $ref: "./openapi.yaml#/components/responses/JobAccepted" }
+        "202": { $ref: "../api/openapi.yaml#/components/responses/JobAccepted" }
 
   # ───────────────────────────── admin metrics for the core console ─────────────────────────────
   /pricing/admin/vendors:
@@ -754,8 +754,8 @@ paths:
       operationId: adminListVendors
       description: Platform admins only (F19, BR-57); `404` for anyone else.
       parameters:
-        - { $ref: "./openapi.yaml#/components/parameters/Cursor" }
-        - { $ref: "./openapi.yaml#/components/parameters/Limit" }
+        - { $ref: "../api/openapi.yaml#/components/parameters/Cursor" }
+        - { $ref: "../api/openapi.yaml#/components/parameters/Limit" }
       responses:
         "200":
           description: OK
@@ -776,7 +776,7 @@ paths:
                     requestsReceived: { type: integer }
                     offersSubmitted: { type: integer }
                     lastActiveAt: { type: [string, "null"], format: date-time }
-        "404": { $ref: "./openapi.yaml#/components/responses/NotFound" }
+        "404": { $ref: "../api/openapi.yaml#/components/responses/NotFound" }
 
 components:
   securitySchemes:
@@ -825,13 +825,13 @@ components:
         contactName: { type: string }
         trades: { type: array, items: { type: string } }
         status: { type: string, enum: [invited, active, removed] }
-        vendor: { $ref: "./openapi.yaml#/components/schemas/UserRef" }
+        vendor: { $ref: "../api/openapi.yaml#/components/schemas/UserRef" }
         sharedPricebook:
           description: The list this vendor shares with this org (read access), or null.
           oneOf:
             - $ref: "#/components/schemas/Pricebook"
             - type: "null"
-        invitedBy: { $ref: "./openapi.yaml#/components/schemas/UserRef" }
+        invitedBy: { $ref: "../api/openapi.yaml#/components/schemas/UserRef" }
         acceptedAt: { type: [string, "null"], format: date-time }
         stats:
           type: object
@@ -1048,9 +1048,9 @@ components:
         currentUpdate: { type: integer }
         status: { type: string, enum: [open, closed, cancelled] }
         counts: { type: object, properties: { lines: { type: integer }, invited: { type: integer }, submitted: { type: integer }, declined: { type: integer } } }
-        createdBy: { $ref: "./openapi.yaml#/components/schemas/UserRef" }
+        createdBy: { $ref: "../api/openapi.yaml#/components/schemas/UserRef" }
         createdAt: { type: string, format: date-time }
-        permissions: { $ref: "./openapi.yaml#/components/schemas/Permissions" }
+        permissions: { $ref: "../api/openapi.yaml#/components/schemas/Permissions" }
     OfferRequestLine:
       type: object
       required: [lineKey, positionNo, description, unit, quantity]

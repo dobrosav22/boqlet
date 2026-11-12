@@ -1,0 +1,67 @@
+# CI for boqlet (plan/08-delivery/testing.md "CI pipeline").
+# Until FE-046 every product job runs in the product root boqlet_v1/ (P44).
+name: ci
+
+on:
+  push:
+    branches: [v_1, main]
+  pull_request:
+    branches: [v_1, main]
+
+defaults:
+  run:
+    working-directory: boqlet_v1
+
+jobs:
+  contract:
+    name: Contract (lint, codegen drift)
+    runs-on: ubuntu-latest
+    env:
+      IFC_BOQ_SKIP_ENGINE_SETUP: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: boqlet_v1/package-lock.json
+      - run: npm ci
+      - run: npm run api:lint
+      - name: Generated API clients match the OpenAPI files
+        run: npm run api:check
+      - name: Engine JSON Schemas match the TypeScript types
+        run: npm run codegen && git diff --exit-code -- packages/types/schema
+
+  typecheck:
+    name: Typecheck and build
+    runs-on: ubuntu-latest
+    env:
+      IFC_BOQ_SKIP_ENGINE_SETUP: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: boqlet_v1/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build:app
+
+  engine:
+    name: Engine tests (incl. Duplex acceptance)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: boqlet_v1/package-lock.json
+      - run: npm ci
+        env:
+          IFC_BOQ_PYTHON: python
+      - run: npm run test:engine

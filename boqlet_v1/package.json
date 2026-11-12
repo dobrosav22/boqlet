@@ -14,6 +14,7 @@
     "dev:engine": "node scripts/run-engine.mjs serve",
     "dev:web": "npm run dev -w @ifc-boq/web",
     "build:poc": "npm run build -w @ifc-boq/web",
+    "build:app": "npm run build -w @ifc-boq/app",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run typecheck && npm run test:engine",
     "test:engine": "node scripts/run-engine.mjs test",
@@ -21,10 +22,15 @@
     "corpus": "node scripts/run-engine.mjs corpus",
     "catalogue": "node scripts/run-engine.mjs catalogue",
     "codegen": "npm run codegen -w @ifc-boq/types",
-    "import:uniclass": "node scripts/run-engine.mjs import-uniclass"
+    "import:uniclass": "node scripts/run-engine.mjs import-uniclass",
+    "api:lint": "redocly lint packages/api/openapi.yaml packages/pricing-api/openapi-pricing.yaml --config packages/api/redocly.yaml",
+    "api:gen": "node scripts/api-codegen.mjs",
+    "api:check": "node scripts/api-codegen.mjs --check"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "@redocly/cli": "2.77.0",
+    "concurrently": "^9.2.5",
+    "openapi-typescript": "7.13.0"
   },
   "engines": {
     "node": ">=20"
