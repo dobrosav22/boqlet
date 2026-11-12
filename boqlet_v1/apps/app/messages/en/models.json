@@ -1,0 +1,119 @@
+{
+  "disciplines": {
+    "detect": "Detect from the file",
+    "architecture": "Architecture",
+    "structure": "Structure",
+    "mep": "Building services"
+  },
+  "list": {
+    "name": "Model name",
+    "namePlaceholder": "Architecture",
+    "discipline": "Discipline",
+    "add": "Add model",
+    "empty": "No models yet. Add one, then upload its IFC file.",
+    "latest": "v{number} · {file}",
+    "noVersion": "No version uploaded yet.",
+    "upload": "Upload IFC",
+    "uploadNew": "Upload new version"
+  },
+  "upload": {
+    "notIfc": "Choose an IFC file (.ifc).",
+    "tooLarge": "This file is larger than your plan allows ({max} MB).",
+    "uploading": "Uploading {pct} %"
+  },
+  "status": {
+    "awaiting_upload": "Waiting for the file",
+    "queued": "Queued",
+    "processing": "Processing",
+    "ready": "Ready",
+    "failed": "Failed",
+    "waiting": "Waiting to start…",
+    "stages": {
+      "download": "Fetching the file",
+      "read": "Reading the model",
+      "geometry": "Building the geometry",
+      "verify": "Checking the model",
+      "write": "Saving the results"
+    },
+    "retry": "Try again",
+    "errors": {
+      "not_ifc": "This file is not an IFC file.",
+      "unsupported_schema": "This IFC version is not supported yet.",
+      "corrupt_file": "The file could not be read. It may be damaged or incomplete.",
+      "parse_timeout": "Processing took too long and was stopped.",
+      "parse_error": "The model could not be processed.",
+      "engine_unavailable": "The processing service was not available. Try again.",
+      "cancelled": "Processing was cancelled."
+    }
+  },
+  "versions": {
+    "number": "Version",
+    "file": "File",
+    "uploaded": "Uploaded",
+    "by": "By",
+    "status": "Status",
+    "elements": "Elements",
+    "v": "v{number}",
+    "identical": "identical to v{number}",
+    "save": "Save"
+  },
+  "report": {
+    "title": "{model} · v{number}",
+    "file": "File",
+    "size": "Size",
+    "mb": "{mb} MB",
+    "schema": "Schema",
+    "app": "Authoring tool",
+    "uploaded": "Uploaded",
+    "parseTime": "Processing time",
+    "seconds": "{s} s",
+    "note": "Note",
+    "identical": "Same content",
+    "identicalTo": "as v{number}, not processed again",
+    "counts": "What's in it",
+    "elements": "Elements",
+    "openings": "Openings",
+    "spaces": "Spaces",
+    "storeys": "Storeys",
+    "ifcClass": "IFC class",
+    "count": "Count",
+    "checks": "Checks",
+    "noProblems": "No problems found.",
+    "affected": "{n} elements",
+    "elevation": "{m} m",
+    "severity": {
+      "error": "Error",
+      "warning": "Warning",
+      "info": "Info"
+    },
+    "checkCodes": {
+      "volume_mismatch": "Reported volume differs from the geometry",
+      "area_mismatch": "Reported area differs from the geometry",
+      "inconsistent_winding": "Faces point inconsistently",
+      "not_watertight": "Geometry is not closed",
+      "no_geometry": "No geometry",
+      "geometry_error": "Geometry could not be built",
+      "overlap": "Elements overlap",
+      "no_material": "No material",
+      "duplicate_material_name": "Same material name used twice",
+      "flag_conflict": "Contradicting properties",
+      "placeholder_value": "Placeholder values",
+      "no_quantities": "No quantities in the file",
+      "unassigned_storey": "Not on a storey",
+      "proxy_element": "Generic proxy elements"
+    }
+  },
+  "names": {
+    "title": "Names in the model",
+    "load": "Show names",
+    "intro": "Material and type names in this model, and whether your dictionaries understand them. Names nobody resolves become questions when you generate a BoQ.",
+    "loading": "Reading names…",
+    "summary": "{total} names, {unresolved} not resolved",
+    "field": "Field",
+    "name": "Name in the model",
+    "term": "Means",
+    "elements": "Elements",
+    "willAsk": "Will ask",
+    "unresolved": "Not resolved"
+  }
+}

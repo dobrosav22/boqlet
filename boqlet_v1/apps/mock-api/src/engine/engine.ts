@@ -7,8 +7,10 @@
  * The mock never measures (BR-01): every quantity comes from the engine.
  */
 import { openAsBlob } from "node:fs";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { BoqResult } from "@ifc-boq/types";
+import { PRODUCT_ROOT } from "../paths.js";
 
 export type PresetFolder = "rules" | "dictionaries" | "classifications" | "federation" | "resolution";
 
@@ -43,6 +45,10 @@ export interface Engine {
   savePreset(kind: PresetFolder, id: string, doc: unknown): Promise<void>;
   deletePreset(kind: PresetFolder, id: string): Promise<void>;
   checkPreset(kind: PresetFolder, doc: unknown, library?: unknown[]): Promise<{ ok: boolean; problems: string[] }>;
+  /** Distinct names in a parsed model and how the dictionaries (most general first) resolve them. */
+  names(engineModelId: string, dictionaries: unknown[]): Promise<{ names: unknown[] }>;
+  /** The verification checks of a parsed model, with their elements (F03 §5). */
+  checks(engineModelId: string): Promise<unknown[]>;
 }
 
 export class EngineUnavailable extends Error {}
@@ -107,6 +113,30 @@ export class PocEngine implements Engine {
 
   checkPreset(kind: PresetFolder, doc: unknown, library: unknown[] = []) {
     return this.call<{ ok: boolean; problems: string[] }>("POST", `/api/presets/${kind}/check`, JSON.stringify({ doc, library }));
+  }
+
+  async names(engineModelId: string, dictionaries: unknown[]) {
+    const res = await this.call<{ names: Record<string, unknown>[] }>("POST", `/api/models/${encodeURIComponent(engineModelId)}/names`, JSON.stringify({ dictionaries }));
+    // The PoC sends null for the optional layer/dictionary/entryId of unresolved names; NameUse (and the
+    // contract) leave them out. Noted for EN-001 in the build log.
+    const optional = new Set(["layer", "dictionary", "entryId"]);
+    return { names: res.names.map((n) => Object.fromEntries(Object.entries(n).filter(([key, value]) => !(optional.has(key) && value === null)))) };
+  }
+
+  /**
+   * The PoC API has no endpoint for the checks' element lists, so the interim path reads them from
+   * the engine's cache (`parsed.json` → `verification.checks`) on this machine (mock-api.md
+   * "Interim engine path"). The worker returns them with the parse output (EN-001).
+   */
+  async checks(engineModelId: string) {
+    if (!/^[0-9a-f]+$/i.test(engineModelId)) return [];
+    const cache = process.env.IFC_BOQ_CACHE ?? path.join(PRODUCT_ROOT, "engine", ".cache");
+    try {
+      const parsed = JSON.parse(await readFile(path.join(cache, "models", engineModelId, "parsed.json"), "utf8")) as { verification?: { checks?: unknown[] } };
+      return parsed.verification?.checks ?? [];
+    } catch {
+      return [];
+    }
   }
 }
 

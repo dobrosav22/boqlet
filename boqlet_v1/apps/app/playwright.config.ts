@@ -25,6 +25,14 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
+      // The PoC engine API (phase 1): models are parsed through it (FE-007).
+      command: "npm run dev:engine",
+      cwd: productRoot,
+      url: "http://127.0.0.1:8787/api/health",
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+    {
       command: "npm run start -w @ifc-boq/mock-api -- --reseed",
       cwd: productRoot,
       url: `${MOCK_URL}/`,

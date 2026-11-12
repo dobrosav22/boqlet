@@ -82,6 +82,64 @@ export interface ProjectMemberRec {
   addedBy?: string;
   createdAt: string;
 }
+export interface ModelRec {
+  id: string;
+  projectId: string;
+  name: string;
+  discipline: string;
+  scope?: Record<string, unknown>;
+  archived: boolean;
+  createdAt: string;
+}
+export interface ModelVersionRec {
+  id: string;
+  modelId: string;
+  number: number;
+  fileName: string;
+  sizeBytes: number;
+  sha256?: string;
+  status: Schemas["ModelVersionStatus"];
+  parseJobId: string | null;
+  summary?: Schemas["ModelSummary"];
+  identicalToVersion: number | null;
+  error?: { code: string; message: string; details?: Record<string, unknown> };
+  retryable?: boolean;
+  note?: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  blobKey: string;
+  /** The PoC engine's id for the parsed model (its sha256); phase 1 only. */
+  engineModelId?: string;
+  archived?: boolean;
+}
+export interface JobRec {
+  id: string;
+  type: string;
+  status: Schemas["JobStatus"];
+  progress?: { stage?: string; pct?: number; message?: string };
+  subjectType: string;
+  subjectId: string;
+  projectId: string;
+  orgId: string;
+  createdBy: string;
+  output?: Record<string, unknown>;
+  error?: { code: string; message: string; retryable: boolean };
+  createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+}
+export interface NotificationRec {
+  id: string;
+  userId: string;
+  orgId: string | null;
+  kind: string;
+  params: Record<string, unknown>;
+  entityType?: string;
+  entityId?: string;
+  url: string;
+  readAt: string | null;
+  createdAt: string;
+}
 export interface AuditRec {
   id: string;
   orgId: string | null;
@@ -106,6 +164,10 @@ export interface Db {
   invitations: InvitationRec[];
   projects: ProjectRec[];
   projectMembers: ProjectMemberRec[];
+  models: ModelRec[];
+  modelVersions: ModelVersionRec[];
+  jobs: JobRec[];
+  notifications: NotificationRec[];
   audit: AuditRec[];
   /** Orgs being deleted (F01 §9): hidden everywhere, removed later. */
   deletedOrgIds: string[];
@@ -129,6 +191,10 @@ export function loadStore(): boolean {
   state.invitations ??= [];
   state.projects ??= [];
   state.projectMembers ??= [];
+  state.models ??= [];
+  state.modelVersions ??= [];
+  state.jobs ??= [];
+  state.notifications ??= [];
   state.deletedOrgIds ??= [];
   return true;
 }

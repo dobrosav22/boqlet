@@ -55,16 +55,19 @@ jobs:
   e2e:
     name: App end-to-end (Playwright)
     runs-on: ubuntu-latest
-    env:
-      IFC_BOQ_SKIP_ENGINE_SETUP: "1"
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: boqlet_v1/package-lock.json
       - run: npm ci
+        env:
+          IFC_BOQ_PYTHON: python
       - run: npx playwright install --with-deps chromium
         working-directory: boqlet_v1/apps/app
       - run: npm run e2e:app
@@ -98,17 +101,20 @@ jobs:
           npm run test:mock
 
   suites:
-    name: Contract and scenario suites (against the mock)
+    name: Contract and scenario suites (against the mock and the PoC engine)
     runs-on: ubuntu-latest
-    env:
-      IFC_BOQ_SKIP_ENGINE_SETUP: "1"
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: boqlet_v1/package-lock.json
       - run: npm ci
+        env:
+          IFC_BOQ_PYTHON: python
       - run: npm run test:contract:mock
       - run: npm run test:scenarios:mock

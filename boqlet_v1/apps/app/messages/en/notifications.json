@@ -1,0 +1,6 @@
+{
+  "open": "Open",
+  "kinds": {
+    "model_version_ready": "{model} v{version} is ready"
+  }
+}

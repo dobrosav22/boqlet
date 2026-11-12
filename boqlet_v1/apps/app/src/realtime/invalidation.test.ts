@@ -5,8 +5,11 @@ describe("invalidationsFor (architecture.md, data layer rule 4)", () => {
   it("refetches the model version and the project's models when a parse finishes", () => {
     expect(invalidationsFor({ event: "job.finished", data: { jobId: "j", type: "parse", subjectId: "v1", projectId: "p1" } })).toEqual([
       ["job", "j"],
+      ["jobProgress", "j"],
       ["modelVersion", "v1"],
       ["models", "p1"],
+      ["modelVersions"],
+      ["model"],
     ]);
   });
 

@@ -19,8 +19,8 @@ const LISTS: Record<string, (projectId?: string) => QueryKey[]> = {
   membership: () => [keys.me(), ["members"]],
   user: () => [keys.me(), ["members"]],
   project: () => [["projects"]],
-  model: (p) => [p ? keys.models(p) : ["models"]],
-  modelVersion: (p) => [p ? keys.models(p) : ["models"]],
+  model: (p) => [p ? keys.models(p) : ["models"], ["modelVersions"]],
+  modelVersion: (p) => [p ? keys.models(p) : ["models"], ["modelVersions"], ["model"]],
   boq: (p) => [p ? keys.boqs(p) : ["boqs"]],
   revision: () => [["boq"]],
   run: () => [["runs"]],
@@ -33,10 +33,10 @@ export function invalidationsFor({ event, data }: RealtimeEvent): QueryKey[] {
     case "job.finished": {
       const subjectId = str(data.subjectId);
       const out: QueryKey[] = [];
-      if (str(data.jobId)) out.push(keys.job(str(data.jobId)!));
+      if (str(data.jobId)) out.push(keys.job(str(data.jobId)!), keys.jobProgress(str(data.jobId)!));
       if (data.type === "parse") {
         if (subjectId) out.push(keys.modelVersion(subjectId));
-        out.push(projectId ? keys.models(projectId) : ["models"]);
+        out.push(projectId ? keys.models(projectId) : ["models"], ["modelVersions"], ["model"]);
       } else if (data.type === "run") {
         if (subjectId) out.push(keys.run(subjectId));
         out.push(["revision"], ["runs"], ["boq"]);

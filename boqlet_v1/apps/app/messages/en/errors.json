@@ -24,6 +24,9 @@
     "limit_reached": "Your plan's limit is reached.",
     "project_archived": "The project is archived and read-only. Restore it to make changes.",
     "not_org_member": "Only members of your organisation can join a project. Send a share link to people outside it.",
-    "last_lead": "A project needs at least one lead."
+    "last_lead": "A project needs at least one lead.",
+    "model_not_ready": "The model is still being processed.",
+    "upload_missing": "The file didn't arrive. Upload it again.",
+    "engine_unavailable": "The processing service is not available right now. Try again in a moment."
   }
 }

@@ -76,6 +76,11 @@ If the worker HTTP transport is not ready yet, the mock can call the PoC dev API
   `mock-<presetVersionId>` (saved in `presets/user/`), then `POST /api/runs` with those ids
   and the decisions. Overrides and manual items are not supported on this path.
 - names, check, code lists: the matching PoC endpoints.
+- check details (F03 §5, the elements of each verification check): the PoC API has no endpoint for
+  them, so `PocEngine.checks` reads `verification.checks` from the engine's cache
+  (`engine/.cache/models/<sha256>/parsed.json`, or `IFC_BOQ_CACHE`) on the same machine (FE-007).
+- names: the PoC sends `null` for the optional `layer`, `dictionary`, `entryId` of unresolved names;
+  `PocEngine.names` drops them so responses match `NameUse` and the contract (FE-007).
 Drop this path as soon as EN-001 is merged.
 
 ## Seed data (`npm run mock:seed`)

@@ -18,15 +18,13 @@ describe("test clock (testing.md)", () => {
   });
 });
 
-describe("ModelVersion", () => {
-  it.todo("awaiting_upload → queued on complete, → processing → ready (FE-007)");
-  it.todo("awaiting_upload → failed when the upload isn't completed within 24 h (FE-007, clock)");
-  it.todo("processing → failed with not_ifc / corrupt_file, failed → queued on retry (FE-007)");
-  it.todo("same content hash in the org: straight to ready (FE-007)");
+describe("ModelVersion (upload, parse, failure, dedupe: scenarios/models.test.ts)", () => {
+  it.todo("awaiting_upload → failed when the upload isn't completed within 24 h (scheduler, M6)");
+  it.todo("a failed parse with a retryable error goes back to queued on retry (needs a corrupt-file fixture)");
 });
 
 describe("Job", () => {
-  it.todo("queued → running → succeeded; a job never needs input (P13) (FE-007, FE-008)");
+  it.todo("run jobs: queued → running → succeeded; a job never needs input (P13) (FE-008; parse jobs: scenarios/models.test.ts)");
   it.todo("queued or running → cancelled by the user (FE-008)");
 });
 

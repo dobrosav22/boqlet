@@ -146,7 +146,7 @@ export function buildSeed(): Db {
     member("small", "olivia", "owner"),
   ];
   const { presets, presetVersions } = systemPresets(at);
-  const store: Db = { version: 1, seededAt: at, users, orgs, memberships, plans: PLANS, presets, presetVersions, invitations: [], projects: [], projectMembers: [], audit: [], deletedOrgIds: [] };
+  const store: Db = { version: 1, seededAt: at, users, orgs, memberships, plans: PLANS, presets, presetVersions, invitations: [], projects: [], projectMembers: [], models: [], modelVersions: [], jobs: [], notifications: [], audit: [], deletedOrgIds: [] };
   seedProjects(store, at);
   return store;
 }
