@@ -96,17 +96,27 @@ Things the product build doesn't do yet, with the task that deals with each.
 - Unknown fields are rejected only at the top level of a request body in the mock (nested objects
   pass); Java should reject them at every level.
 - The sample project (FL-1 step 5) is created empty: its Duplex model, BoQ and answered questions are
-  copied in once models, BoQs and questions exist in the mock (FE-007, FE-008, FE-010).
+  copied in once questions exist in the mock (FE-010).
 - The dashboard's "Needs you" list is always empty: its items (reviews, runs needing input, new model
   versions, failed jobs) arrive with their features; F02-AC5 (a review request within 5 s) is checked
   in FE-031.
-- Project cards count BoQs, blocking questions and reviews as 0 until those exist (FE-008, FE-010, FE-031).
-- Project default presets can't be chosen yet; every project starts with As modelled and the global
-  seed dictionary (preset pickers come with FE-008, starred presets with FE-021).
+- Project cards count blocking questions and reviews as 0 until those exist (FE-010, FE-031).
+- Project default presets can't be chosen in the project's settings yet; every project starts with As
+  modelled and the global seed dictionary (per-BoQ pickers exist since FE-008; project defaults and
+  starred presets come with FE-021).
 - Models: scope rules can't be edited in the app yet (the selector UI comes with the Library, FE-021);
   check rows don't open the viewer yet (FE-016, F03-AC5); multipart uploads over 100 MB and resuming an
   interrupted upload are not built; abandoned `awaiting_upload` versions are not cleaned up after 24 h
-  (the mock's scheduler, M6); processing minutes are not counted (FE-019).
+  (the mock's scheduler, M6); processing minutes are counted for runs only, not parses (FE-019).
+- BoQs (FE-008): Save version calls `POST /revisions/{id}/issue`, which the mock answers
+  `501 not_implemented` until FE-031 (the button's blocking rule, BR-22, works); the Sheet and Questions
+  tabs show the current run's figures only (FE-009, FE-010); runs carry no decisions yet, so pending
+  changes cover inputs only (FE-010); an old run can't be opened or compared from the run history yet
+  (FE-009, FE-030); a BoQ's model scope is shown, not editable (FE-021); "Generate a BoQ" is offered on
+  the model version page, not yet in the ready notification (FE-018).
+- Phase-1 interim (FE-008): federation and resolution settings are stored with the inputs but not sent
+  to the engine (the PoC API takes neither; EN-001); a rule-set patch is run as saved, so its parent must
+  be a shipped preset (org-level patch chains with FE-025).
 - Phase-1 interim: the mock reads check details from the PoC engine's cache on the same machine, and
   drops the `null` optional fields the PoC sends in names (the worker should omit them, EN-001).
 
@@ -175,6 +185,7 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-11-12 | c5d3b33 | FE-008: F04 on the mock and in the app: BoQs with their working version, inputs prefilled from the project defaults and every model's latest ready version, the Setup tab (models with version pickers and the newer-version hint, rule set with versions, ordered classifications and dictionary layers with the project dictionary last, advanced settings), runs as jobs through the PoC engine with live stages, complete / needs input / failed / cancelled, run history, pending changes blocking Save version (BR-22), archive and restore, "Generate a BoQ" from a ready model version; fixes the mock router checking inline query parameters against the wrong schema; 11 F04 scenarios (incl. BR-02), 3 e2e flows |
 | 2026-11-12 | dc24b65 | FE-007: F03 on the mock and in the app: models, versions uploaded straight to signed URLs with progress, header check (`not_ifc` fails without a job), content dedupe across the org, the parse job through the PoC engine with live stages over SSE, failure and retry, the input-check report (counts by class, checks with their elements, storeys), names preview, the ready notification as a toast; 6 shared F03 scenarios through mock + engine, 4 e2e flows; CI installs the engine for e2e and suites |
 | 2026-11-12 | 2500f97 | FE-006: F02 on the mock and in the app: dashboard (needs-you list, project cards with generated compositions, empty state with the sample project), projects list, new project with the `activeProjects` limit, project overview, settings (members from the org only, archive and restore), activity; project visibility and the `permissions` keys (now listed in 03-domain/permissions.md); archived projects refuse writes with `409 project_archived`; 7 shared F02 scenarios, 6 e2e flows |
 | 2026-11-12 | 8d00621 | FE-005: F01 on the mock and in the app: onboarding (create org), invitations (send, resend, withdraw, accept with email check, 14-day expiry), members (roles, remove, leave, last-owner rule), account page, org settings (general, members), org switcher, start-page routing; seat limit answered with 402 and the limit dialog; audit events; 13 shared F01 scenarios and 8 e2e flows |
