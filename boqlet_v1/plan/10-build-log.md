@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M0 |
 | Role | Frontend agent |
-| Last task done | FE-000 Consolidate the repository into the product root (0921ea9) |
-| Next task | FE-001 Contract package |
+| Last task done | FE-001 Contract package (2e9c848) |
+| Next task | FE-002 Next app skeleton |
 | Waiting for the owner | — |
 | In progress (not committed) | — |
-| Notes for the next session | Run every npm command in `boqlet_v1/`. On Windows, stopping a background `npm run dev:poc` leaves the Vite and uvicorn children running: stop them by the PIDs listening on 5173 and 8787 (and their `spawn_main` children), not every node or python process. Whether Vercel builds previews of `v_1` was not checked from the session (no Vercel access); the root `vercel.json` was updated per FE-000. |
+| Notes for the next session | Run every npm command in `boqlet_v1/`. Add shadcn components with `npm run ui:add -w @ifc-boq/app -- <name>`, never `npx shadcn add` (it installs the `cn` package; see `06-frontend/architecture.md` "Pinned versions"). `npm install <pkg> -w <ws>` sometimes fails on this machine with npm's "Cannot read properties of null (reading 'location')": add the dependency to the workspace's `package.json` by hand and run a plain `npm install`. On Windows, stopping a background `npm run dev:poc` leaves the Vite and uvicorn children running: stop them by the PIDs listening on 5173 and 8787 (and their `spawn_main` children), not every node or python process. Whether Vercel builds previews of `v_1` was not checked from the session (no Vercel access). |
 
 ## Entry template
 
