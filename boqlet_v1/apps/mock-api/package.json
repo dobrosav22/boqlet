@@ -16,9 +16,6 @@
     "@hono/node-server": "2.1.8",
     "@ifc-boq/api": "*",
     "@ifc-boq/types": "*",
-    "@redocly/openapi-core": "2.77.0",
-    "ajv": "8.20.0",
-    "ajv-formats": "3.0.1",
     "hono": "4.13.18"
   },
   "devDependencies": {

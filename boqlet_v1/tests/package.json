@@ -1,0 +1,22 @@
+{
+  "name": "@ifc-boq/tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared contract and behaviour suites (08-delivery/testing.md): the same tests run against the mock (phase 1) and the Java backend (phase 2), through the generated client. API_URL selects the target.",
+  "type": "module",
+  "scripts": {
+    "contract": "node run.mjs contract",
+    "scenarios": "node run.mjs scenarios",
+    "contract:mock": "node run.mjs contract --mock",
+    "scenarios:mock": "node run.mjs scenarios --mock",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ifc-boq/api": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.3",
+    "vitest": "5.1.0"
+  }
+}

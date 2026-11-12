@@ -48,7 +48,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:app
-      - name: Mock API tests (the engine-backed test is skipped here; TS-001 runs it with the engine)
+      - name: Mock API tests (the engine-backed Duplex test runs in the engine job)
         run: npm run test:mock
       - run: npm run build:app
 
@@ -91,3 +91,24 @@ jobs:
         env:
           IFC_BOQ_PYTHON: python
       - run: npm run test:engine
+      - name: The mock runs the Duplex through the PoC engine (M0)
+        run: |
+          npm run dev:engine > engine.log 2>&1 &
+          for i in $(seq 1 90); do curl -sf http://127.0.0.1:8787/api/health && break; sleep 2; done
+          npm run test:mock
+
+  suites:
+    name: Contract and scenario suites (against the mock)
+    runs-on: ubuntu-latest
+    env:
+      IFC_BOQ_SKIP_ENGINE_SETUP: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: boqlet_v1/package-lock.json
+      - run: npm ci
+      - run: npm run test:contract:mock
+      - run: npm run test:scenarios:mock

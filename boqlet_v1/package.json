@@ -5,7 +5,8 @@
   "description": "boqlet: IFC -> Bill of Quantities. Product root (P44): PoC web app + Python engine today, the product apps and services as they are built.",
   "workspaces": [
     "packages/*",
-    "apps/*"
+    "apps/*",
+    "tests"
   ],
   "scripts": {
     "postinstall": "node scripts/setup-engine.mjs",
@@ -23,8 +24,12 @@
     "lint": "npm run lint -w @ifc-boq/app",
     "test:app": "npm run test -w @ifc-boq/app",
     "test:mock": "npm run test -w @ifc-boq/mock-api",
+    "test:contract": "npm run contract -w @ifc-boq/tests",
+    "test:scenarios": "npm run scenarios -w @ifc-boq/tests",
+    "test:contract:mock": "npm run contract:mock -w @ifc-boq/tests",
+    "test:scenarios:mock": "npm run scenarios:mock -w @ifc-boq/tests",
     "e2e:app": "npm run e2e -w @ifc-boq/app",
-    "test": "npm run typecheck && npm run lint && npm run test:app && npm run test:mock && npm run test:engine",
+    "test": "npm run typecheck && npm run lint && npm run test:app && npm run test:mock && npm run test:contract:mock && npm run test:scenarios:mock && npm run test:engine",
     "test:engine": "node scripts/run-engine.mjs test",
     "boq": "node scripts/run-engine.mjs cli",
     "corpus": "node scripts/run-engine.mjs corpus",

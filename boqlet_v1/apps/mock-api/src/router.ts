@@ -7,7 +7,7 @@
 import type { Context } from "hono";
 import { userFromAuthorization } from "./auth.js";
 import { HttpError, unauthenticated } from "./http.js";
-import { describeErrors, escapePointer, type Operation, type Spec } from "./spec.js";
+import { describeErrors, escapePointer, type Operation, type Spec } from "@ifc-boq/api/spec";
 import type { UserRec } from "./store.js";
 
 type Json = Record<string, unknown>;

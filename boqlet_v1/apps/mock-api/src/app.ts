@@ -5,7 +5,7 @@ import { devRoutes } from "./dev.js";
 import { coreHandlers } from "./handlers/core.js";
 import { apiRouter, type Handlers } from "./router.js";
 import { buildSeed } from "./seed.js";
-import { loadSpec } from "./spec.js";
+import { loadSpec } from "@ifc-boq/api/spec";
 import { loadStore, replaceStore } from "./store.js";
 
 /** All handlers, by operationId. Each task adds its file here. */
