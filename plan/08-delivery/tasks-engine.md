@@ -1,6 +1,7 @@
 # Engine tasks (Python, `engine/ifc_boq`)
 
 **Owner: the backend agent, in phase 2, milestone ME** (after BE-000, before the Java work; P39).
+The engine sits in the product root since FE-000 (`boqlet_v1/engine`, P44).
 During phase 1 the frontend agent's mock faked these features on top of the proof-of-concept
 engine API; `06-frontend/mock-api.md` "Engine fakes" lists each fake and the task that replaces
 it. When a task lands, switch the mock to the real behaviour and delete its fake. Suggested

@@ -4,13 +4,63 @@
 `milestones.md`. In phase 1 the mock talks to the existing proof-of-concept engine API
 (`engine/ifc_boq/api.py`) and fakes engine features that don't exist yet
 (`06-frontend/mock-api.md`, "Engine fakes"). The frontend agent never edits `engine/`; a needed
-engine change becomes a fake plus a note on the matching EN task.
+engine change becomes a fake plus a note on the matching EN task. (Two exceptions, both named in
+their task: FE-000 moves the engine without changing it, and FE-046 deletes the PoC dev API.)
+Paths are relative to the product root `boqlet_v1/` (P44).
 
 Each task: specs to read, what to build, acceptance. Every screen handles loading, empty,
 error and read-only states (02-flows/screens.md). Every UI string goes through i18n (F15).
 Every task adds or extends Playwright e2e coverage of its flow against the mock + engine.
 
-## M0 Contract and scaffolding
+## M0 Consolidation, contract and scaffolding
+
+### FE-000 Consolidate the repository into the product root (P44)
+The first task of the build. It moves the proof of concept into `boqlet_v1/` so that everything
+the product needs sits under one root. File contents don't change, except the paths listed here.
+- **Before:** stop any running dev servers (Windows keeps files open); `git status` clean;
+  `npm run test` green at the repository root (the baseline).
+- **Move with `git mv`** (history kept) into `boqlet_v1/`: `engine/`, `packages/`, `presets/`,
+  `fixtures/`, `scripts/`, `apps/` (the PoC UI becomes `boqlet_v1/apps/web`), `docs/`, `plan/`,
+  `README.md`, `notes.md`, `CLAUDE.md`, `.gitignore`, `package.json`, `package-lock.json`.
+- **Leave at the repository root:** `.claude/`, and the PoC demo deployment, which Vercel needs
+  there: `vercel.json`, `api/index.py`, `requirements.txt`. `.github/` is created there later
+  (TS-001).
+- **Paths to fix.** The engine (`engine/ifc_boq/paths.py`) and `scripts/` resolve everything
+  relative to their own folders, so they need no change. Fix these:
+  - **New root `CLAUDE.md`:** a short pointer: the product root is `boqlet_v1/`; read
+    `boqlet_v1/CLAUDE.md`; paths there and in the plan are relative to `boqlet_v1/`; the
+    repository root holds only CI, agent settings and the PoC demo deployment until FE-046.
+  - **`boqlet_v1/CLAUDE.md`:**
+    - commands run in `boqlet_v1/`;
+    - the repo map gets the product folders from `plan/README.md` "Where the code lives";
+    - the status paragraph points to `plan/10-build-log.md`.
+  - **`boqlet_v1/package.json`:** name `boqlet`; rename the scripts `dev` → `dev:poc` and
+    `build` → `build:poc` (the product adds `dev:app`, `build:app` and so on); workspaces stay
+    `apps/*`, `packages/*`.
+  - **New root `.gitignore`:** `node_modules/`, `.env`, `.vercel/`. The moved one keeps the
+    engine's ignores, now relative to `boqlet_v1/`.
+  - **`vercel.json`:**
+    - `installCommand`: `cd boqlet_v1 && IFC_BOQ_SKIP_ENGINE_SETUP=1 npm ci`;
+    - `buildCommand`: `cd boqlet_v1 && VITE_DEPLOYED=1 VITE_MAX_UPLOAD_MB=4.4 npm run build:poc`;
+    - `outputDirectory`: `boqlet_v1/apps/web/dist`;
+    - every `excludeFiles` pattern prefixed with `boqlet_v1/`, plus `boqlet_v1/plan/**`,
+      `boqlet_v1/tests/**` and `boqlet_v1/services/**`.
+  - **`api/index.py`:** the engine path becomes `ROOT / "boqlet_v1" / "engine"`.
+  - **`docs/17-deploying-a-demo.md`, `docs/README.md`, `README.md`:** paths and commands from
+    `boqlet_v1/`.
+  - **The plan itself:** nothing to fix; its paths are already relative to the product root.
+- **Recreate local state:** delete the root `node_modules/`. In `boqlet_v1/`, run `npm install`,
+  then `npm run setup:engine`: the venv moved with `engine/` and must be rebuilt at its new path.
+- **Accept:**
+  - `git show --stat -M` of the move commit lists renames only, plus the files above.
+  - In `boqlet_v1/`:
+    - `npm run test` is green: typecheck, and every engine test including the Duplex
+      acceptance test;
+    - `npm run dev:poc` serves the PoC with the Duplex sample;
+    - `VITE_DEPLOYED=1 npm run build:poc` builds.
+  - The engine's Python loads `api/index.py` from the repository root without errors.
+  - After the push, the demo URL still works. The agent checks it with a logged-in `vercel`
+    CLI if there is one; otherwise the owner checks (`09-open-questions.md` "Needed by").
 
 ### FE-001 Contract package
 - Move `plan/05-api/openapi.yaml` to `packages/api/openapi.yaml` and `plan/05-api/openapi-pricing.yaml`
@@ -293,7 +343,84 @@ real behaviour differs (e.g. derived lines now follow edited quantities, real tr
 **Accept:** the fakes table is empty; every "(fake)" criterion green on the real engine.
 
 ### FE-043 Real auth adapter (after backend decision D1)
+- Implement `AuthAdapter` for the provider chosen in D1 (BE-000): sign-in, sign-up, email
+  verification, sign-out; token or cookie session as D1 decided; invitation acceptance by email
+  match; the single-session takeover screen against Java (BE-027).
+- Vendor sign-in, if the pricing module is built (MP2).
+- `NEXT_PUBLIC_AUTH_ADAPTER` selects the adapter. The mock adapter stays for e2e on the mock.
+- **Accept:**
+  - F01 acceptance criteria on Java staging with the real provider;
+  - FL-1 sign-up to first BoQ end to end on staging;
+  - e2e on the mock still green.
 
 ## Phase 3, M8: hardening and release
-### FE-044 Accessibility pass (axe in Playwright on main screens) and pseudo-locale pass (v1 criterion 11)
-### FE-045 Performance pass: bundle budgets, 20k-line sheet test, viewer on a medium model (nfr.md)
+
+### FE-044 Accessibility and pseudo-locale pass (nfr.md, F15)
+Run TS-003 (axe in Playwright on the main screens) and fix what it finds. Walk the main screens
+in the `en-XA` pseudo-locale and fix clipped, overlapping or untranslated strings.
+**Accept:** TS-003 green (no serious or critical violations); v1 criterion 11 green.
+
+### FE-045 Performance pass (nfr.md)
+- Set bundle budgets per route and enforce them in CI.
+- Test the sheet with 20 000 lines (scrolling, filtering, group switch) and the viewer on a
+  medium model, against the targets in nfr.md, on staging. Fix what misses.
+- Record the frontend numbers through TS-002.
+**Accept:** every frontend target in nfr.md met on staging and recorded in the NFR table.
+
+### FE-046 Make the product root the repository root and remove the proof of concept (P44)
+After FE-041…FE-045 and BE-025, BE-026, TS-002…TS-004 are green, and before the release
+(FE-047). This is the last structural change.
+- **Check first** that nothing in the product uses the proof of concept any more:
+  - `PocEngine` and the interim engine path are gone (EN-001);
+  - the fakes table in `mock-api.md` is empty (FE-042);
+  - `git grep -n "8787\|ifc_boq.api\|apps/web\|dev:poc"` finds only the PoC itself and
+    history docs.
+- **Tag** the last commit that still has the PoC as `poc-final` and push the tag. The demo can
+  be redeployed from it.
+- **Delete:**
+  - `apps/web/` (the PoC UI and its Guide);
+  - the PoC dev API: `engine/ifc_boq/api.py` and `store.py`, the `serve` command in
+    `scripts/run-engine.mjs`, and the `dev:poc`, `dev:web`, `dev:engine` (if it only served the
+    PoC) and `build:poc` scripts. This is the one engine change the frontend agent makes.
+    Remove Python dependencies only they used (check `engine/requirements.txt` and
+    `pyproject.toml`). Engine tests stay green;
+  - the demo deployment: `vercel.json`, `api/`, the root `requirements.txt`, and
+    `docs/17-deploying-a-demo.md`;
+  - the root pointer `CLAUDE.md`.
+
+  `docs/reference/` stays: it is the record of the original conversation.
+- **Promote:** `git mv` every entry of `boqlet_v1/` (dotfiles included) to the repository root,
+  merge `boqlet_v1/.gitignore` into the root one, and remove the empty folder.
+- **Fix references:**
+  - CI: drop `working-directory: boqlet_v1`;
+  - `CLAUDE.md`: repo map, run commands, status (the PoC UI and dev API are gone; their roles
+    live in the product);
+  - `README.md` and `docs/README.md`;
+  - the engine docs (`docs/03`, `docs/10`) where they describe the PoC UI or dev API as current;
+  - `plan/README.md` "Where the code lives": the product root is now the repository root; the
+    `boqlet_v1/` story becomes a sentence of history;
+  - `sessions.md`: the prompt, ports and tooling rows.
+  - Afterwards `git grep -n boqlet_v1` finds only the build log, `docs/11` and that sentence of
+    history.
+- **Recreate local state** at the root (`npm install`, `npm run setup:engine`) and delete the
+  leftover untracked folders under `boqlet_v1/`.
+- **Accept:**
+  - CI is green on the new layout: every job, including core-only, the contract and scenario
+    suites against the mock and Java, the Java build and the Playwright smoke on staging;
+  - a fresh clone runs `npm ci` and `npm run test` green;
+  - `git ls-files boqlet_v1` is empty;
+  - the owner is told to remove or repoint the Vercel demo project (`09-open-questions.md`).
+
+### FE-047 Production release (04-architecture/deployment.md)
+- Needs from the owner (`09-open-questions.md` "Needed by"): the production account and region
+  (D8), the domain, and the provider secrets for auth (D1), email (D6) and billing (D7).
+- Deploy `main` to production with the services and configuration in deployment.md:
+  - migrations run before the API takes traffic;
+  - the pricing module is switched on or off as the owner says (P32).
+- Smoke test on production: sign up, create the Duplex sample project, generate the BoQ, export
+  it, open a share link.
+- Tag the release `v1.0.0`.
+- Write the phase 3 summary and the release notes in the build log; set the status table to
+  "Released".
+**Accept:** M8 exit criteria; TS-004 (v1 acceptance) green on staging at the tagged commit;
+production smoke test green.

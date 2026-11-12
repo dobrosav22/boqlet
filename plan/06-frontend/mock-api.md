@@ -97,11 +97,11 @@ Drop this path as soon as EN-001 is merged.
 Seeding runs the real engine (parse + runs), so the seeded numbers are real. It takes a few
 minutes once and the result is cached in `.data/`.
 
-## Scripts (root `package.json`)
+## Scripts (product root `package.json`)
 
 | Script | Does |
 |---|---|
-| `npm run dev:app` | engine (HTTP transport) + mock API + Next app, concurrently |
+| `npm run dev:app` | engine (the PoC engine API in phase 1, the worker's HTTP transport from EN-001) + mock API + Next app, concurrently |
 | `npm run mock:seed` / `mock:reset` | seed / wipe and reseed |
 | `npm run mock:fetch-fixtures` | download the federated pair (optional) |
 | `npm run test:contract:mock` | run the contract test suite against the mock |

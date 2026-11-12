@@ -58,6 +58,7 @@ Environment: `IFC_BOQ_PYTHON` (python to use), `IFC_BOQ_SKIP_ENGINE_SETUP=1`,
 | `fixtures/` | The NIBS Duplex IFC and the hand-made reference BoQ; buildingSMART certification samples (CC BY 4.0) in `ifc/buildingsmart/`. |
 | `scripts/` | Node helpers that set up and run the Python engine from npm. |
 | `docs/` | Everything decided so far, written for the next developer or agent. |
+| `boqlet_v1/` | The product root (P44). Empty until the build starts; task FE-000 moves everything above into it, and FE-046 finally makes it the repository root. |
 | `vercel.json`, `api/index.py`, `requirements.txt` | Demo deployment on Vercel only (docs/17): the web build plus the engine as one Python function. Keep the root `requirements.txt` in sync with `engine/requirements.txt`. |
 
 ## Rules of the road
@@ -98,7 +99,7 @@ Environment: `IFC_BOQ_PYTHON` (python to use), `IFC_BOQ_SKIP_ENGINE_SETUP=1`,
 | Deploy a demo on Vercel | `docs/17-deploying-a-demo.md` |
 | Dictionaries and code lists | `docs/07-dictionaries-and-classification.md` |
 | What is not built yet, open questions | `docs/11-roadmap-and-open-questions.md` |
-| Build the product (Next.js frontend, mock API, Java backend, engine worker): specs, API contract, phases, tasks | `plan/README.md`, section "Start here" |
+| Build the product (Next.js frontend, mock API, Java backend, engine worker): specs, API contract, phases, tasks | `plan/README.md` "Start here", then `plan/08-delivery/sessions.md` and `plan/10-build-log.md` |
 | Everything from the original conversation, verbatim | `docs/reference/` |
 
 ## Status in one paragraph
@@ -116,6 +117,8 @@ DURAARK, the Auckland OpenIFC repository, Schependomlaan): no engine errors, out
 against the contract; quantities checked only for the Duplex and the buildingSMART samples.
 What was run and what is still uncovered: `docs/12-ifc-corpus-catalogue.md`.
 
-The product to build on top of this is fully specified in `plan/` (decisions P01–P43, phases,
+The product to build on top of this is fully specified in `plan/` (decisions P01–P45, phases,
 milestones, tasks). **The build has not started; wait for the owner's go-ahead**, then follow
-`plan/README.md` "Start here".
+`plan/README.md` "Start here" and `plan/08-delivery/sessions.md`. Where the build stands, and
+what agents decided along the way, is in `plan/10-build-log.md`. Every session starts with the
+prompt in `sessions.md`.

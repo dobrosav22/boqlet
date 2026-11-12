@@ -2,7 +2,8 @@
 
 **Owner: the backend agent, in phase 2** (`milestones.md`), after the frontend agent's phase 1
 on the mock. Order: BE-000 → the engine tasks (`tasks-engine.md`, milestone ME) → M5 → M6 → M7
-→ MP2 (optional). The contract and scenario suites written in phase 1 are the specification:
+(ending with BE-032, staging) → MP2 (optional). Paths are relative to the product root
+`boqlet_v1/` (P44); FE-000 already moved the engine there. The contract and scenario suites written in phase 1 are the specification:
 make them pass against Java without changing them; a suite that looks wrong goes to the owner.
 
 Start with **BE-000**. Every task is done when the contract suite passes for its endpoints
@@ -126,6 +127,20 @@ the pricing module adds vendor and module-off cases for its endpoints (BE-P4).
 ### BE-024 Retention and deletion
 Org deletion job (BR-52), old-run row pruning with rehydration from `result_key`, export
 retention, audit retention per plan.
+
+### BE-032 Staging environment (D8, deployment.md)
+- Needs from the owner: the hosting account in the provider and region chosen in D8, with
+  credentials the agent can use (`09-open-questions.md` "Needed by").
+- Set up staging as code (the tool chosen in D8; recorded in the build log):
+  - the services and configuration of deployment.md, with managed Postgres and object storage;
+  - the engine worker pools and rpc.
+- CI deploys `main` to staging after the suites pass. Seed staging with the corpus reference
+  projects.
+- Leave BE-025 and BE-026 ready to run, so phase 3 can use them.
+**Accept:**
+- staging runs Java + worker + web from `main`;
+- the contract and scenario suites pass against staging;
+- a Duplex BoQ is generated on staging.
 
 ### BE-025 Observability and ops
 Structured logs, OpenTelemetry, metrics and alerts from deployment.md, backups and restore test.

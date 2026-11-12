@@ -11,25 +11,37 @@ product to build. When they disagree about the *product*, `plan/` wins. When the
 
 ## Start here (a new session)
 
-**Build status: not started.** Do not start building until the owner says so. When they do:
+**Build status: not started.** Do not start building until the owner says so. When they do,
+every session, in every phase, starts with the prompt in `08-delivery/sessions.md` and works by
+that file: it says how to start, what to decide yourself and what to ask, when to stop and how
+to hand over.
 
-1. Read this README (decisions P01–P43 are settled; don't reopen them), then
-   `08-delivery/milestones.md` (phases, milestones, exit criteria).
-2. Find the current phase and milestone in the status table below. **Phase 1** belongs to the
-   frontend agent, **phase 2** to the backend agent (it starts with BE-000: ask the owner D1–D9
-   before any backend code), **phase 3** to the frontend agent again.
+1. Read this README (decisions P01–P45 are settled; don't reopen them),
+   `08-delivery/sessions.md`, and `10-build-log.md` "Current position" (where the build
+   stands, the next task, and your role).
+2. `08-delivery/milestones.md`: phases, milestones, exit criteria.
+   - **Phase 1**, frontend role, starts with **FE-000**: it moves the repository into the
+     product root `boqlet_v1/` (P44).
+   - **Phase 2**, backend role, starts with **BE-000**: ask the owner D1–D9 before any backend
+     code.
+   - **Phase 3**, frontend role, ends with **FE-046** (the product root becomes the repository
+     root, the proof of concept is removed) and **FE-047** (production release).
 3. Take the next task of your phase in order from `08-delivery/tasks-frontend.md`,
-   `tasks-backend.md` or `tasks-engine.md`. Read the specs the task names, build only that, meet
-   its acceptance criteria and the definition of done in `08-delivery/testing.md`.
-4. Commit straight to `main` (P40). Record the task in `docs/11-roadmap-and-open-questions.md`
-   ("Done"), and update the status table here when a milestone's exit criteria are met.
+   `tasks-backend.md` or `tasks-engine.md`. Read the specs the task names, build only that, and
+   meet its acceptance criteria and the definition of done in `08-delivery/testing.md`.
+4. Commit straight to `main` (P40). After every task, record it in
+   `docs/11-roadmap-and-open-questions.md` ("Done") and in the build log's Current position. At
+   the end of a milestone, write its build-log entry and update the status table here.
 5. If a spec is silent or contradictory, or a decision is the owner's, add it to
-   `09-open-questions.md` and ask; never guess product behaviour.
+   `09-open-questions.md` and ask; never guess product behaviour. Meanwhile go on with tasks
+   that don't depend on it.
 
-Rules that catch people out: the core never depends on the pricing module (P36,
-`04-architecture/modules.md`); only the engine computes quantities (BR-01), and in phase 1 the
-mock fakes engine features without measuring (`06-frontend/mock-api.md`); the look follows
-`06-frontend/design-guidelines.md` (P43).
+Rules that catch people out:
+- **Paths in `plan/` are relative to the product root** (`boqlet_v1/` until FE-046; P44).
+- The core never depends on the pricing module (P36, `04-architecture/modules.md`).
+- Only the engine computes quantities (BR-01). In phase 1 the mock fakes engine features
+  without measuring (`06-frontend/mock-api.md`).
+- The look follows `06-frontend/design-guidelines.md` (P43).
 
 ## How to use this folder
 
@@ -63,8 +75,9 @@ mock fakes engine features without measuring (`06-frontend/mock-api.md`); the lo
 | 13 | [05-api/](05-api/) | `openapi.yaml` (core), `openapi-pricing.yaml` (pricing module), API conventions |
 | 14 | [06-frontend/](06-frontend/) | Next.js architecture, what to reuse from the PoC, mock API (and its engine fakes), design system, the owner's design guidelines (when supplied) |
 | 15 | [07-backend/](07-backend/) | Java architecture, DB schema, decisions to make |
-| 16 | [08-delivery/](08-delivery/) | Milestones, task lists, testing |
+| 16 | [08-delivery/](08-delivery/) | Milestones, task lists, testing, how sessions run (`sessions.md`) |
 | 17 | [09-open-questions.md](09-open-questions.md) | What is still open, who decides, and by when |
+| 18 | [10-build-log.md](10-build-log.md) | Where the build stands, and what the agents decided along the way |
 
 ## Decisions taken (Nov 2026, product owner)
 
@@ -116,23 +129,49 @@ decisions D01–D68 are in `docs/02-decisions.md` and still hold unless changed 
 | P41 | **The owner sets the visual direction**; it is recorded in `06-frontend/design-guidelines.md` (P43), which overrides `design-system.md`. |
 | P42 | **The setup wizard's questions come from the rule set's data.** Every yes/no question that switches BoQ items on or off forms one checklist, with the follow-ups of what was switched on; the measuring questions for walls, openings, roofs, windows and doors and line splitting are marked in the rule set (`setupSteps`, six screens for "As modelled"). Step 2 lists only the BoQ items the answers switch on. F16. |
 | P43 | **The product is called boqlet** (always lowercase). **Visual direction:** warm paper and ink, JetBrains Mono for the UI and Inter Tight for display, 2 px corners, colour only where it means something (blue accent and "derived", orange "to confirm", yellow "manual" and selection, red errors, no green), poster compositions only in the wizard, onboarding, sign-in, share page and dashboard cards, the dimension line as a recurring device, light theme default plus dark. Details and tokens in `06-frontend/design-guidelines.md`. |
+| P44 | **One product root: `boqlet_v1/`.** All product code is built there, as one npm workspace. The first task (FE-000) moves the proof of concept (engine, contract types, presets, fixtures, scripts, PoC UI, docs, this plan) into it, so nothing ever refers across two roots; the PoC demo deployment stays pointed into it. The last structural task (FE-046) removes the PoC leftovers and makes `boqlet_v1/` the repository root. Paths in `plan/` are relative to the product root. |
+| P45 | **Agents work on their own from task to task and milestone to milestone**, by `08-delivery/sessions.md`. They stop only for an owner decision that blocks every remaining task, at the end of a phase, or before an irreversible step. Implementation decisions and deviations are written in `10-build-log.md`, which, with its "Current position", is the handover between sessions and agents. |
 
-## Where the code will live (target monorepo)
+## Where the code lives (P44)
 
+The **product root is `boqlet_v1/`**. FE-000, the first task of the build, moves the proof of
+concept into it. FE-046, the last structural task, removes what is left of the proof of concept
+and makes `boqlet_v1/` the repository root. **Every path in `plan/` is relative to the product
+root**: `engine/` means `boqlet_v1/engine/` until FE-046, and `engine/` afterwards.
+
+```text
+boqlet_v1/                     the product root: one npm workspace (apps/*, packages/*), name "boqlet"
+  apps/app                     Next.js product frontend (phase 1; wired to Java in phase 3)
+  apps/mock-api                Mock backend implementing both contracts (phase 1): PoC engine API plus
+                               engine fakes, then the engine worker from phase 2; afterwards an e2e test double
+  apps/web                     PoC dev UI and its Guide, behind the live demo; deleted in FE-046
+  packages/api                 openapi.yaml (moved from plan/05-api in FE-001) + generated client (@ifc-boq/api)
+  packages/pricing-api         openapi-pricing.yaml + its generated client (pricing module only)
+  packages/pricing-ui          Pricing module frontend (optional, removable, P36)
+  packages/types               Engine contract (TS -> JSON Schema), unchanged role
+  services/api                 Java backend (phase 2); the pricing module is its own build module (BE-P*)
+  engine/                      Python engine; gains worker.py, worker_http.py, rpc.py, storage.py, sheets/ (phase 2)
+  presets/  fixtures/          as today
+  scripts/                     Node helpers that set up and run the engine
+  tests/contract               shared contract suite (TS-001): runs against the mock and against Java
+  tests/scenarios              shared behaviour suite (TS-001): same
+  tests/perf                   performance suite (TS-002)
+  plan/                        this specification, with 10-build-log.md
+  docs/                        engine and PoC documentation
+  CLAUDE.md  README.md  notes.md  .gitignore  package.json  package-lock.json
+
+Outside the product root, at the repository root (until FE-046):
+  CLAUDE.md                    a pointer to boqlet_v1/CLAUDE.md
+  .github/workflows/           CI (GitHub needs it at the repository root; product jobs run in boqlet_v1/)
+  .claude/                     agent settings
+  .gitignore                   node_modules/, .env, .vercel/
+  vercel.json, api/index.py, requirements.txt
+                               the PoC demo deployment (docs/17), pointed into boqlet_v1/; deleted in FE-046
 ```
-apps/app          Next.js product frontend (new, phase 1; wired to Java in phase 3)
-apps/mock-api     Mock backend implementing the contracts (new, phase 1): computation through the
-                  PoC engine API plus engine fakes in phase 1, through the engine worker from phase 2
-apps/web          The PoC dev UI (kept as an engine developer tool until the product replaces it)
-services/api      Java backend (new, phase 2)
-engine/           Python engine; gains worker.py (queue worker) and rpc.py (quick calls) in phase 2
-packages/types    Engine contract (TS -> JSON Schema), unchanged role
-packages/pricing-ui  Pricing module frontend (optional, removable, P36)
-packages/pricing-api openapi-pricing.yaml + its generated client (module only)
-packages/api      openapi.yaml (moved here from plan/05-api in task FE-001) + generated TS client
-plan/             This specification
-docs/             Engine and PoC documentation
-```
+
+After FE-046 the same tree sits at the repository root, without `apps/web`, the PoC dev API
+(`engine/ifc_boq/api.py`, `store.py`) and the demo deployment. The last PoC commit is tagged
+`poc-final`.
 
 ## Status
 
@@ -142,6 +181,6 @@ docs/             Engine and PoC documentation
 | Domain, features, flows (01–03) | Written |
 | Architecture, API (04–05) | Written; `openapi.yaml` (core) and `openapi-pricing.yaml` (pricing module) cover every endpoint; the core never references the module (`04-architecture/modules.md`) |
 | Frontend, backend specs (06–07) | Written; backend decisions open on purpose |
-| Delivery (08) | Phases, milestones and task lists written (P37–P40) |
+| Delivery (08) | Phases, milestones, task lists, session rules and build log written (P37–P40, P44, P45) |
 | Design (06) | Design guidelines decided (P43); wordmark SVG still to come from the owner |
-| **Build** | **Not started.** Next: phase 1, M0 (frontend agent), when the owner says go |
+| **Build** | **Not started.** Next: phase 1, FE-000 (frontend role), when the owner says go. Live position: `10-build-log.md` |

@@ -19,8 +19,8 @@ Render.
 | Email | provider (adapter) | — | — | transactional, SPF/DKIM/DMARC on the sending domain |
 | Billing | provider (adapter) | — | — | webhooks to `api` |
 
-Phase 1 (frontend build) runs locally: `apps/app` + `apps/mock-api` + the engine HTTP
-transport, all from `npm run dev:app` (06-frontend/mock-api.md). A shared demo of the frontend
+Phase 1 (frontend build) runs locally: `apps/app` + `apps/mock-api` + the PoC engine API (the engine HTTP
+transport from EN-001), all from `npm run dev:app` (06-frontend/mock-api.md). A shared demo of the frontend
 on the mock can go to any Node host. The engine must run beside it (the Vercel demo of docs/17
 shows the limits of serverless for the engine).
 

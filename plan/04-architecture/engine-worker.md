@@ -135,7 +135,8 @@ The rpc service caches parsed models by key (LRU, memory-bounded) for `names`.
 
 ## Transports
 
-### HTTP transport (phase 1, also usable in phase 2 for small deployments)
+### HTTP transport (the mock API from EN-001; also usable for small deployments)
+- `ENGINE_URL` defaults to `http://127.0.0.1:8788` locally (`08-delivery/sessions.md`, ports).
 - `POST {ENGINE_URL}/jobs/{type}` with the envelope → response `application/x-ndjson`:
   progress events, one per line, then the result as the last line. Closing the connection
   cancels the job.

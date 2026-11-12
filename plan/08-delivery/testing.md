@@ -39,6 +39,10 @@ production builds) moves time for deadline tests.
 
 ## CI pipeline
 
+GitHub Actions, `.github/workflows/ci.yml` at the repository root (TS-001). Until FE-046 every
+product job runs with `working-directory: boqlet_v1`. Jobs run on Ubuntu; the scripts must also
+run on the owner's Windows machine (`sessions.md`).
+
 1. Lint: contract (`api:lint`), TS (eslint), Python (ruff if adopted), Java (spotless/checkstyle).
 2. Typecheck: workspaces.
 3. Engine tests (`npm run test:engine`).
@@ -51,7 +55,7 @@ production builds) moves time for deadline tests.
 
 | ID | Milestone | Task | Acceptance |
 |---|---|---|---|
-| TS-001 | M0 (frontend agent) | Scaffold `tests/contract` and `tests/scenarios` (Vitest over the generated client, base URL from env), seed helpers through the API, `/_test/clock`; wire into CI against the mock | One contract test per tag and one scenario per state machine run green against the mock |
+| TS-001 | M0 (frontend agent) | Scaffold `tests/contract` and `tests/scenarios` (Vitest over the generated client, base URL from env), seed helpers through the API, `/_test/clock`; create `.github/workflows/ci.yml` (lint, typecheck, engine tests, contract and scenario suites against the mock) | One contract test per tag and one scenario per state machine run green against the mock |
 | TS-002 | M8 (frontend agent) | Performance suite (k6 for API paths in nfr.md, engine timing on reference files, Playwright traces for sheet and viewer) | NFR table filled with measured values on staging |
 | TS-003 | M8 (frontend agent) | Accessibility suite (axe in Playwright on S05, S10, S12a–c, S15c, S20, S29) | No serious/critical violations |
 | TS-004 | M8 (frontend agent) | v1 acceptance run on staging (00-product/03 criteria 1–17), results recorded in `plan/README.md` | All green |
@@ -62,7 +66,9 @@ production builds) moves time for deadline tests.
 - Contract and scenario suites green.
 - No new hard-coded UI strings; i18n keys added.
 - Audit events written for new write actions.
-- Docs: plan status updated if a milestone moved; `docs/11` "Done" row added (project rule).
+- Docs: `docs/11` "Done" row added (project rule); the build log's Current position updated;
+  if a milestone was completed, its build-log entry written and the plan status table updated.
+- Committed and pushed to `main` with the task id in the message; nothing red committed.
 
 ## Core without modules
 

@@ -3,14 +3,18 @@
 What the plan assumes but nobody has confirmed, and the questions still open. The owner decides
 when each is closed. **None of these blocks phase 1** (the frontend on the mock); the
 "Needed by" list below says which ones block a later step. Settled decisions are in
-`plan/README.md` (P01–P41).
+`plan/README.md` (P01–P45).
 
 ## Needed by (what blocks what)
 
 | When | Must be answered | Who |
 |---|---|---|
 | Before the first screens are reviewed (M1) | The boqlet wordmark as SVG (light and dark) and a favicon; until then it is set in the display face | Owner |
+| Right after FE-000 is pushed | Open the demo URL once and confirm it still works (only if the agent had no logged-in `vercel` CLI to check it itself) | Owner |
 | Start of phase 2 (BE-000) | Q16 auth provider, Q17 hosting and region, and D2–D9 in `07-backend/decisions-to-make.md` | Owner, asked by the backend agent |
+| Before BE-032 (end of phase 2) | A hosting account in the provider and region chosen in D8, for staging, with credentials the agent can use | Owner |
+| Before FE-047 (release) | The production account, the domain, and the provider secrets for auth (D1), email (D6) and billing (D7); whether the pricing module is on at launch | Owner |
+| After FE-046 | Remove or repoint the Vercel demo project; the PoC stays reachable as the git tag `poc-final` | Owner |
 | Before public launch | Q18 and Q26 (tiers, limits, prices), Q19 and Q20 (legal) | Owner (+ lawyer) |
 | After pilots | Q1–Q3, Q7, Q8, Q10–Q15, Q23, Q24, Q27–Q30, Q32 | Owner, with pilot firms |
 
