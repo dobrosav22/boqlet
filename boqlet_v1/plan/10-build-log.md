@@ -22,8 +22,8 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M0 |
 | Role | Frontend agent |
-| Last task done | FE-003 Mock API skeleton (2edb4ae) |
-| Next task | FE-004 Auth adapter (mock) and realtime client |
+| Last task done | FE-004 Auth adapter (mock) and realtime client (6888ec2) |
+| Next task | TS-001 Shared contract and scenario suites, CI |
 | Waiting for the owner | — |
 | In progress (not committed) | — |
 | Notes for the next session | Run every npm command in `boqlet_v1/`. Add shadcn components with `npm run ui:add -w @ifc-boq/app -- <name>`, never `npx shadcn add` (it installs the `cn` package; see `06-frontend/architecture.md` "Pinned versions"). `npm install <pkg> -w <ws>` sometimes fails on this machine with npm's "Cannot read properties of null (reading 'location')": add the dependency to the workspace's `package.json` by hand and run a plain `npm install`. On Windows, stopping a background `npm run dev:poc` leaves the Vite and uvicorn children running: stop them by the PIDs listening on 5173 and 8787 (and their `spawn_main` children), not every node or python process. Whether Vercel builds previews of `v_1` was not checked from the session (no Vercel access). |
