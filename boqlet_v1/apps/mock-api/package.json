@@ -1,0 +1,30 @@
+{
+  "name": "@ifc-boq/mock-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mock backend implementing packages/api/openapi.yaml for frontend development and tests (plan/06-frontend/mock-api.md). A test double, not a prototype of the backend.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/server.ts",
+    "start": "tsx src/server.ts",
+    "seed": "tsx src/seed-cli.ts",
+    "reset": "tsx src/seed-cli.ts --reset",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/vitest.mjs"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.8",
+    "@ifc-boq/api": "*",
+    "@ifc-boq/types": "*",
+    "@redocly/openapi-core": "2.77.0",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "hono": "4.13.18"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "4.23.15",
+    "typescript": "^5.6.3",
+    "vitest": "5.1.0"
+  }
+}

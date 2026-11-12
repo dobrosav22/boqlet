@@ -36,8 +36,9 @@ npm run dev:poc      # PoC: engine on 127.0.0.1:8787 + web on http://localhost:5
 | Command | What it does |
 |---|---|
 | `npm run dev:poc` | The proof of concept: engine and PoC web app (concurrently). Vite proxies `/api` to the engine. |
-| `npm run dev:app` | The product app (`apps/app`, Next.js) on http://localhost:3000; `/api/v1` is proxied to the mock on 4010 (`API_PROXY_TARGET`). |
-| `npm run test` | Typecheck all workspaces, lint the app, the app's unit tests (Vitest), then the engine tests (pytest). |
+| `npm run dev:app` | The product in development: PoC engine API (8787) + mock API (`apps/mock-api`, 4010) + app (`apps/app`, Next.js, http://localhost:3000; `/api/v1` proxied to the mock). Sign in as a seeded user (`/_dev/users` on 4010). |
+| `npm run dev:mock` / `npm run mock:seed` / `npm run mock:reset` | The mock API alone / seed `apps/mock-api/.data` if empty / wipe and reseed. |
+| `npm run test` | Typecheck all workspaces, lint the app, the app's and the mock's tests (Vitest), then the engine tests (pytest). The mock's Duplex test runs only when the engine is up (`npm run dev:engine`). |
 | `npm run lint` / `npm run test:app` / `npm run e2e:app` | The app's ESLint (no literal UI strings, F15) / Vitest unit tests / Playwright end-to-end tests (starts the app if it isn't running). |
 | `npm run test:engine` | Engine tests only. Includes the Duplex acceptance test. |
 | `npm run typecheck` / `npm run build:poc` | Typecheck all workspaces / production build of the PoC web app. |

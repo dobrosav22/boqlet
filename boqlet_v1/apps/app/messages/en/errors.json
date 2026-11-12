@@ -5,7 +5,7 @@
   "limit": {
     "title": "Your plan's limit is reached",
     "body": "This action needs more than your current plan allows.",
-    "detail": "Limit: {limit}. Used: {used}."
+    "detail": "{limit}: {current} of {max} in use."
   },
   "codes": {
     "revision_locked": "This BoQ is locked: it was saved or confirmed. Reopen it or work on the current version.",

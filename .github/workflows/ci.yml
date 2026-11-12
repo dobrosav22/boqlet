@@ -48,6 +48,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:app
+      - name: Mock API tests (the engine-backed test is skipped here; TS-001 runs it with the engine)
+        run: npm run test:mock
       - run: npm run build:app
 
   e2e:

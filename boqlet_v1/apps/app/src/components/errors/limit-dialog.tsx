@@ -23,8 +23,10 @@ export function LimitDialog() {
   const t = useTranslations();
   const [error, setError] = useState<ApiError | null>(null);
   useEffect(() => registerGlobalErrorHandler("limitReached", setError), []);
+  // 402 details (conventions.md): which limit, the current count and the plan maximum.
   const limit = error?.details?.limit;
-  const used = error?.details?.used;
+  const current = error?.details?.current;
+  const max = error?.details?.max;
   return (
     <Dialog open={error !== null} onOpenChange={(open) => !open && setError(null)}>
       <DialogContent data-testid="limit-dialog">
@@ -32,8 +34,10 @@ export function LimitDialog() {
           <DialogTitle>{t("errors.limit.title")}</DialogTitle>
           <DialogDescription>{t("errors.limit.body")}</DialogDescription>
         </DialogHeader>
-        {limit !== undefined && used !== undefined && (
-          <p className="text-ui">{t("errors.limit.detail", { limit: String(limit), used: String(used) })}</p>
+        {limit !== undefined && current !== undefined && max !== undefined && (
+          <p className="text-ui" data-testid="limit-detail">
+            {t("errors.limit.detail", { limit: String(limit), current: Number(current), max: Number(max) })}
+          </p>
         )}
         <DialogFooter>
           <DialogClose render={<Button />}>{t("common.ok")}</DialogClose>
