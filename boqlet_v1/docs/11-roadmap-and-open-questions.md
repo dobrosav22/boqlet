@@ -109,11 +109,16 @@ Things the product build doesn't do yet, with the task that deals with each.
   interrupted upload are not built; abandoned `awaiting_upload` versions are not cleaned up after 24 h
   (the mock's scheduler, M6); processing minutes are counted for runs only, not parses (FE-019).
 - BoQs (FE-008): Save version calls `POST /revisions/{id}/issue`, which the mock answers
-  `501 not_implemented` until FE-031 (the button's blocking rule, BR-22, works); the Sheet and Questions
-  tabs show the current run's figures only (FE-009, FE-010); runs carry no decisions yet, so pending
-  changes cover inputs only (FE-010); an old run can't be opened or compared from the run history yet
-  (FE-009, FE-030); a BoQ's model scope is shown, not editable (FE-021); "Generate a BoQ" is offered on
+  `501 not_implemented` until FE-031 (the button's blocking rule, BR-22, works); the Questions tab shows
+  the current run's counts only (FE-010); runs carry no decisions yet, so pending changes cover inputs
+  only (FE-010); an old run can't be opened or compared from the run history yet (FE-030); a BoQ's model scope is shown, not editable (FE-021); "Generate a BoQ" is offered on
   the model version page, not yet in the ready notification (FE-018).
+- Sheet (FE-009): no position numbers in the No. column (FE-040); Description shows the rule set's line
+  text, not item texts (FE-027, EN-010); the line detail has the formula in words, settings, element
+  shares, codes and the log, but not yet the plain-words "How it is calculated" steps (FE-013) or "Show in
+  3D" (FE-014, FE-016); no "not in the models" notice (FE-015); no edits, manual lines or "Edited" /
+  "overridden" filter (FE-011); the app loads up to 20,000 lines at once and doesn't yet switch to the
+  server-side grouping above that (the mock serves it; FE-045).
 - Phase-1 interim (FE-008): federation and resolution settings are stored with the inputs but not sent
   to the engine (the PoC API takes neither; EN-001); a rule-set patch is run as saved, so its parent must
   be a shipped preset (org-level patch chains with FE-025).
@@ -185,6 +190,7 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-11-12 | 94c6cc4 | FE-009: F06 sheet on the mock and in the app: lines, line detail, warnings and the paged log served from the run's stored result (with server-side grouping for large runs); the Sheet tab, virtualised and grouped by any attached classification with subtotals, filters, toggleable columns and keyboard; the line detail with the formula in words (PoC `readable.ts` ported), settings, element shares and their total, codes, notes and log; the warnings bar and the Log tab; contract fix for `RunLine`; 10 sheet scenarios, 5 e2e flows, the 20,000-line perf test (60 fps scrolling, Group by switch 27 ms on a production build) |
 | 2026-11-12 | c5d3b33 | FE-008: F04 on the mock and in the app: BoQs with their working version, inputs prefilled from the project defaults and every model's latest ready version, the Setup tab (models with version pickers and the newer-version hint, rule set with versions, ordered classifications and dictionary layers with the project dictionary last, advanced settings), runs as jobs through the PoC engine with live stages, complete / needs input / failed / cancelled, run history, pending changes blocking Save version (BR-22), archive and restore, "Generate a BoQ" from a ready model version; fixes the mock router checking inline query parameters against the wrong schema; 11 F04 scenarios (incl. BR-02), 3 e2e flows |
 | 2026-11-12 | dc24b65 | FE-007: F03 on the mock and in the app: models, versions uploaded straight to signed URLs with progress, header check (`not_ifc` fails without a job), content dedupe across the org, the parse job through the PoC engine with live stages over SSE, failure and retry, the input-check report (counts by class, checks with their elements, storeys), names preview, the ready notification as a toast; 6 shared F03 scenarios through mock + engine, 4 e2e flows; CI installs the engine for e2e and suites |
 | 2026-11-12 | 2500f97 | FE-006: F02 on the mock and in the app: dashboard (needs-you list, project cards with generated compositions, empty state with the sample project), projects list, new project with the `activeProjects` limit, project overview, settings (members from the org only, archive and restore), activity; project visibility and the `permissions` keys (now listed in 03-domain/permissions.md); archived projects refuse writes with `409 project_archived`; 7 shared F02 scenarios, 6 e2e flows |

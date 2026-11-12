@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M1 (core loop) |
 | Role | Frontend agent |
-| Last task done | FE-008 BoQ create, setup, generate (F04) (c5d3b33) |
-| Next task | FE-009 BoQ sheet (F06 §1–5, 8–11) |
-| Waiting for the owner | — |
+| Last task done | FE-009 BoQ sheet (F06 §1–5, 8–11) (94c6cc4) |
+| Next task | FE-010 Questions and decisions (F05) |
+| Waiting for the owner | — (the session stopped after FE-009 because the owner asked it to; start the next one with the usual prompt) |
 | In progress (not committed) | — |
-| Notes for the next session | Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | FE-010 must also restate `QuestionWithDecision` in `openapi.yaml` the way FE-009 restated `RunLine` (see the FE-008/FE-009 entry). Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,58 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-12 — M1 decisions: FE-008 and FE-009 (frontend agent)
+- **Decisions taken:**
+  - Runs on the interim engine path (`apps/mock-api/src/handlers/boqs.ts`): shipped system presets
+    (version 1) go to the PoC by their own id; any other preset version is saved once as
+    `mock-<versionId>` (doc id rewritten). The project dictionary's latest published version is appended
+    as the last dictionary (it is never listed in `inputs.dictionaryVersionIds`; listing it answers
+    `400 invalid_inputs`). The full `BoqResult` is stored gzipped at `orgs/<orgId>/runs/<runId>/result.json.gz`;
+    lines, line detail, warnings and log are read from it (`handlers/lines.ts`, cached per run).
+  - A run's `request` keeps the inputs and the project dictionary version it used; `pendingChanges`
+    compares them with the revision (`inputs.models`, `inputs.ruleSet`, `inputs.classifications`,
+    `inputs.dictionaries`, `inputs.federation`, `inputs.resolution`). FE-010 adds `decisions`
+    (`request.decisionsHash` is there, empty).
+  - The revision's `currentRunId` moves only on `complete` / `needs_input`, to the newest run by creation
+    time; a failed or cancelled newer run leaves it. The header derives its state from the run list
+    (`apps/app/src/features/boqs/run-state.ts`).
+  - Mock error codes added: `boq_archived`, `no_models`, `no_rule_set`, `invalid_inputs`,
+    `preset_unavailable`, `run_not_finished`. Run failures carry `engine_unavailable` or `run_error`.
+    Notifications: `run.needs_input`, and `job.failed` for a failed run.
+  - BoQ archive and restore are the lead's (`archive` permission key); revision `permissions` turn
+    `editBoqs`, `answerQuestions`, `editLines`, `saveVersion` off for an archived or confirmed BoQ and a
+    revision that isn't `draft`.
+  - Setup edits are saved one change at a time (`PATCH /revisions/{id}`), optimistically in the app.
+  - The sheet groups, filters and subtotals client-side (`features/boq-sheet/model.ts`, pure, tested);
+    TanStack Table only owns the columns and their visibility; rows are virtualised at 32 px in their
+    own component with memoised rows. A group whose lines are all "to confirm" shows no sum.
+  - `readable.ts` is ported to `apps/app/src/features/library/lib` with labels from the `library`
+    message namespace (`library.names.<name>.label`); slot labels come from the run's rule-set version
+    (`GET /preset-versions/{id}`, which returns `flattened` for patches through the engine's check).
+- **Deviations from the spec:**
+  - Contract fix: `RunLine` was `allOf` the generated `BoqLine`, whose `additionalProperties: false`
+    rejects `sortIndex`, so no response could validate. It now lists BoqLine's properties by reference
+    (`openapi.yaml`). `QuestionWithDecision` has the same construction over `Question`: FE-010 must fix it
+    the same way.
+  - Fixed in the mock router (FE-008): an operation's inline query parameters were validated against
+    the wrong schema when the path has parameters of its own (the merged list shifted the pointers).
+- **Measured (F06-AC11, nfr.md):** 20,000 lines, Chromium 1440×1000 on the owner's machine:
+  production build 60.0 fps scrolling (p95 frame 16.8 ms), Group by switch 27 ms; `next dev` 58.3 fps,
+  switch 379 ms. `e2e/sheet.perf.spec.ts` holds 300 ms only with `E2E_PRODUCTION=1` (start the app with
+  `API_PROXY_TARGET=http://localhost:4010 npm run build:app` then `npm run start -w @ifc-boq/app`;
+  production builds proxy `/api/v1` only when `API_PROXY_TARGET` is set at build time).
+- **Known issues and debt:** run results are read from the mock's blob folder per request (cached for
+  8 runs); fine for the mock, not a pattern for Java (which ingests rows, 07-backend).
+- **For the next agent:**
+  - `tests/run.mjs` gives the suites' private engine its own `IFC_BOQ_USER_PRESETS` (the suite's temp
+    folder), so runs don't fill `presets/user`.
+  - e2e helpers `modelWithVersion` and `generatedDuplexBoq` set up a ready model and a finished run
+    through the API in a few seconds (the second upload of the Duplex reuses the parse).
+  - Message keys can't contain dots: pending-change codes like `inputs.ruleSet` are looked up as
+    `inputs_ruleSet`.
+  - Don't edit `apps/app` files while Playwright runs against `next dev`: a reload breaks a running
+    test (seen once in `shell.spec.ts`).
 
 ### 2026-11-12 — M1 decisions so far: FE-005…FE-007 (frontend agent)
 - **Decisions taken:**
