@@ -45,6 +45,33 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 
 ## Entries
 
+### 2026-11-12 — M1 decisions so far: FE-005…FE-007 (frontend agent)
+- **Decisions taken:**
+  - Project `permissions` keys are fixed in `03-domain/permissions.md` (FE-006); the mock computes
+    them in `apps/mock-api/src/projects.ts`. Org-level gating uses `orgCan` from `GET /me` roles.
+  - Mock error codes added where the contract left them open: `own_role`, `already_invited`,
+    `email_mismatch`, `confirm_mismatch` (F01), `not_org_member`, `last_lead` (F02), `upload_missing`
+    (F03). Java should use the same codes; the shared scenarios assert them.
+  - The mock signs people up with `POST /_dev/users {name, email}`; the suites read invitation
+    links from `/_dev/outbox` (`tests/support/mail.ts`). Java needs a test-only mail sink and a
+    token strategy (`tests/support/users.ts`) after BE-000.
+  - `node tests/run.mjs <suite> --mock` starts a private PoC engine (the venv's uvicorn, no reload,
+    free port) and a fresh mock pointed at it; scenarios that parse need it.
+  - Jobs in the mock: `apps/mock-api/src/jobs.ts` (one at a time per type, progress over SSE);
+    model versions in `handlers/models.ts`. The app shows job progress from the `jobProgress`
+    query, which SSE `job.progress` events overwrite.
+  - Codegen keeps fields with a `default` optional (`defaultNonNullable: false`).
+- **Deviations from the spec:** none beyond those listed in `docs/11` "Known limitations of the
+  product build".
+- **Known issues and debt:** the PoC sends `null` for optional `NameUse` fields (the mock drops
+  them; EN-001's worker should omit them).
+- **For the next agent:**
+  - e2e: Playwright starts engine, mock and app (or reuses running ones); run with two workers;
+    give every created model, project and org a unique name: tests run in parallel as the same
+    seeded users and receive each other's notifications.
+  - Forms that must not submit before hydration render after a client fetch (the mock sign-up form).
+  - Audit action codes contain dots; message keys use underscores (`project_created`).
+
 ### 2026-11-12 — M0 Consolidation, contract and scaffolding (frontend agent)
 - **Built:** FE-000, FE-001, FE-002, FE-003, FE-004, TS-001; 0921ea9..dfa66f0 (plus the record commits).
 - **Exit criteria:**
