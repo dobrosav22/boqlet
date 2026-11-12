@@ -37,13 +37,23 @@ Set in FE-001; change them deliberately and update this table.
 | `openapi-typescript` | 7.13.0 | product root (`npm run api:gen`) |
 | `openapi-fetch` | 0.17.0 | `packages/api`, `packages/pricing-api` |
 | `@redocly/cli` | 2.77.0 | product root (`npm run api:lint`) |
-| TypeScript | 5.x (5.9 installed) | every workspace |
+| `next-intl` | 4.15.1 | `apps/app` (no locale in the URL; the cookie `boqlet-locale` carries the user's language) |
+| `@tanstack/react-query` | 5.107.1 | `apps/app` |
+| `next-themes`, `sonner` | 0.4.6, 2.0.8 | `apps/app` (theme class on `<html>`, default "system"; toasts) |
+| `@fontsource-variable/jetbrains-mono`, `@fontsource-variable/inter-tight` | 5.3.0 | `apps/app` (self-hosted, every subset incl. Latin Extended and Cyrillic) |
+| `eslint`, `eslint-config-next` | 9.39.5, 16.4.6 | `apps/app` (ESLint 10 is not supported by `eslint-plugin-react` yet) |
+| `vitest`, `@vitejs/plugin-react`, `@testing-library/react`, `jsdom` | 5.1.0, 6.3.0, 16.3.3, 31.0.0 | `apps/app` (`npm run test` goes through `scripts/vitest.mjs`, which upper-cases a Windows drive letter in the cwd; Git Bash otherwise makes Vitest load itself twice) |
+| `@playwright/test` | 1.65.0 | `apps/app` (`npx playwright install chromium` once per machine) |
+| TypeScript | 5.x (5.9 installed) | every workspace; `apps/app/tsconfig.json` maps `react` to its own `@types/react` 19 (the PoC hoists 18) |
 
 **shadcn components.** The registry's `base-mira` components import `cn` from an npm package
 named `cn`; this repo doesn't take that dependency. `apps/app/scripts/ui-add.mjs` fetches a
 component (and its registry dependencies) from `https://ui.shadcn.com/r/styles/base-mira/`,
 points `cn` at `src/lib/utils.ts` (the classic clsx + tailwind-merge helper) and prints any npm
 dependency still to add. Don't run `npx shadcn add` directly: it tries to install `cn`.
+Local changes to added components (re-applied by hand after `ui:add --overwrite`): `dialog.tsx`
+translates its "Close" text (`common.close`); `button.tsx` default and icon sizes are 32 px with
+13 px text (the guidelines' control density).
 
 ## Rendering model
 

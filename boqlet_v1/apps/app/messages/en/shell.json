@@ -1,0 +1,17 @@
+{
+  "skipToContent": "Skip to content",
+  "mainNav": "Main",
+  "nav": {
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "library": "Library",
+    "settings": "Settings"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "Follow the system"
+  },
+  "home": "{appName} home"
+}

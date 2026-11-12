@@ -1,0 +1,18 @@
+{
+  "generic": "Something went wrong. Try again.",
+  "network": "The server could not be reached. Check your connection and try again.",
+  "conflict": "Someone else changed this in the meantime. The latest version is shown now.",
+  "limit": {
+    "title": "Your plan's limit is reached",
+    "body": "This action needs more than your current plan allows.",
+    "detail": "Limit: {limit}. Used: {used}."
+  },
+  "codes": {
+    "revision_locked": "This BoQ is locked: it was saved or confirmed. Reopen it or work on the current version.",
+    "invalid_transition": "That step is not possible in the current state.",
+    "deadline_passed": "The deadline has passed.",
+    "not_found": "Not found, or you don't have access.",
+    "forbidden": "You don't have permission to do this.",
+    "validation_failed": "Some values are not valid. Check the form and try again."
+  }
+}

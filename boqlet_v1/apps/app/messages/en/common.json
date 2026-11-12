@@ -1,0 +1,34 @@
+{
+  "loading": "Loading…",
+  "retry": "Try again",
+  "close": "Close",
+  "cancel": "Cancel",
+  "ok": "OK",
+  "notFound": {
+    "code": "404",
+    "title": "Not found",
+    "body": "This page doesn't exist, or you don't have access to it.",
+    "home": "Go to the start page"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "body": "The page could not be shown. Try again; if it keeps happening, reload the page."
+  },
+  "home": {
+    "title": "IFC → BoQ",
+    "body": "Bills of quantities from building models, every number explained.",
+    "signIn": "Sign in"
+  },
+  "signIn": {
+    "title": "Sign in",
+    "placeholder": "Sign-in arrives with the auth adapter."
+  },
+  "admin": {
+    "title": "Platform admin",
+    "placeholder": "The admin console is built in F19."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "placeholder": "Projects and what needs you appear here."
+  }
+}

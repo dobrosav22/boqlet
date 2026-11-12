@@ -1,67 +1,91 @@
 #!/usr/bin/env node
-// Add shadcn/ui components of the style in components.json (base-mira, preset b38miVKzY) without
-// the shadcn CLI's install step: `npm run ui:add -w @ifc-boq/app -- button dialog`.
+// Add shadcn/ui components of the style in components.json (base-mira, preset b38miVKzY):
+//   npm run ui:add -w @ifc-boq/app -- button dialog [--overwrite]
 //
-// Why: the registry's components import `cn` from an npm package of that name, which this repo
-// does not use; they get the shadcn helper in `src/lib/utils.ts` (clsx + tailwind-merge) instead.
-// Registry dependencies are added too; npm dependencies are printed for you to add to
-// apps/app/package.json (pinned) and install with a plain `npm install` in the product root.
+// Why not `npx shadcn add`: the registry's components import `cn` from an npm package of that
+// name, and the CLI installs it; this repo uses the classic helper in `src/lib/utils.ts`
+// (clsx + tailwind-merge) instead. So this script asks the CLI for a dry run with the files'
+// contents (which already carries every CLI transform: icons, aliases, "use client"), writes the
+// files itself with `cn` imported from "@/lib/utils", and prints the npm dependencies still to
+// add (pin them in apps/app/package.json, then a plain `npm install` in the product root).
 // Existing files are kept unless --overwrite is given.
+import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+const SHADCN = "shadcn@4.23.0";
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const config = JSON.parse(await readFile(path.join(appRoot, "components.json"), "utf8"));
-const style = config.style;
 const args = process.argv.slice(2);
 const overwrite = args.includes("--overwrite");
-const queue = args.filter((a) => !a.startsWith("--"));
-if (queue.length === 0) {
+const names = args.filter((a) => !a.startsWith("--"));
+if (names.length === 0) {
   console.error("usage: ui-add <component> [...] [--overwrite]");
   process.exit(2);
 }
 
-const target = { "registry:ui": "src/components/ui", "registry:hook": "src/hooks", "registry:lib": "src/lib" };
-const seen = new Set();
-const npmDeps = new Set();
-const pkg = JSON.parse(await readFile(path.join(appRoot, "package.json"), "utf8"));
-const installed = new Set([...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.devDependencies ?? {})]);
+const ANSI = /\x1b\[[0-9;]*m/g;
+const npx = process.platform === "win32" ? "npx.cmd" : "npx";
+const files = new Map();
+const deps = new Set();
 
-while (queue.length) {
-  const name = queue.shift();
-  if (seen.has(name)) continue;
-  seen.add(name);
-  const url = name.startsWith("http") ? name : `https://ui.shadcn.com/r/styles/${style}/${name}.json`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`${url}: ${res.status}`);
-  const item = await res.json();
-  for (const dep of item.registryDependencies ?? []) {
-    const short = dep.replace(/^@shadcn\//, "");
-    if (short !== "utils") queue.push(short);
-  }
-  for (const dep of item.dependencies ?? []) {
-    const bare = dep.replace(/(?<=.)@[^/]*$/, "");
-    if (bare !== "cn" && !installed.has(bare)) npmDeps.add(dep);
-  }
-  for (const file of item.files ?? []) {
-    const dir = target[file.type];
-    if (!dir) {
-      console.warn(`[ui:add] ${name}: skipped ${file.path} (${file.type})`);
+// One dry run per component: asked for several at once, the CLI leaves some files out of the view.
+for (const name of names) {
+  const run = execFileSync(npx, ["-y", SHADCN, "add", name, "--dry-run", "--view", "--cwd", appRoot], {
+    cwd: appRoot,
+    encoding: "utf8",
+    shell: process.platform === "win32",
+    env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" },
+  }).replace(ANSI, "");
+  // Each file:  ├ <path> (create|overwrite|skip) N lines / │ ┌── / │ │ <line>… / │ └──
+  // Dependencies:  ├ Dependencies (N) / │ + <package>
+  let current = null;
+  let inDeps = false;
+  for (const line of run.split(/\r?\n/)) {
+    const header = line.match(/^├ (\S+) \((?:create|overwrite|skip)\)/);
+    if (header) {
+      const file = header[1].split("\\").join("/");
+      current = files.has(file) ? null : { body: [] };
+      if (current) files.set(file, current);
+      inDeps = false;
       continue;
     }
-    const out = path.join(appRoot, dir, path.basename(file.path));
-    if (existsSync(out) && !overwrite) {
-      console.log(`[ui:add] kept ${path.relative(appRoot, out)}`);
+    if (line.startsWith("├ Dependencies")) {
+      inDeps = true;
       continue;
     }
-    const content = file.content
-      .replace(/from "cn"/g, 'from "@/lib/utils"')
-      .replace(/from "@\/registry\/[^/]+\/(ui|hooks|lib)\//g, (_m, kind) => `from "@/${kind === "ui" ? "components/ui" : kind}/`);
-    await mkdir(path.dirname(out), { recursive: true });
-    await writeFile(out, content, "utf8");
-    console.log(`[ui:add] wrote ${path.relative(appRoot, out)}`);
+    if (inDeps) {
+      const dep = line.match(/^│ \+ (\S+)/);
+      if (dep) deps.add(dep[1]);
+      else if (!line.startsWith("│ ")) inDeps = false;
+      continue;
+    }
+    if (!current) continue;
+    if (line.startsWith("│ │ ")) current.body.push(line.slice(4));
+    else if (line === "│ │") current.body.push("");
+    else if (line.startsWith("│ └")) current = null;
   }
 }
-if (npmDeps.size) console.log(`[ui:add] add these npm dependencies (pinned) to apps/app/package.json: ${[...npmDeps].join(" ")}`);
+if (files.size === 0) throw new Error("ui-add: no files in the shadcn dry run");
+
+for (const [file, { body }] of files) {
+  const out = path.join(appRoot, file);
+  if (existsSync(out) && !overwrite) {
+    console.log(`[ui:add] kept ${file}`);
+    continue;
+  }
+  while (body.length && body[body.length - 1] === "") body.pop();
+  const content = body.join("\n").replace(/from "cn"/g, 'from "@/lib/utils"') + "\n";
+  await mkdir(path.dirname(out), { recursive: true });
+  await writeFile(out, content, "utf8");
+  console.log(`[ui:add] wrote ${file}`);
+}
+
+const pkg = JSON.parse(await readFile(path.join(appRoot, "package.json"), "utf8"));
+const have = new Set([...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.devDependencies ?? {})]);
+const missing = [...deps].filter((d) => {
+  const bare = d.replace(/(?<=.)@[^/]*$/, "");
+  return bare !== "cn" && !have.has(bare);
+});
+if (missing.length) console.log(`[ui:add] add these npm dependencies (pinned) to apps/app/package.json: ${missing.join(" ")}`);
