@@ -41,7 +41,7 @@ test("F04-AC1..AC4 create with both models, generate without a reload, pending c
   await expect(page.getByTestId("save-version")).toBeDisabled();
 
   // Use one model, so the sheet matches the hand-made Duplex BoQ's scope.
-  await page.getByTestId("use-model-Architecture B").uncheck();
+  await page.getByTestId("use-model-Architecture B").click();
   await expect(page.getByTestId("use-model-Architecture B")).not.toBeChecked();
 
   // AC2: generate and see the result arrive without a reload (cached parse: well under 10 s).

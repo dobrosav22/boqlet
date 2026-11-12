@@ -78,15 +78,20 @@ export function useUpdateInputs(revisionId: string, boqId: string) {
     mutationFn: async (inputs: Partial<RevisionInputs>) => (await api.PATCH("/revisions/{revisionId}", { params: { path: { revisionId } }, body: { inputs } })).data!,
     // Optimistic: the control shows the change at once; the server's answer (or a rollback) follows.
     onMutate: async (inputs) => {
-      await client.cancelQueries({ queryKey: keys.boq(boqId) });
       const before = client.getQueryData<Boq>(keys.boq(boqId));
-      if (before) {
+      const apply = () => {
+        if (!before) return;
         const models = inputs.models?.map((m) => ({ ...m, newerVersionAvailable: before.currentRevision.inputs.models.find((x) => x.modelVersionId === m.modelVersionId)?.newerVersionAvailable ?? null }));
         client.setQueryData<Boq>(keys.boq(boqId), {
           ...before,
           currentRevision: { ...before.currentRevision, inputs: { ...before.currentRevision.inputs, ...inputs, ...(models ? { models } : {}) } },
         });
-      }
+      };
+      // Show the change at once; a refetch in flight is cancelled (so it can't overwrite it), and
+      // cancelling reverts the query to its state before that fetch, so the change is applied again.
+      apply();
+      await client.cancelQueries({ queryKey: keys.boq(boqId) });
+      apply();
       return { before };
     },
     onError: (_e, _inputs, context) => {
