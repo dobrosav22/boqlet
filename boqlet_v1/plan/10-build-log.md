@@ -22,8 +22,8 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M3 (Versions, exports, sharing, notifications) |
 | Role | Frontend agent |
-| Last task done | FE-031 Versions, confirmation, optional approval (f7e9428) |
-| Next task | FE-032 Exports tab and frozen exports (F12) |
+| Last task done | FE-032 Exports tab and frozen exports (8d49e51) |
+| Next task | FE-033 Activity and audit (F09 audit, S18, S25) |
 | Waiting for the owner | — (the owner asked this session to stop after FE-037, the end of M3) |
 | In progress (not committed) | — |
 | Notes for the next session | Read the M3 decision entries (newest first), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
@@ -44,6 +44,22 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M3 decisions: FE-032 (frontend agent)
+- **Built:** FE-032, 8d49e51. `features/exports/exports-tab.tsx`, the CSV button on S18, mock `exportRun` /
+  `downloadExport` / `exportProjectAuditCsv`. Checked by `tests/scenarios/versions.test.ts` "frozen exports and
+  the audit CSV" (3) and `e2e/exports.spec.ts` (F12-AC3).
+- **Decisions taken:**
+  - BR-25 in the mock: `POST /runs/{runId}/exports` on a run frozen in a saved version (and not the working
+    version's current run) answers a job that succeeds at once with the frozen `exportId` (output also has
+    `frozen: true`); if that file isn't written yet, it writes it as the saved version's. The working version's
+    export of the run it shares with the last saved version is a WORKING `boq_xlsx` recorded on the working
+    version.
+  - Contract: `exportProjectAuditCsv` takes the audit page's filters (`actorId`, `action`, `entityType`), as
+    F12 says ("filtered audit events"). The CSV has a BOM, CRLF lines, columns `at, actor, action, entityType,
+    entityId, data`.
+  - The Exports tab lists exports per revision (`GET /revisions/{id}/exports` for every listed version);
+    `job.finished` of an `export_xlsx` job and a revision's `entity.changed` refresh them.
 
 ### 2026-11-13 — M3 decisions: FE-031 (frontend agent)
 - **Built:** FE-031, f7e9428. Mock `handlers/versions.ts` (issue, submit, request changes, approve, withdraw =
