@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M1 (core loop) |
 | Role | Frontend agent |
-| Last task done | FE-017 Exports (run Excel) (da07e51) |
-| Next task | FE-018 Notifications (F13 part) |
+| Last task done | FE-018 Notifications (F13 part) (94026ce) |
+| Next task | FE-019 Entitlement UX (F14 part) |
 | Waiting for the owner | — |
 | In progress (not committed) | — |
-| Notes for the next session | Read the FE-017, FE-014, FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | Read the FE-018, FE-017, FE-014, FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,25 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M1 decisions: FE-018 (frontend agent)
+- **Built:** FE-018, 94026ce. F13-AC1 in `e2e/notifications.spec.ts` (two tabs: the run the other tab starts
+  shows here as a toast, the new run in the header and a bell item within 2 s); bell, list page, read
+  state and email preferences there too; endpoints in `tests/scenarios/sheet.test.ts`; who gets an email
+  in `apps/mock-api/test/notify.test.ts`. F13-AC2 and AC3 are the pricing module's (MP1).
+- **Decisions taken:**
+  - Mock: one `notify()` (`src/notify.ts`) for every notification: the row, the SSE event, and an email
+    when F13 emails the kind and the recipient's category is on. Kinds map to the contract's core
+    categories (jobs, versions, reviews, membership, limits); preferences are stored per user, missing =
+    on; `PUT` with an unknown category is `400 invalid_body`.
+  - Job notifications carry `params.jobId`; `src/realtime/local-jobs.ts` holds the jobs this tab shows
+    itself (exports), whose notifications go to the bell without a toast. A finished run is
+    `job.succeeded` (or `run.needs_input`), an export `job.succeeded` with the file name.
+  - The bell queries `GET /notifications?limit=8` (its count is the response's `unreadCount`); the page
+    is `/notifications` outside the org shell, like `/account`. Email checkboxes keep a local value so a
+    tick shows at once.
+- **For the next agent:** e2e tests run in parallel as the same seeded users: don't compare unread
+  counts; look for the item. `current-run` now has `data-run` (the run id).
 
 ### 2026-11-13 — M1 decisions: FE-017 (frontend agent)
 - **Built:** FE-017, da07e51. F12-AC1 and F06-AC3's export part in `e2e/exports.spec.ts`: a Duplex BoQ with a
