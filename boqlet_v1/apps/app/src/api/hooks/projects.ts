@@ -11,9 +11,10 @@ export function useProjects(orgId: string, filters: { status?: "active" | "archi
   });
 }
 
-export function useProject(projectId: string) {
+export function useProject(projectId: string, enabled = true) {
   return useQuery({
     queryKey: keys.project(projectId),
+    enabled,
     queryFn: async () => (await api.GET("/projects/{projectId}", { params: { path: { projectId } } })).data!,
   });
 }

@@ -146,6 +146,7 @@ export function buildSeed(): Db {
     member("small", "olivia", "owner"),
   ];
   const { presets, presetVersions } = systemPresets(at);
+  orgPresets(presets, presetVersions, at);
   const store: Db = { version: 1, seededAt: at, users, orgs, memberships, plans: PLANS, presets, presetVersions, invitations: [], projects: [], projectMembers: [], models: [], modelVersions: [], jobs: [], boqs: [], revisions: [], runs: [], decisions: [], overrides: [], manualItems: [], exports: [], sessions: [], usage: [], notifications: [], notificationPreferences: {}, audit: [], deletedOrgIds: [] };
   seedProjects(store, at);
   // mock-api.md "Seed data": Marko is signed in elsewhere, so the takeover screen can be tried.
@@ -204,6 +205,56 @@ export function systemPresets(at: string) {
   const resolution = readJson(path.join(dir("settings"), "resolution.json"));
   add("resolution", String(resolution.id ?? "resolution-default"), String(resolution.name ?? "Default resolution settings"), resolution);
   return { presets, presetVersions };
+}
+
+export const SEED_PRESETS = {
+  studioRules: seedId("preset:org:studio-rules"),
+  studioTrades: seedId("preset:org:studio-trades"),
+  studioNames: seedId("preset:org:studio-names"),
+} as const;
+
+/**
+ * Studio Demo's own Library (mock-api.md "Seed data"): "Studio rules", a patch on As modelled with
+ * three settings changed, version 1 published and a draft; "Studio trades", a copy of demo-trades;
+ * "Studio names", a copy of acme-company. Written by Ivana, the library editor.
+ */
+function orgPresets(presets: PresetRec[], presetVersions: PresetVersionRec[], at: string) {
+  const ivana = SEED.users.ivana;
+  const systemVersion = (kind: PresetRec["kind"], slug: string) => presetVersions.find((v) => v.id === seedId(`preset-version:${kind}:${slug}:1`))!;
+  const add = (key: keyof typeof SEED_PRESETS, kind: PresetRec["kind"], slug: string, name: string, doc: unknown, extendsVersionId: string | null, extra: Partial<PresetRec> = {}) => {
+    const id = SEED_PRESETS[key];
+    presets.push({ id, orgId: SEED.orgs.studio, projectId: null, kind, layer: "org", slug, name, archived: false, createdAt: at, createdBy: ivana, updatedAt: at, updatedBy: ivana, ...extra });
+    presetVersions.push({ id: seedId(`preset-version:org:${slug}:1`), presetId: id, number: 1, status: "published", doc, extendsVersionId, problems: [], createdAt: at, createdBy: ivana, changeNote: "First version", publishedAt: at, publishedBy: ivana });
+  };
+  const rules = {
+    schemaVersion: "1.0",
+    id: "studio-rules",
+    name: "Studio rules",
+    version: "1",
+    extends: "as-modelled",
+    meta: {},
+    params: { wall_opening_mode: { value: "over_threshold" }, wall_opening_threshold: { value: 0.5 }, window_measure: { value: "area" } },
+  };
+  add("studioRules", "rule_set", "studio-rules", "Studio rules", rules, systemVersion("rule_set", "as-modelled").id, { basedOn: "As modelled", description: "Our office settings on As modelled." });
+  presetVersions.push({
+    id: seedId("preset-version:org:studio-rules:draft"),
+    presetId: SEED_PRESETS.studioRules,
+    number: null,
+    status: "draft",
+    doc: { ...rules, params: { ...rules.params, lines_by_storey: { value: true } } },
+    extendsVersionId: systemVersion("rule_set", "as-modelled").id,
+    problems: [],
+    createdAt: at,
+    createdBy: ivana,
+    updatedAt: at,
+    rev: 0,
+  });
+  const trades = structuredClone(systemVersion("classification", "demo-trades").doc) as { codeList: Record<string, unknown>; map: Record<string, unknown> };
+  trades.codeList = { ...trades.codeList, id: "studio-trades", name: "Studio trades" };
+  trades.map = { ...trades.map, id: "studio-trades-map", name: "Studio trades: map", codeList: "studio-trades" };
+  add("studioTrades", "classification", "studio-trades", "Studio trades", trades, null, { available: true });
+  const names = { ...(structuredClone(systemVersion("dictionary", "acme-company").doc) as Record<string, unknown>), id: "studio-names", name: "Studio names" };
+  add("studioNames", "dictionary", "studio-names", "Studio names", names, null);
 }
 
 /**

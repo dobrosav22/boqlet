@@ -8,7 +8,7 @@ import { memberOrg, requireOrgAction, roleIn } from "../permissions.js";
 import { activeProjectCount, projectPermissions, projectRoleOf, visibleProject, writableProject } from "../projects.js";
 import { json, noContent, type Handlers } from "../router.js";
 import { seedId } from "../ids.js";
-import { db, persist, type Db, type OrgRec, type ProjectRec, type ProjectRole, type UserRec } from "../store.js";
+import { db, persist, type Db, type OrgRec, type PresetRec, type ProjectRec, type ProjectRole, type UserRec } from "../store.js";
 import { openBlockingQuestions } from "../decisions.js";
 import { planLimits } from "./orgs.js";
 
@@ -49,13 +49,26 @@ function listItem(project: ProjectRec, userId: string) {
 
 /**
  * Initial defaults (F02 §2): the org's starred presets (FE-021), else the system "As modelled"
- * rule set, the global seed dictionary and no classification.
+ * rule set, the global seed dictionary and no classification. Per kind: the newest starred rule set;
+ * every starred classification (by name; the first is the default grouping); the global seed
+ * dictionary, then the starred company dictionaries (most general first). Only presets with a
+ * published version count; each gives its latest.
  */
-function initialDefaults(): ProjectRec["defaults"] {
+function initialDefaults(store: Db, orgId: string): ProjectRec["defaults"] {
+  const starred = (kind: PresetRec["kind"]) =>
+    store.presets
+      .filter((p) => p.orgId === orgId && p.layer === "org" && p.kind === kind && p.starred && !p.archived)
+      .map((p) => ({
+        preset: p,
+        version: store.presetVersions.filter((v) => v.presetId === p.id && v.status === "published").sort((a, b) => (b.number ?? 0) - (a.number ?? 0))[0],
+      }))
+      .filter((x) => x.version);
+  const ruleSet = starred("rule_set").sort((a, b) => b.preset.updatedAt.localeCompare(a.preset.updatedAt))[0];
+  const byName = (a: { preset: PresetRec }, b: { preset: PresetRec }) => a.preset.name.localeCompare(b.preset.name);
   return {
-    ruleSetVersionId: seedId("preset-version:rule_set:as-modelled:1"),
-    classificationVersionIds: [],
-    dictionaryVersionIds: [seedId("preset-version:dictionary:global-seed:1")],
+    ruleSetVersionId: ruleSet?.version!.id ?? seedId("preset-version:rule_set:as-modelled:1"),
+    classificationVersionIds: starred("classification").sort(byName).map((x) => x.version!.id),
+    dictionaryVersionIds: [seedId("preset-version:dictionary:global-seed:1"), ...starred("dictionary").sort(byName).map((x) => x.version!.id)],
     federationVersionId: null,
   };
 }
@@ -101,7 +114,7 @@ export function insertProject(
     locale: fields.locale ?? org.settings.defaultLocale ?? "en",
     status: "active",
     sample: fields.sample ?? false,
-    defaults: fields.defaults ?? initialDefaults(),
+    defaults: fields.defaults ?? initialDefaults(store, org.id),
     projectDictionaryId: "",
     createdAt: at,
     updatedAt: at,

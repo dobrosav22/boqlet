@@ -27,7 +27,9 @@ const LISTS: Record<string, (projectId?: string) => QueryKey[]> = {
   run: () => [["runs"]],
   // Decisions belong to the project: its decisions, and every run's questions (joined with them).
   decision: (p) => [p ? keys.decisions(p) : ["decisions"], ["questions"]],
-  preset: () => [["presets"], ["terms"]],
+  // A preset's lists, versions and where it is used. A draft's document is keyed by its ETag, which
+  // the refetched preset carries, so published versions (large code lists) are never refetched.
+  preset: () => [["presets"], ["terms"], ["presetVersions"], ["presetUsage"]],
   // A BoQ's line edits and manual lines (entityId = the BoQ).
   override: () => [["overrides"]],
   manualItem: () => [["manualItems"]],

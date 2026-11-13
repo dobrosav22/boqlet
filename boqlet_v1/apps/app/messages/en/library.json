@@ -280,5 +280,176 @@
   "formula": {
     "unclosed": "“{text}” has no closing ]",
     "unknown": "Unknown name {label}. Pick one from Names."
+  },
+  "kinds": {
+    "rule_set": "Rule sets",
+    "classification": "Classifications",
+    "dictionary": "Dictionaries",
+    "federation": "Federation",
+    "resolution": "Resolution"
+  },
+  "kindsOne": {
+    "rule_set": "Rule set",
+    "classification": "Classification",
+    "dictionary": "Dictionary",
+    "federation": "Federation settings",
+    "resolution": "Resolution settings"
+  },
+  "layers": {
+    "system": "System",
+    "org": "Company",
+    "project": "Project"
+  },
+  "hints": {
+    "rule_set": "How quantities are measured. Changes the numbers.",
+    "classification": "Codes, grouping and item texts. Never changes a number.",
+    "dictionary": "What the names in your models mean.",
+    "federation": "Which discipline's model owns which elements when several models go into one BoQ.",
+    "resolution": "How names are matched to meanings, and when to ask."
+  },
+  "home": {
+    "title": "Library",
+    "intro": "Your firm's measuring knowledge, as data you own: rule sets, classifications and dictionaries, versioned and shared by every project.",
+    "projectIntro": "Presets that belong to this project only, such as its own dictionary or a patch on a company rule set.",
+    "kinds": "Kinds",
+    "layer": "Layer",
+    "allLayers": "All layers",
+    "showArchived": "Show archived",
+    "empty": "Nothing here yet.",
+    "emptyProject": "This project has no presets of its own.",
+    "new": {
+      "rule_set": "New rule set",
+      "classification": "New classification",
+      "dictionary": "New dictionary",
+      "federation": "New federation settings",
+      "resolution": "New resolution settings"
+    }
+  },
+  "columns": {
+    "name": "Name",
+    "layer": "Layer",
+    "basedOn": "Based on",
+    "version": "Version",
+    "edited": "Last edited",
+    "usedBy": "Used by"
+  },
+  "preset": {
+    "tabs": "Preset",
+    "tab": {
+      "edit": "Edit",
+      "versions": "Versions",
+      "usage": "Where used"
+    },
+    "backToLibrary": "‹ Library",
+    "backToProject": "‹ Project library",
+    "versionN": "Version {n}",
+    "unpublished": "Not published yet",
+    "draft": "Draft",
+    "draftProblems": "Draft · {n, plural, one {# problem} other {# problems}}",
+    "problems": "{n, plural, one {# problem} other {# problems}}",
+    "noProblems": "no problems",
+    "basedOn": "Based on",
+    "latest": "Latest",
+    "lastEdit": "Last edit",
+    "editedBy": "{name}, {when}",
+    "starred": "Starred",
+    "starredHint": "Preselected for new projects",
+    "star": "Star for new projects",
+    "unstar": "Unstar",
+    "archived": "Archived",
+    "archivedNote": "This preset is archived: it is hidden from pickers and can't be edited. BoQs that used it keep their numbers.",
+    "unavailable": "Not downloaded",
+    "makeCopy": "Make a copy",
+    "editDetails": "Edit details",
+    "detailsHint": "The name and notes people see in the Library and in the BoQ setup.",
+    "save": "Save",
+    "archive": "Archive",
+    "archiveTitle": "Archive {name}?",
+    "archiveBody": "It disappears from the Library and from every picker. BoQs and saved versions that used it keep their numbers and their copy of it.",
+    "archivedToast": "{name} archived"
+  },
+  "create": {
+    "title": {
+      "rule_set": "New rule set",
+      "classification": "New classification",
+      "dictionary": "New dictionary",
+      "federation": "New federation settings",
+      "resolution": "New resolution settings"
+    },
+    "forProject": "For the project {project}",
+    "name": "Name",
+    "description": "Notes",
+    "optional": "optional",
+    "basedOn": "Based on",
+    "basedOnHint": "Free text, for your own reference, e.g. the rulebook you follow. boqlet doesn't check it against any standard.",
+    "start": "Start from",
+    "modes": {
+      "empty": "Empty",
+      "copy": "A copy",
+      "patch": "Changes on a rule set"
+    },
+    "modeHints": {
+      "empty": "Start with nothing and add what you need.",
+      "copy": "An independent copy of a version. Later changes to the original don't reach it.",
+      "patch": "Store only your changes. It follows the original's future versions."
+    },
+    "copyOf": "Copy of",
+    "patchOn": "Changes on",
+    "version": "Version",
+    "copyName": "{name} (copy)",
+    "submit": "Create",
+    "cancel": "Cancel",
+    "notAllowed": "You can view and pick presets here, but creating them is for library editors (and, in a project, its leads and estimators)."
+  },
+  "edit": {
+    "draftSaved": "Draft, saved {when}.",
+    "draftOver": "Version {n} stays in use until the draft is published.",
+    "noDraft": "Version {n} is the latest. Start a draft to change it.",
+    "system": "System presets are read-only. Make a copy to change one.",
+    "startDraft": "Start a draft",
+    "discard": "Discard draft",
+    "discardTitle": "Discard the draft?",
+    "discardBody": "Its changes are lost. The published versions stay as they are.",
+    "discardBodyNoVersion": "Its changes are lost. The preset has no published version, so it stays empty until you start again."
+  },
+  "versions": {
+    "hint": "Published versions never change. Tick two to compare them.",
+    "none": "No versions yet.",
+    "compare": "Compare",
+    "pick": "Pick",
+    "pickOne": "Pick {version} to compare",
+    "version": "Version",
+    "note": "Change note",
+    "by": "By",
+    "at": "When",
+    "view": "View",
+    "readOnly": "Read-only. Restore it as a draft to work from it.",
+    "restore": "Restore as draft",
+    "restoreTitle": "Restore version {n} as the draft?",
+    "restoreBody": "The current draft is replaced by version {n}'s document.",
+    "restored": "Version {n} is the draft now",
+    "diffTitle": "{older} → {newer}",
+    "diffSame": "The two versions are the same.",
+    "diffSummary": "{added, plural, one {# line added} other {# lines added}}, {removed, plural, one {# line removed} other {# lines removed}}",
+    "diffSkip": "{n, plural, one {# unchanged line} other {# unchanged lines}}"
+  },
+  "usage": {
+    "none": "No BoQ uses this preset yet.",
+    "project": "Project",
+    "boq": "BoQ",
+    "revision": "Revision",
+    "status": "Status",
+    "version": "Version used",
+    "statuses": {
+      "draft": "Working",
+      "in_review": "In review",
+      "approved": "Approved",
+      "issued": "Issued"
+    }
+  },
+  "document": {
+    "title": "Document",
+    "download": "Download JSON",
+    "truncated": "Showing the first {shown} of {total} lines"
   }
 }

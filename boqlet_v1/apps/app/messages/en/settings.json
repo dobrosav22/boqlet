@@ -97,7 +97,8 @@
       "maxModelsPerBoq": "Models per BoQ",
       "processingMinutesPerMonth": "Processing per month",
       "approvalWorkflow": "Review and approval",
-      "exportWatermark": "Watermark on exports"
+      "exportWatermark": "Watermark on exports",
+      "libraryOrgPresets": "Company presets"
     },
     "usedOf": "{used} of {max}",
     "usedUnlimited": "{used}, no limit",
@@ -114,7 +115,8 @@
       "maxModelsPerBoq": "{n}",
       "processingMinutesPerMonth": "{n} min",
       "approvalWorkflow": "{n}",
-      "exportWatermark": "{n}"
+      "exportWatermark": "{n}",
+      "libraryOrgPresets": "{n}"
     }
   },
   "usage": {

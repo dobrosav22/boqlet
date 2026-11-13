@@ -100,7 +100,11 @@
       "revision_inputs_changed": "Changed a BoQ's inputs",
       "run_created": "Started generating a BoQ",
       "run_finished": "Generated a BoQ",
-      "run_failed": "Generating a BoQ failed"
+      "run_failed": "Generating a BoQ failed",
+      "preset_created": "Created a preset",
+      "preset_updated": "Changed a preset's details",
+      "preset_archived": "Archived a preset",
+      "preset_draft_discarded": "Discarded a preset draft"
     }
   },
   "settings": {

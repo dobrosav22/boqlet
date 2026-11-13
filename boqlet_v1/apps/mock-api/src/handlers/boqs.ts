@@ -314,14 +314,23 @@ export function engineIdOf(version: PresetVersionRec): string {
 let cleanup: Promise<void> = Promise.resolve();
 export const presetsSettled = () => cleanup;
 
-/** Saves the version through the PoC API when it isn't a shipped one; returns its engine id. */
-export async function enginePresetId(version: PresetVersionRec): Promise<string> {
+/**
+ * Saves the version through the PoC API when it isn't a shipped one; returns its engine id. A
+ * rule-set patch on an org or project version saves that parent first (and its parents), under its
+ * own engine id, and lists it in `parents` (nearest last) so the caller can remove it afterwards.
+ */
+export async function enginePresetId(version: PresetVersionRec, parents?: [PresetFolder, string][]): Promise<string> {
   const preset = db().presets.find((p) => p.id === version.presetId)!;
   const id = engineIdOf(version);
   if (id === preset.slug) return id;
   const doc = structuredClone(version.doc) as Record<string, unknown>;
   if (preset.kind === "classification") (doc.codeList as Record<string, unknown>).id = id;
   else doc.id = id;
+  const parent = preset.kind === "rule_set" && typeof doc.extends === "string" && version.extendsVersionId ? db().presetVersions.find((v) => v.id === version.extendsVersionId) : undefined;
+  if (parent) {
+    doc.extends = await enginePresetId(parent, parents);
+    if ((doc.extends as string).startsWith("mock-")) parents?.push(["rules", doc.extends as string]);
+  }
   await engine().savePreset(FOLDER[preset.kind]!, id, doc);
   return id;
 }
@@ -367,7 +376,7 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
           return id;
         };
         const adjustments = run.request.adjustments ?? adjustmentsOf(boq.id, true);
-        let ruleSet = keep("rules")(await enginePresetId(version(inputs.ruleSetVersionId)));
+        let ruleSet = keep("rules")(await enginePresetId(version(inputs.ruleSetVersionId), saved));
         // Manual lines go to the engine as a patch that appends them to the rule set (data-model.md "ManualItem").
         if (adjustments.manualItems.length) {
           const patchId = `mock-run-${run.id}`;

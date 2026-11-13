@@ -100,16 +100,17 @@ Things the product build doesn't do yet, with the task that deals with each.
   versions, failed jobs) arrive with their features; F02-AC5 (a review request within 5 s) is checked
   in FE-031.
 - Project cards count reviews as 0 until those exist (FE-031).
-- Project default presets can't be chosen in the project's settings yet; every project starts with As
-  modelled and the global seed dictionary (per-BoQ pickers exist since FE-008; project defaults and
-  starred presets come with FE-021).
-- Models: scope rules can't be edited in the app yet (the selector UI comes with the Library, FE-021);
+- Project default presets can't be chosen in the project's settings yet. A new project starts with the
+  org's starred presets (FE-021, F02 §2), else As modelled and the global seed dictionary; per-BoQ
+  pickers exist since FE-008; the wizard's "Publish all" sets defaults (FE-028).
+- Models: scope rules can't be edited in the app yet (they need the Library's selector UI, ported with
+  the rule-set editor in FE-022; no task names the model setting itself);
   check rows don't open the viewer yet (FE-016, F03-AC5); multipart uploads over 100 MB and resuming an
   interrupted upload are not built; abandoned `awaiting_upload` versions are not cleaned up after 24 h
   (the mock's scheduler, M6); processing minutes are counted for runs only, not parses (FE-019).
 - BoQs (FE-008): Save version calls `POST /revisions/{id}/issue`, which the mock answers
   `501 not_implemented` until FE-031 (the button's blocking rule, BR-22, works); the Questions tab shows
-  an old run can't be opened or compared from the run history yet (FE-030); a BoQ's model scope is shown, not editable (FE-021); "Generate a BoQ" is offered on
+  an old run can't be opened or compared from the run history yet (FE-030); a BoQ's model scope is shown, not editable (with the selector UI, FE-022); "Generate a BoQ" is offered on
   the model version page, not yet in the ready notification (FE-018).
 - Sheet (FE-009): no position numbers in the No. column (FE-040); Description shows the rule set's line
   text, not item texts (FE-027, EN-010); "Show in 3D" opens the Viewer tab; on
@@ -165,15 +166,28 @@ Things the product build doesn't do yet, with the task that deals with each.
   formula slot the item points to, which it does check (EN-007 should add `formula` to the checked keys).
 - Questions and decisions (FE-010): no "Show in 3D" or element properties from a question (F05 §9,
   FE-016); no model filter (questions carry no model; FE-016 with the element index); promoting needs an
-  org dictionary, which can only be created with the Library (FE-021), so F05-AC5 is checked in M2;
+  org dictionary: they can be created since FE-021 (Studio Demo has "Studio names"), and F05-AC5 is
+  checked end to end with the dictionary editor (FE-024);
   F05-AC2 (a new model version asks nothing again) is checked with new model versions (FE-029);
   clearing a name answer keeps the entry it added to the project dictionary (edit it in the Library,
   FE-024); on the decisions page, rule and code answers are edited as text (the lists come from a run);
   the BR-23 dry run is skipped when no BoQ of the project is in review or approved, so answering stays one
   request; "used by latest runs" is approximate in the mock (mock-api.md "Decisions").
 - Phase-1 interim (FE-008): federation and resolution settings are stored with the inputs but not sent
-  to the engine (the PoC API takes neither; EN-001); a rule-set patch is run as saved, so its parent must
-  be a shipped preset (org-level patch chains with FE-025).
+  to the engine (the PoC API takes neither; EN-001). A rule-set patch on an org or project version is run
+  and checked with its parents saved or passed under `mock-<versionId>` (FE-021).
+- Library (FE-021): the Edit tab shows the document read-only as JSON until the editors (rule sets FE-022,
+  classifications FE-023, dictionaries FE-024); new presets stay drafts until publishing (FE-025), so
+  "Restore as draft" and comparisons need a preset with published versions (Studio rules in the seed).
+  Comparing two versions is a line diff of the JSON with sorted keys (F10 §5: a structured diff later).
+  Not yet: the Guided setup button (FE-028), guided mode and Clone's "Independent copy / Based on it"
+  dialog (FE-026; "Make a copy" makes a copy, a patch is made with New → "Changes on a rule set"),
+  starting from an imported code list (FE-023) or an Excel template (FE-026), the one-time "bring your
+  own licence" notice on the first rule set (F10 §12, with FE-026's guided creation), "rebase on latest"
+  for a patch whose parent is archived (FE-022), and preview (FE-025). Archive can't be undone (the
+  contract has no unarchive). Draft saves aren't audited (autosave saves every second, FE-022); creating,
+  renaming, starring, archiving and discarding are. The version list names who published a version, not
+  who last saved a draft.
 - Phase-1 interim: the mock reads check details from the PoC engine's cache on the same machine, and
   drops the `null` optional fields the PoC sends in names (the worker should omit them, EN-001).
 

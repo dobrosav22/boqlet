@@ -45,6 +45,44 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 
 ## Entries
 
+### 2026-11-13 — M2 decisions: FE-021 (frontend agent)
+- **Built:** FE-021, HASH. S19 `/{org}/library` (a tab per kind, layer filter, archived toggle, New, "Make a copy"
+  on system rows), S16 `/{org}/projects/{p}/library` (the project's own presets), create
+  `/{org}/library/{kind}/new` (empty / a copy of a version / changes on a rule set; `?mode=&from=&project=`),
+  S20 `/{org}/library/{kind}/{presetId}` (header with details, star, copy, archive; tabs Edit, Versions,
+  Where used). Checked by `tests/scenarios/library.test.ts` (10), `apps/mock-api/test/presets.test.ts` (3),
+  `e2e/library.spec.ts` (8, F10-AC6 included) and `src/features/library/json-diff.test.ts`.
+- **Decisions taken:**
+  - Mock (mock-api.md "What it implements", Library row): create modes, slugs unique per org and kind
+    (system slugs included), the document's id is the slug; a patch keeps `extends` = the parent document's
+    id plus `extendsVersionId`. `src/preset-docs.ts` holds the blank documents and `withParents`, which
+    passes org parents to the engine's check as `library` documents under `mock-<versionId>`;
+    `enginePresetId(version, parents)` saves the same chain for a run.
+  - Drafts: ETag `"<versionId>.<rev>"`, in `PresetVersionInfo.etag` and the `ETag` header of
+    `GET /preset-versions/{draft}` and `PUT /presets/{id}/draft`. A different `If-Match` is
+    `409 draft_conflict` (details `etag`, `updatedAt`); no `If-Match` overwrites (restore as draft). Every
+    save runs the engine's check (`503 engine_unavailable` saves nothing). New error code: `preset_archived`
+    (409, any edit of an archived preset).
+  - Archive is one-way (no unarchive in the contract) and unstars. "Used by" and the usage list count BoQ
+    revisions in projects the caller can see.
+  - New projects' defaults (F02 §2): the newest starred rule set, every starred classification (by name),
+    the global seed dictionary then the starred company dictionaries; only published versions count.
+  - Seed: Studio Demo's "Studio rules" (patch on As modelled: wall openings over 0.5 m², windows by area;
+    v1 published, a draft that adds lines per storey), "Studio trades", "Studio names"; ids in `SEED_PRESETS`.
+    None is starred, so new Studio projects keep As modelled.
+  - App: hooks in `src/api/hooks/library.ts`. A draft's document is cached under its ETag
+    (`[presetVersion, id, etag]`), so a preset's `entity.changed` refreshes lists, versions and usage but
+    never refetches published versions (large code lists on open sheets). The org layer is called
+    "Company" in the UI. `src/components/confirm-dialog.tsx`: the registry's `AlertDialogAction` is a plain
+    button that never closes its dialog; use `ConfirmDialog` for confirmations that don't navigate away.
+  - The Edit tab shows the draft (or the latest version) read-only as JSON, with its problems, "Start a
+    draft" and "Discard draft": the editors of FE-022…FE-024 go there.
+  - `tests/run.mjs` takes a file filter: `node run.mjs scenarios library --mock`.
+- **Deviations from the spec:** none; what F10 §1, 2, 5 leave for later tasks is in docs/11 (Library).
+- **For the next agent:** the query client's global 409 handler toasts and refetches on any mutation's 409:
+  FE-022's autosave must handle `draft_conflict` itself (the reload-or-overwrite dialog) without that
+  toast. The rule-set editor opens the Settings question named by `?question=<slot>` on this page.
+
 ### 2026-11-13 — M1 Core loop (frontend agent)
 - **Built:** FE-005…FE-020, 8d00621..d7ace66 (plus the record commits). Order deviation: FE-016 (viewer)
   before FE-014 (sheet and model together), which is built on it.

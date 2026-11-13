@@ -31,7 +31,10 @@ export interface PresetRec {
   basedOn?: string;
   available?: boolean;
   unavailableReason?: string;
+  starred?: boolean;
   archived: boolean;
+  createdAt?: string;
+  createdBy?: string;
   updatedAt: string;
   updatedBy?: string;
 }
@@ -44,7 +47,13 @@ export interface PresetVersionRec {
   extendsVersionId: string | null;
   problems: string[];
   createdAt: string;
+  createdBy?: string;
+  /** Drafts: the last save (the ETag is built from it and `rev`). */
+  updatedAt?: string;
+  rev?: number;
+  changeNote?: string;
   publishedAt?: string;
+  publishedBy?: string;
 }
 export interface InvitationRec {
   id: string;
