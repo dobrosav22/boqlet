@@ -45,6 +45,59 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 
 ## Entries
 
+### 2026-11-13 — M2 decisions: FE-022…FE-027 (frontend agent)
+- **Built:** HASH. The three editors (FE-022 rule sets, FE-023 classifications with code-list import,
+  FE-024 dictionaries with Names in a model), publish and preview (FE-025), clone and Excel templates
+  (FE-026 without guided mode), item texts in runs, sheet, line detail and Excel (FE-027 without the code
+  list's item-text box). Checked by `e2e/library-editors.spec.ts` (6: autosave and the `?question=` deep
+  link, F10-AC1 / v1 criterion 7's flow, F10-AC2, both other editors, clone and template download, item
+  texts in the sheet), `tests/scenarios/library-publish.test.ts` (4: publish rules, BR-07, a Duplex preview
+  with changed lines), `templates.test.ts` (3: F10-AC8), `codelists.test.ts` (4: F10-AC4), unit tests in
+  each editor folder and `apps/mock-api/test/item-texts.test.ts`.
+- **Order deviation:** the three editor ports ran in parallel (separate folders and message namespaces:
+  `ruleSetEditor`, `classificationEditor`, `dictionaryEditor`) on a shared base built first
+  (`features/library/shared/`: the PoC's `fields.tsx` restyled and through `library.fields`, the PoC's
+  lists in `vocab.ts` with their words in `library.vocab` (dumped from the PoC's `vocab.ts`, nothing
+  rewritten), `story.ts`, `doc.ts` (the PoC's `store.ts` helpers), `json-tab.tsx`, `use-draft.ts`). They
+  and FE-025…FE-027 land in one commit because the preset page wires them together; FE-026's guided mode
+  and FE-027's code-list item-text box follow with FE-028 (guided mode reuses the wizard's steps).
+- **Decisions taken:**
+  - Drafts (`use-draft.ts`, no Zustand: React state in one hook): the editor works on a local copy, saved
+    1 s after the last change with `If-Match`; `draft_conflict` is handled there (reload or keep mine),
+    outside the global 409 toast, by calling the client directly. Edits made while a newer server document
+    arrives (e.g. right after publishing) win; only the ETag follows. Read-only users get the editor in a
+    disabled `<fieldset>`; navigation uses non-button elements so it keeps working (`RowList` rows are
+    `role="button"` divs).
+  - A patch's draft follows its parent's latest published version when saved; a published version keeps
+    its exact parent (data-model.md says "the exact parent version", F10 §2 "follows the original's future
+    versions": both hold).
+  - `libraryOrgPresets` counts per kind (05-plans-and-limits.md); FE-021 had counted all kinds.
+  - Publish: `400 change_note_required`, `409 no_draft`, `409 draft_has_problems` (details `problems`,
+    checked again at publish). Audit `preset.published`.
+  - Preview: contract addition `PreviewResult` (the JSON behind `Job.output.previewResultUrl`, which the
+    contract named but didn't describe). Output also has `presetVersionId`, `lines`, `compare`. The app waits
+    by asking `GET /jobs/{id}` (as exports do) and fetches the signed URL. The panel sits beside the editor
+    (≥ 1280 px), remembers the model version in `localStorage`, and runs again after each save ("Follow my
+    changes"). Errors: `no_models`, `invalid_inputs`, `model_not_ready`, `no_rule_set`, `preview_error`.
+  - Templates: openpyxl through the engine's Python instead of SheetJS (no new dependency, real dropdowns);
+    `400 invalid_file` for a file that isn't a workbook; applying puts the proposed document into the draft
+    (rows with problems are listed and left out). Clone replaces "Make a copy" on the preset page; the list
+    keeps "Make a copy" for system rows.
+  - Types first: `Code.description` documented as the item text, `LineCode.text`, `SlotPrompt.setup`,
+    `SetupStep`, `RuleSet.setupSteps`, `RuleSetPatch.setupSteps` (EN-010 / EN-011 step 1, as FE-013 did for
+    trace steps); `npm run codegen`. The Description column and the export use `codes[groupBy].text`, else the
+    line text; an edited description wins.
+  - Fixed in earlier work: a run with an org classification saved its code list under a new id but left the
+    map's `codeList` on the old one, so the engine failed (FE-008's path; the seeded "Studio trades" hit it).
+- **Fakes:** Preview, Item texts filled, Preset Excel templates built; Setup markers' data in place for FE-028
+  (mock-api.md).
+- **Known issues:** in docs/11 (Library, Library drafts, Library preview, Item texts, Excel templates,
+  Component tests).
+- **For the next agent:** component render tests need the in-file workaround of
+  `rule-set-editor.test.tsx` (two Reacts in the workspace until FE-046); dedupe/alias in `vitest.config.ts`
+  was tried and doesn't work because Testing Library and next-intl are external to Vite. Settings test hooks:
+  `question` cards with `data-slot`, `data-mine`, `data-focused`; `answer`; `use-default`.
+
 ### 2026-11-13 — M2 decisions: FE-021 (frontend agent)
 - **Built:** FE-021, 829d61e. S19 `/{org}/library` (a tab per kind, layer filter, archived toggle, New, "Make a copy"
   on system rows), S16 `/{org}/projects/{p}/library` (the project's own presets), create

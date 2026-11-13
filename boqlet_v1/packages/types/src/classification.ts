@@ -28,6 +28,11 @@ export interface Code {
   parent?: string;
   /** 0 = top level. Omit to derive it. */
   level?: number;
+  /**
+   * The item text (P14, BR-11): the written description of the BoQ item that is priced, a template
+   * with blanks the engine fills per line, same syntax as a rule's line text (`{thickness}`,
+   * `{thickness*1000}`, `{expr: …}`). Its lines show the filled text (`LineCode.text`).
+   */
   description?: string;
   /** Translations of the title, by locale. */
   titles?: Record<string, string>;
@@ -151,4 +156,6 @@ export interface LineCode {
   path: { code: string; title: string }[];
   source: "decision" | "map" | "ifc" | "default";
   mapRuleId?: string;
+  /** The code's item text filled with this line's values (EN-010); absent when the code has none. */
+  text?: string;
 }

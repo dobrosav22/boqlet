@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useOrg } from "@/features/orgs/org-context";
 import { presetHref } from "./kinds";
+import { hasTemplate, useDownloadTemplate } from "./template-tools";
 
 type Mode = "empty" | "copy" | "patch";
 
@@ -53,6 +54,9 @@ export function CreatePreset({ kind }: { kind: PresetKind }) {
 
   const allowed = projectId ? project.data?.permissions?.editPresets === true && project.data.status !== "archived" : can("editLibrary");
   const create = useCreatePreset(org.id);
+  const download = useDownloadTemplate();
+  // An empty template is the kind's master preset's layout with nothing filled in (F10 §14).
+  const templateOf = sourceList.find((p) => p.layer === "system" && (kind !== "rule_set" || p.slug === "as-modelled")) ?? sourceList[0];
   const back = projectId ? `/${org.slug}/projects/${projectId}/library` : `/${org.slug}/library${kind === "rule_set" ? "" : `?kind=${kind}`}`;
 
   if (projectId && project.isPending) return <div aria-busy="true" />;
@@ -141,6 +145,11 @@ export function CreatePreset({ kind }: { kind: PresetKind }) {
         <Button variant="outline" render={<Link href={back} />} nativeButton={false}>
           {t("create.cancel")}
         </Button>
+        {hasTemplate(kind) && templateOf && (
+          <Button type="button" variant="ghost" onClick={() => download.mutate({ preset: templateOf, source: "empty" })} disabled={download.isPending} data-testid="empty-template">
+            {t("template.emptyTemplate")}
+          </Button>
+        )}
       </div>
     </form>
   );

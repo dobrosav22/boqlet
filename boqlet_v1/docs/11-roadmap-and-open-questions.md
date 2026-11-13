@@ -176,18 +176,36 @@ Things the product build doesn't do yet, with the task that deals with each.
 - Phase-1 interim (FE-008): federation and resolution settings are stored with the inputs but not sent
   to the engine (the PoC API takes neither; EN-001). A rule-set patch on an org or project version is run
   and checked with its parents saved or passed under `mock-<versionId>` (FE-021).
-- Library (FE-021): the Edit tab shows the document read-only as JSON until the editors (rule sets FE-022,
-  classifications FE-023, dictionaries FE-024); new presets stay drafts until publishing (FE-025), so
-  "Restore as draft" and comparisons need a preset with published versions (Studio rules in the seed).
-  Comparing two versions is a line diff of the JSON with sorted keys (F10 §5: a structured diff later).
-  Not yet: the Guided setup button (FE-028), guided mode and Clone's "Independent copy / Based on it"
-  dialog (FE-026; "Make a copy" makes a copy, a patch is made with New → "Changes on a rule set"),
-  starting from an imported code list (FE-023) or an Excel template (FE-026), the one-time "bring your
-  own licence" notice on the first rule set (F10 §12, with FE-026's guided creation), "rebase on latest"
-  for a patch whose parent is archived (FE-022), and preview (FE-025). Archive can't be undone (the
-  contract has no unarchive). Draft saves aren't audited (autosave saves every second, FE-022); creating,
-  renaming, starring, archiving and discarding are. The version list names who published a version, not
-  who last saved a draft.
+- Library (FE-021…FE-027): the three editors are the PoC's, ported (FE-022 rule sets, FE-023
+  classifications, FE-024 dictionaries); federation and resolution settings are edited as JSON. Not yet:
+  the Guided setup button and the setup wizard (FE-028), guided mode (FE-026, reusing the wizard's
+  steps), the one-time "bring your own licence" notice on the first rule set (F10 §12, with guided
+  mode), the code list's "Item text" box with insert buttons and "Reads as" and the sample text under
+  each Codes per line row (FE-027, F10 §13), "rebase on latest" for a patch whose parent is archived,
+  renaming an item id across classification maps (the PoC's `onItemRenamed`), and the import's "keep other
+  columns" (`CodeListBuildRequest` has no `extra`). Comparing two versions is a line diff of the JSON
+  with sorted keys (F10 §5: a structured diff later). Archive can't be undone (the contract has no
+  unarchive). Draft saves aren't audited (autosave); creating, renaming, starring, archiving,
+  discarding and publishing are. The version list names who published a version, not who last saved
+  a draft.
+- Library drafts: a patch's draft follows its parent's latest published version when saved (F10 §2
+  "Based on it"); a published version keeps the exact parent it was made on (data-model.md). Read-only
+  users (members, and everyone on a system preset) see the editors inside a disabled fieldset: tabs,
+  list rows and links work, but the filter boxes and pickers used only for looking (the dictionary's
+  model-version picker, the classification's rule-set picker and code filter) are disabled too.
+- Library preview (FE-025, the "Preview" fake until EN-005): two runs per preview (draft and published),
+  serialised with other previews; one project's model versions at a time; no BoQ data changes, and the
+  time counts as processing. Runs of org classifications now rename the map's `codeList` with the code
+  list (fixed: a copied classification failed in runs before).
+- Item texts (FE-027, the "Item texts filled" fake until EN-010): plain `{name}` blanks only; an item
+  text shows on one line in the sheet (rows are 32 px for the virtualised sheet; F06 §2's three-line
+  clamp is not built), in full as a tooltip and in the line detail with "Measured as".
+- Excel templates (FE-026, the "Preset Excel templates" fake until EN-012): openpyxl through the
+  engine's Python; a classification's Codes per line lists As modelled's items and round-trips only
+  single-item map rules; the empty template on the create page is the kind's master preset's layout.
+- Component tests: Testing Library and next-intl resolve the workspace root's React 18 while the app
+  uses React 19, so render tests need the in-file workaround in
+  `src/features/library/rule-set/rule-set-editor.test.tsx` (FE-046 removes the PoC and its React 18).
 - Phase-1 interim: the mock reads check details from the PoC engine's cache on the same machine, and
   drops the `null` optional fields the PoC sends in names (the worker should omit them, EN-001).
 

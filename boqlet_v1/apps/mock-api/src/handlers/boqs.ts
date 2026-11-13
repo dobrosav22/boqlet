@@ -32,6 +32,7 @@ import {
   type UserRec,
 } from "../store.js";
 import { planLimits } from "./orgs.js";
+import { addItemTexts } from "../engine/fakes/item-texts.js";
 import { latestPublished } from "./presets.js";
 
 type InputsPatch = Partial<RevisionInputs>;
@@ -290,7 +291,7 @@ const notify = (userId: string, project: ProjectRec, kind: string, params: Recor
 // ───────────────────────────── the run job ─────────────────────────────
 
 /** Minutes of processing used this calendar month (BR-62). */
-function minutesUsed(orgId: string) {
+export function minutesUsed(orgId: string) {
   const month = nowIso().slice(0, 7);
   return db().usage.filter((u) => u.orgId === orgId && u.at.startsWith(month)).reduce((sum, u) => sum + u.ms, 0) / 60000;
 }
@@ -324,8 +325,11 @@ export async function enginePresetId(version: PresetVersionRec, parents?: [Prese
   const id = engineIdOf(version);
   if (id === preset.slug) return id;
   const doc = structuredClone(version.doc) as Record<string, unknown>;
-  if (preset.kind === "classification") (doc.codeList as Record<string, unknown>).id = id;
-  else doc.id = id;
+  if (preset.kind === "classification") {
+    // The map names its code list: it follows the rename.
+    (doc.codeList as Record<string, unknown>).id = id;
+    if (doc.map) (doc.map as Record<string, unknown>).codeList = id;
+  } else doc.id = id;
   const parent = preset.kind === "rule_set" && typeof doc.extends === "string" && version.extendsVersionId ? db().presetVersions.find((v) => v.id === version.extendsVersionId) : undefined;
   if (parent) {
     doc.extends = await enginePresetId(parent, parents);
@@ -396,6 +400,8 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
         const codeLists = codeListsOf(inputs);
         applyManualCodes(result, adjustments.manualItems, codeLists);
         applyOverrides(result, adjustments.overrides, adjustments.manualItems, codeLists);
+        // Item texts follow the codes the lines end up with (moves included), "Item texts filled" fake.
+        addItemTexts(result, codeLists);
         addTraceSteps(result, (key) => {
           const by = adjustments.overrides.find((o) => o.lineKey === key && o.quantity !== undefined)?.createdBy;
           return by ? db().users.find((u) => u.id === by)?.name : undefined;

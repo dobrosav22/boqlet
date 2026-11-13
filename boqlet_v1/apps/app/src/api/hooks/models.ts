@@ -7,6 +7,7 @@ import { keys } from "@/api/keys";
 export function useModels(projectId: string) {
   return useQuery({
     queryKey: keys.models(projectId),
+    enabled: !!projectId,
     queryFn: async () => (await api.GET("/projects/{projectId}/models", { params: { path: { projectId } } })).data!,
   });
 }
@@ -21,6 +22,7 @@ export function useModel(modelId: string) {
 export function useModelVersions(modelId: string) {
   return useQuery({
     queryKey: keys.modelVersions(modelId),
+    enabled: !!modelId,
     queryFn: async () => (await api.GET("/models/{modelId}/versions", { params: { path: { modelId } } })).data!,
   });
 }

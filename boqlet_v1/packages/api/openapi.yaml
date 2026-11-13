@@ -3168,6 +3168,49 @@ components:
         createdAt: { type: string, format: date-time }
     JobType: { type: string, description: "Core types: parse, run, preview, diff, export_xlsx, import_boq_edits, names; modules add pricing.* and the like" }
     JobStatus: { type: string, enum: [queued, running, succeeded, failed, cancelled] }
+    PreviewLine:
+      type: object
+      required: [key, ruleId, description, quantity, unit]
+      properties:
+        key: { type: string }
+        ruleId: { type: string, description: The BoQ item (rule) the line comes from }
+        description: { type: string }
+        quantity: { type: [number, "null"] }
+        unit: { type: string }
+        storey: { type: string }
+        keys: { type: object, additionalProperties: true, description: "The values that split the line (`BoqLine.keys`), e.g. for an item text's sample" }
+    PreviewResult:
+      type: object
+      description: >-
+        What a `preview` job's `output.previewResultUrl` (a signed GET URL, 7 days) returns (F10 §6): the
+        lines of the previewed document and, when compared, what changed against the latest published
+        version, by line key. The job's output also carries `presetVersionId` (what was previewed),
+        `lines` (count) and `compare` (the counts).
+      required: [lines, questions, blockingQuestions, warnings, compare, changes]
+      properties:
+        lines: { type: array, items: { $ref: "#/components/schemas/PreviewLine" } }
+        questions: { type: integer }
+        blockingQuestions: { type: integer }
+        warnings: { type: integer }
+        compare:
+          type: [object, "null"]
+          required: [versionId, versionNumber, added, removed, changed]
+          properties:
+            versionId: { type: string, format: uuid }
+            versionNumber: { type: integer }
+            added: { type: integer }
+            removed: { type: integer }
+            changed: { type: integer }
+        changes:
+          type: array
+          items:
+            type: object
+            required: [key, change]
+            properties:
+              key: { type: string }
+              change: { type: string, enum: [added, removed, changed] }
+              before: { $ref: "#/components/schemas/PreviewLine" }
+              after: { $ref: "#/components/schemas/PreviewLine" }
     Job:
       type: object
       required: [id, type, status, createdAt]

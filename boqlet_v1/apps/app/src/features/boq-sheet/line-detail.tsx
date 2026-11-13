@@ -28,6 +28,7 @@ const FROM_SLOT = /\s*\(from slot ([A-Za-z0-9_]+)\)\s*$/;
 export function LineDetailPanel({
   run,
   lineKey,
+  groupBy,
   showIn3dHref,
   modelNames,
   systemNames,
@@ -38,6 +39,8 @@ export function LineDetailPanel({
 }: {
   run: Run;
   lineKey: string;
+  /** The sheet's Group-by system: its item text comes first (F06 §5). */
+  groupBy?: string | null;
   /** "Show in 3D" (F06 §5, F07 §7): the Viewer tab on this line's elements. */
   showIn3dHref?: string;
   modelNames: Map<string, string>;
@@ -71,7 +74,7 @@ export function LineDetailPanel({
   return (
     <aside className={cn("flex w-full flex-col gap-5 border-l border-border pl-5 lg:w-[440px] lg:shrink-0", className)} aria-label={t("title")} data-testid="line-detail">
       <div className="flex items-start gap-2">
-        <h3 className="text-title flex-1">{detail.data?.description ?? ""}</h3>
+        <h3 className="text-title flex-1">{detail.data ? itemTexts(detail.data, groupBy)[0]?.text ?? detail.data.description : ""}</h3>
         {showIn3dHref && (
           <Button variant="outline" render={<Link href={showIn3dHref} />} nativeButton={false} data-testid="show-in-3d">
             <Box aria-hidden />
@@ -97,8 +100,22 @@ export function LineDetailPanel({
           const elements = line.trace.elements;
           const sum = elements.reduce((s, e) => s + (e.quantity ?? 0), 0);
           const params = Object.entries(line.trace.params);
+          const texts = itemTexts(line, groupBy);
           return (
             <>
+              {texts.length > 0 && (
+                <div className="flex flex-col gap-2" data-testid="detail-item-texts">
+                  {texts.map((x, i) => (
+                    <p key={x.system} className={i === 0 ? "text-prose" : "text-muted-foreground"} data-testid="detail-item-text" data-system={x.system}>
+                      {texts.length > 1 && <span className="label-caps mr-2 text-muted-foreground">{systemNames.get(x.system) ?? x.system}</span>}
+                      {x.text}
+                    </p>
+                  ))}
+                  <p className="text-muted-foreground" data-testid="detail-measured-as">
+                    {t("measuredAs", { text: line.description })}
+                  </p>
+                </div>
+              )}
               <div className="flex items-baseline gap-3">
                 <span className="text-title tabular-nums" data-testid="detail-quantity">
                   {line.quantity === null ? "—" : num(line.quantity)} {displayUnit(line.unit)}
@@ -245,4 +262,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       {children}
     </section>
   );
+}
+
+/** A line's item texts (P14), the Group-by system's first. */
+function itemTexts(line: { codes: Record<string, { text?: string }> }, groupBy: string | null | undefined) {
+  return Object.entries(line.codes)
+    .filter(([, c]) => !!c.text)
+    .map(([system, c]) => ({ system, text: c.text! }))
+    .sort((a, b) => (a.system === groupBy ? -1 : b.system === groupBy ? 1 : 0));
 }

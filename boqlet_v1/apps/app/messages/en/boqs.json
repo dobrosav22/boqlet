@@ -259,7 +259,8 @@
     "missing": "missing",
     "yes": "yes",
     "no": "no",
-    "showIn3d": "Show in 3D"
+    "showIn3d": "Show in 3D",
+    "measuredAs": "Measured as: {text}"
   },
   "how": {
     "noSteps": "This run has no step-by-step explanation. Generate the BoQ again to see one.",

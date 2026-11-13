@@ -9,7 +9,7 @@
 import { openAsBlob } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import type { BoqResult, SceneIndex } from "@ifc-boq/types";
+import type { BoqResult, CodeListBuildRequest, CodeListBuildResponse, SceneIndex, TableReadResponse } from "@ifc-boq/types";
 import { PRODUCT_ROOT } from "../paths.js";
 
 export type PresetFolder = "rules" | "dictionaries" | "classifications" | "federation" | "resolution";
@@ -54,6 +54,10 @@ export interface Engine {
   geometry(engineModelId: string): Promise<Uint8Array>;
   /** The scene index that links the geometry's nodes to elements (`SceneIndex`, F07 §1). */
   scene(engineModelId: string): Promise<SceneIndex>;
+  /** The sheets of a code-list spreadsheet (.xlsx, .csv, .tsv), with a guess of its columns (F10 §8). */
+  readCodeTable(file: Blob, fileName: string): Promise<TableReadResponse>;
+  /** Codes from a sheet's rows and a column mapping: hierarchy, problems (duplicates…), stats (F10 §8). */
+  buildCodeList(request: CodeListBuildRequest): Promise<CodeListBuildResponse>;
 }
 
 export class EngineUnavailable extends Error {}
@@ -142,6 +146,16 @@ export class PocEngine implements Engine {
 
   async scene(engineModelId: string) {
     return this.call<SceneIndex>("GET", `/api/models/${encodeURIComponent(engineModelId)}/scene`);
+  }
+
+  readCodeTable(file: Blob, fileName: string) {
+    const form = new FormData();
+    form.append("file", file, fileName);
+    return this.call<TableReadResponse>("POST", "/api/codelists/read", form, false);
+  }
+
+  buildCodeList(request: CodeListBuildRequest) {
+    return this.call<CodeListBuildResponse>("POST", "/api/codelists/build", JSON.stringify(request));
   }
 
   /**

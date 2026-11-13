@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { useArchivePreset, useDiscardDraft, usePreset, usePresetVersion, useSaveDraft, useUpdatePreset, type Preset } from "@/api/hooks/library";
+import { useArchivePreset, useDiscardDraft, usePreset, useUpdatePreset, type Preset } from "@/api/hooks/library";
 import { useErrorMessage } from "@/components/errors/use-error-message";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Field } from "@/components/field";
@@ -15,8 +15,13 @@ import { Input } from "@/components/ui/input";
 import { useOrg } from "@/features/orgs/org-context";
 import { useRelativeTime } from "@/i18n/use-relative-time";
 import { cn } from "@/lib/utils";
-import { DocumentView } from "./document-view";
-import { createHref, Tag } from "./kinds";
+import { Tag } from "./kinds";
+import { CloneDialog } from "./clone-dialog";
+import { PresetEditor } from "./preset-editor";
+import { TemplateTools } from "./template-tools";
+import { PreviewPanel } from "./preview/preview-panel";
+import { PublishDialog } from "./publish-dialog";
+import { useDraft } from "./shared/use-draft";
 import { PresetUsage } from "./preset-usage";
 import { PresetVersions } from "./preset-versions";
 
@@ -56,7 +61,7 @@ export function PresetPage({ presetId }: { presetId: string }) {
   const editable = p.permissions?.edit === true;
   return (
     <div className="flex flex-col gap-6" data-testid="preset-page" data-preset={p.id}>
-      <PresetHeader preset={p} canCopy={can("editLibrary")} orgSlug={org.slug} />
+      <PresetHeader preset={p} canCopy={can("editLibrary")} orgId={org.id} orgSlug={org.slug} />
       <nav aria-label={t("preset.tabs")} className="flex gap-6 border-b border-border">
         {TABS.map((k) => (
           <button
@@ -79,7 +84,7 @@ export function PresetPage({ presetId }: { presetId: string }) {
   );
 }
 
-function PresetHeader({ preset: p, canCopy, orgSlug }: { preset: Preset; canCopy: boolean; orgSlug: string }) {
+function PresetHeader({ preset: p, canCopy, orgId, orgSlug }: { preset: Preset; canCopy: boolean; orgId: string; orgSlug: string }) {
   const t = useTranslations("library");
   const relativeTime = useRelativeTime();
   const router = useRouter();
@@ -87,7 +92,7 @@ function PresetHeader({ preset: p, canCopy, orgSlug }: { preset: Preset; canCopy
   const update = useUpdatePreset(p.id);
   const archive = useArchivePreset(p.id);
   const back = p.projectId ? `/${orgSlug}/projects/${p.projectId}/library?kind=${p.kind}` : `/${orgSlug}/library?kind=${p.kind}`;
-  const copyFrom = p.latestPublishedVersion?.id;
+  const copyFrom = p.latestPublishedVersion?.id ?? p.draft?.id;
   return (
     <div className="flex flex-col gap-3">
       <Link href={back} className="text-muted-foreground hover:underline">
@@ -143,11 +148,7 @@ function PresetHeader({ preset: p, canCopy, orgSlug }: { preset: Preset; canCopy
             {t(p.starred ? "preset.unstar" : "preset.star")}
           </Button>
         )}
-        {canCopy && copyFrom && (
-          <Button variant="outline" render={<Link href={createHref(orgSlug, p.kind, { mode: "copy", from: copyFrom })} />} nativeButton={false} data-testid="preset-copy">
-            {t("preset.makeCopy")}
-          </Button>
-        )}
+        {canCopy && copyFrom && <CloneDialog preset={p} orgId={orgId} orgSlug={orgSlug} />}
         {editable && (
           <ConfirmDialog
             trigger={<Button variant="outline" data-testid="preset-archive" />}
@@ -228,18 +229,21 @@ function DetailsDialog({ preset: p }: { preset: Preset }) {
 }
 
 /**
- * The document being worked on: the draft if there is one, else the latest version. The editors
- * (FE-022 rule sets, FE-023 classifications, FE-024 dictionaries) replace the read-only view.
+ * The document in its editor (FE-022 rule sets, FE-023 classifications, FE-024 dictionaries; the
+ * advanced kinds as JSON). The first change starts a draft; "Discard draft" goes back to the latest
+ * version.
  */
 function EditTab({ preset: p, editable }: { preset: Preset; editable: boolean }) {
   const t = useTranslations("library");
   const relativeTime = useRelativeTime();
-  const shownId = p.draft?.id ?? p.latestPublishedVersion?.id;
-  const version = usePresetVersion(shownId, p.draft?.etag);
-  const save = useSaveDraft(p.id);
+  const params = useSearchParams();
   const discard = useDiscardDraft(p.id);
+  const draft = useDraft<unknown>(p);
   return (
     <div className="flex flex-col gap-4" data-testid="preset-edit">
+      <div className="flex flex-wrap items-center gap-2">
+        <TemplateTools preset={p} draft={draft} editable={editable} />
+      </div>
       {p.draft ? (
         <div className="flex flex-wrap items-center gap-3">
           <p className="flex-1">
@@ -257,28 +261,15 @@ function EditTab({ preset: p, editable }: { preset: Preset; editable: boolean })
               onConfirm={() => discard.mutateAsync()}
             />
           )}
+          {editable && <PublishDialog preset={p} draft={draft} />}
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="flex-1 text-muted-foreground">{p.layer === "system" ? t("edit.system") : t("edit.noDraft", { n: p.latestPublishedVersion?.number ?? 0 })}</p>
-          {editable && version.data && (
-            <Button onClick={() => save.mutate({ doc: version.data.doc })} disabled={save.isPending} data-testid="start-draft">
-              {t("edit.startDraft")}
-            </Button>
-          )}
-        </div>
+        <p className="text-muted-foreground">{p.layer === "system" ? t("edit.system") : editable ? t("edit.noDraft", { n: p.latestPublishedVersion?.number ?? 0 }) : t("edit.readOnly")}</p>
       )}
-      {version.data && version.data.problems.length > 0 && (
-        <div className="flex flex-col gap-1" role="status" data-testid="draft-problems">
-          <p className="label-caps text-error">{t("preset.problems", { n: version.data.problems.length })}</p>
-          <ul className="list-disc pl-5">
-            {version.data.problems.map((problem, i) => (
-              <li key={i}>{problem}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {version.data && <DocumentView doc={version.data.doc} />}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)]">
+        <PresetEditor preset={p} draft={draft} editable={editable} question={params.get("question")} />
+        {(p.kind === "rule_set" || p.kind === "classification" || p.kind === "dictionary") && <PreviewPanel preset={p} saves={draft.saves} />}
+      </div>
     </div>
   );
 }

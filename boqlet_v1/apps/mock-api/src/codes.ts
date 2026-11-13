@@ -11,6 +11,8 @@ export interface CodeEntry {
   code: string;
   title: string;
   parent?: string;
+  /** The item text template (P14). */
+  description?: string;
 }
 export type CodeLists = Map<string, Map<string, CodeEntry>>;
 

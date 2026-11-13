@@ -47,6 +47,15 @@ export type Row = GroupRow | LineRow;
 
 export const UNCLASSIFIED = "~unclassified";
 
+/**
+ * What the Description column shows (F06 §2, P14): the line's item text in the Group-by system when its
+ * code has one, else the rule set's line text; a description edited on the line wins over both.
+ */
+export function shownDescription(l: Pick<SheetLine, "description" | "codes" | "edit">, system: string | null): string {
+  if (l.edit?.fields.includes("description")) return l.description;
+  return (system && l.codes[system]?.text) || l.description;
+}
+
 export function filterLines(lines: SheetLine[], f: SheetFilters, system: string | null = null): SheetLine[] {
   const q = f.q?.trim().toLowerCase();
   const group = system ? f.group : undefined;
@@ -58,7 +67,7 @@ export function filterLines(lines: SheetLine[], f: SheetFilters, system: string 
     if (f.storey && l.location?.storey !== f.storey && !l.location?.storeys?.includes(f.storey)) return false;
     if (f.family && l.family !== f.family) return false;
     if (f.model && !l.trace.elements.some((e) => e.model === f.model)) return false;
-    if (q && !l.description.toLowerCase().includes(q) && !Object.values(l.codes).some((c) => c.code.toLowerCase().includes(q) || c.title.toLowerCase().includes(q))) return false;
+    if (q && !l.description.toLowerCase().includes(q) && !Object.values(l.codes).some((c) => c.code.toLowerCase().includes(q) || c.title.toLowerCase().includes(q) || !!c.text?.toLowerCase().includes(q))) return false;
     return true;
   });
 }

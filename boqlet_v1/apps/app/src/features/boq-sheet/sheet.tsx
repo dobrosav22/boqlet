@@ -26,7 +26,7 @@ import { ManualLineDialog, ReasonDialog } from "./edit-dialogs";
 import { batchFor, effectiveLines, restoreField, withChange, type CodeLists, type EditField, type SheetLine } from "./edits";
 import { LineDetailPanel } from "./line-detail";
 import { LineEdits, type LineActions } from "./line-edits";
-import { buildRows, displayUnit, facets, filterLines, linesInGroup, topGroups, UNCLASSIFIED, type GroupRow, type Row, type SheetFilters, type SourceFilter } from "./model";
+import { buildRows, displayUnit, facets, filterLines, linesInGroup, topGroups, UNCLASSIFIED, type GroupRow, type Row, type SheetFilters, type SourceFilter, shownDescription } from "./model";
 import { SourceTag } from "./source-tag";
 import { useCodeLists } from "./use-code-lists";
 import { NotInModelsNotice } from "./not-in-models";
@@ -192,7 +192,8 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
         cell: (l) => (groupBy ? l.codes[groupBy]?.code : null),
         engine: (l) => (groupBy && l.edit?.override.codes?.[groupBy] ? engine(l, "codes", l.edit.engine.codes[groupBy] ?? te("noCode")) : undefined),
       }),
-      col("description", t("col.description"), { width: "minmax(16rem, 1fr)", editable: "description", cell: (l) => l.description, engine: (l) => engine(l, "description", l.edit?.engine.description ?? "") }),
+      // The item text of the Group-by system when its code has one (P14, F06 §2); an edited description wins.
+      col("description", t("col.description"), { width: "minmax(16rem, 1fr)", editable: "description", cell: (l) => shownDescription(l, groupBy), engine: (l) => engine(l, "description", l.edit?.engine.description ?? "") }),
       col("unit", t("col.unit"), { width: "4.5rem", editable: "unit", cell: (l) => displayUnit(l.unit), engine: (l) => engine(l, "unit", displayUnit(l.edit?.engine.unit ?? "")) }),
       col("quantity", t("col.quantity"), {
         width: "8rem",
@@ -431,7 +432,7 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
               <LineEdits line={selectedLine} editable={editable} systemNames={systemNames} actions={actions} />
             </aside>
           ) : (
-            <LineDetailPanel run={run} lineKey={selectedLine.key} showIn3dHref={(run.snapshotVersions?.models?.length ?? 0) > 0 ? showIn3dHref(base, { line: selectedLine.key }) : undefined} modelNames={modelNames} systemNames={systemNames} onSelect={setSelected} onClose={() => setSelected(null)} className={detailClass}>
+            <LineDetailPanel run={run} lineKey={selectedLine.key} groupBy={groupBy} showIn3dHref={(run.snapshotVersions?.models?.length ?? 0) > 0 ? showIn3dHref(base, { line: selectedLine.key }) : undefined} modelNames={modelNames} systemNames={systemNames} onSelect={setSelected} onClose={() => setSelected(null)} className={detailClass}>
               {(editable || selectedLine.edit || selectedLine.excluded) && <LineEdits line={selectedLine} editable={editable} systemNames={systemNames} actions={actions} />}
             </LineDetailPanel>
           ));
@@ -1101,7 +1102,7 @@ const LineRowView = memo(function LineRowView({
             data-edited={edited ? "true" : undefined}
             data-column={c.id}
           >
-            <span className="truncate">{c.cell(line)}</span>
+            <span className="truncate" title={c.id === "description" ? String(c.cell(line) ?? "") : undefined}>{c.cell(line)}</span>
             {c.id === "description" && line.pending && <span className="label-caps ml-2 shrink-0 not-italic text-muted-foreground">{pendingLabel}</span>}
           </div>
         );

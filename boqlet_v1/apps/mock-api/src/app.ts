@@ -16,13 +16,14 @@ import { billingHandlers } from "./handlers/billing.js";
 import { decisionHandlers } from "./handlers/decisions.js";
 import { adjustmentHandlers } from "./handlers/adjustments.js";
 import { sessionHandlers } from "./handlers/sessions.js";
+import { codeListHandlers } from "./handlers/codelists.js";
 import { apiRouter, type Handlers } from "./router.js";
 import { buildSeed } from "./seed.js";
 import { loadSpec } from "@ifc-boq/api/spec";
 import { loadStore, replaceStore } from "./store.js";
 
 /** All handlers, by operationId. Each task adds its file here. */
-export const handlers: Handlers = { ...coreHandlers, ...orgHandlers, ...projectHandlers, ...modelHandlers, ...presetHandlers, ...boqHandlers, ...lineHandlers, ...viewerHandlers, ...exportHandlers, ...notificationHandlers, ...billingHandlers, ...decisionHandlers, ...adjustmentHandlers, ...sessionHandlers };
+export const handlers: Handlers = { ...coreHandlers, ...orgHandlers, ...projectHandlers, ...modelHandlers, ...presetHandlers, ...boqHandlers, ...lineHandlers, ...viewerHandlers, ...exportHandlers, ...notificationHandlers, ...billingHandlers, ...decisionHandlers, ...adjustmentHandlers, ...sessionHandlers, ...codeListHandlers };
 
 /** Builds the mock: loads (or seeds) the store and the contract. Used by the server and the tests. */
 export async function createApp(opts: { reseed?: boolean } = {}) {

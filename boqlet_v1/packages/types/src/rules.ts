@@ -42,6 +42,18 @@ export interface SlotPrompt {
   example?: string;
   /** Only relevant when another slot has one of these values (the questionnaire dims it otherwise). */
   dependsOn?: { param: string; values: (string | number | boolean)[] };
+  /**
+   * The setup wizard (F16, P42, EN-011): the id of a `RuleSet.setupSteps` entry this question appears
+   * on (part 1c), or "skip" to keep an item-switching yes/no question off the checklist (part 1a).
+   */
+  setup?: string;
+}
+
+/** One screen of the setup wizard's "How the main items are measured" (F16 part 1c), in order. */
+export interface SetupStep {
+  id: string;
+  title: string;
+  intro?: string;
 }
 
 /** A named, editable slot. This is what a standard "fills in". */
@@ -460,6 +472,8 @@ export interface RuleSet {
 
   /** The slots. A standard is mostly a set of values for these. */
   params: Record<string, Param>;
+  /** The setup wizard's measuring screens (F16 part 1c, EN-011), in order. */
+  setupSteps?: SetupStep[];
   /** How the slots are grouped into questions (settings questionnaire), in order. */
   sections?: RuleSection[];
   /** What the BoQ covers (elements left out). */
@@ -486,6 +500,8 @@ export interface RuleSetPatch {
   meta?: Partial<RuleSetMeta>;
   defaults?: RuleSetDefaults;
   params?: Record<string, Param | { value: Param["value"] }>;
+  /** Replaces the parent's setup wizard screens (F16 part 1c, EN-011). */
+  setupSteps?: SetupStep[];
   /** Sections merge by id (title / intro override, new ones appended), so a patch can group its own questions. */
   sections?: RuleSection[];
   /** Replaces the parent's scope when present. */

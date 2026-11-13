@@ -175,7 +175,7 @@ describe("F10 Library shell", () => {
     expect((await create(ivana, { kind: "dictionary", name: "Not mine", projectId: project.id, start: { mode: "empty" } })).response.status).toBe(404);
   });
 
-  it("org presets count against libraryOrgPresets (402)", async () => {
+  it("org presets count against libraryOrgPresets per kind (402)", async () => {
     if (TARGET !== "mock") return;
     const owner = await signUp("Library Owner", uniqueEmail("library"));
     const { data: org } = await client(owner.token).POST("/orgs", { body: { name: "Library Firm", slug: slug("library") } });
@@ -185,5 +185,7 @@ describe("F10 Library shell", () => {
     const over = await create(owner, { kind: "dictionary", name: "One too many", start: { mode: "empty" } }, org!.id);
     expect(over.response.status).toBe(402);
     expect((over.error as { details?: Record<string, unknown> }).details).toMatchObject({ limit: "libraryOrgPresets", current: max, max });
+    // Another kind still fits.
+    expect((await create(owner, { kind: "rule_set", name: "Our rules", start: { mode: "empty" } }, org!.id)).response.status).toBe(201);
   });
 });

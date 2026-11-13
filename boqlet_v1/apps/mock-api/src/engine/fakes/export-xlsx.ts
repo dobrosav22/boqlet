@@ -42,19 +42,25 @@ function python() {
 
 const fmt = (v: number | null | undefined) => (v === null || v === undefined ? "to confirm" : String(Math.round(v * 1e6) / 1e6));
 
-/** The result the export shows: without excluded lines, each edit written in the line's notes. */
-export function exportedResult(result: BoqResult): BoqResult {
+/**
+ * The result the export shows: without excluded lines, each edit written in the line's notes, and
+ * (P14, F06 §2) the item text of the grouping system as the Description, with what was measured in the
+ * notes. An edited description wins over the item text.
+ */
+export function exportedResult(result: BoqResult, groupBy?: string): BoqResult {
   const lines = (result.lines as EditedLine[])
     .filter((l) => !l.excluded)
     .map((l) => {
       const o = l.overridden;
-      if (!o) return l;
+      const text = groupBy && !o?.fields.includes("description") ? l.codes?.[groupBy]?.text : undefined;
+      const withText = text ? { ...l, description: text, notes: [...l.notes, `Measured as: ${l.description}`] } : l;
+      if (!o) return withText;
       const parts: string[] = [];
       if (o.fields.includes("quantity")) parts.push(`quantity edited: ${fmt(o.quantity)} instead of ${fmt(o.engineQuantity)}${o.engineUnit ? ` ${o.engineUnit}` : ""}`);
       if (o.fields.includes("description")) parts.push(`description edited (measured as: ${o.engineDescription})`);
       if (o.fields.includes("codes")) parts.push("moved to another section");
       if (o.reason) parts.push(`reason: ${o.reason}`);
-      return parts.length ? { ...l, notes: [...l.notes, `Edited: ${parts.join("; ")}`] } : l;
+      return parts.length ? { ...withText, notes: [...withText.notes, `Edited: ${parts.join("; ")}`] } : withText;
     });
   return { ...result, lines };
 }
@@ -64,7 +70,7 @@ export async function exportXlsx(result: BoqResult, meta: ExportMeta): Promise<U
   const dir = await mkdtemp(path.join(os.tmpdir(), "boqlet-export-"));
   try {
     const [resultPath, metaPath, outPath] = ["result.json", "meta.json", "boq.xlsx"].map((f) => path.join(dir, f)) as [string, string, string];
-    await writeFile(resultPath, JSON.stringify(exportedResult(result)));
+    await writeFile(resultPath, JSON.stringify(exportedResult(result, meta.classifications[0]?.id)));
     await writeFile(metaPath, JSON.stringify(meta));
     await new Promise<void>((resolve, reject) => {
       const child = spawn(python(), ["-c", SCRIPT, resultPath, metaPath, outPath], { cwd: ENGINE, env: { ...process.env, PYTHONUTF8: "1" } });

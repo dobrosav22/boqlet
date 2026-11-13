@@ -132,3 +132,48 @@ export function useDiscardDraft(presetId: string) {
     onSuccess: async () => refresh(presetId),
   });
 }
+
+/** F10 §4: the draft becomes version n+1 (only without problems; a change note is required). */
+export function usePublishDraft(presetId: string) {
+  const refresh = useRefreshPreset();
+  return useMutation({
+    mutationFn: async (changeNote: string) => (await api.POST("/presets/{presetId}/publish", { params: { path: { presetId } }, body: { changeNote } })).data!,
+    onSuccess: async () => refresh(presetId),
+    onError: () => {},
+  });
+}
+
+export type PreviewResult = Schemas["PreviewResult"];
+export interface PreviewOutput {
+  result: PreviewResult;
+  presetVersionId: string;
+  jobId: string;
+}
+
+const PREVIEW_POLL_MS = 400;
+const PREVIEW_TIMEOUT_MS = 180_000;
+
+/**
+ * F10 §6: starts a `preview` job, waits for it (asking `GET /jobs/{id}`, independent of SSE), then
+ * reads the result through its signed URL.
+ */
+export function usePreview(presetId: string) {
+  return useMutation({
+    mutationFn: async (body: { modelVersionIds: string[]; presetVersionId?: string }): Promise<PreviewOutput> => {
+      const job = (await api.POST("/presets/{presetId}/preview", { params: { path: { presetId } }, body: { ...body, compareWithPublished: true } })).data!;
+      const deadline = Date.now() + PREVIEW_TIMEOUT_MS;
+      let current = job;
+      while (current.status === "queued" || current.status === "running") {
+        if (Date.now() > deadline) throw new Error("preview timed out");
+        await new Promise((r) => setTimeout(r, PREVIEW_POLL_MS));
+        current = (await api.GET("/jobs/{jobId}", { params: { path: { jobId: job.id } } })).data!;
+      }
+      if (current.status !== "succeeded") throw Object.assign(new Error(current.error?.message ?? "preview failed"), { code: current.error?.code });
+      const output = current.output as { previewResultUrl: string; presetVersionId: string };
+      const res = await fetch(output.previewResultUrl);
+      if (!res.ok) throw new Error(`preview result answered ${res.status}`);
+      return { result: (await res.json()) as PreviewResult, presetVersionId: output.presetVersionId, jobId: job.id };
+    },
+    onError: () => {},
+  });
+}

@@ -84,7 +84,47 @@ const changed = (entityType: string, entityId: string, change: "created" | "upda
   emit("entity.changed", { entityType, entityId, change }, { userIds });
 const orgMemberIds = (orgId: string) => db().memberships.filter((m) => m.orgId === orgId).map((m) => m.userId);
 
+/** `Org.setup` as the contract shows it, with the user who started it. */
+function setupView(setup: NonNullable<OrgRec["setup"]>) {
+  const by = setup.startedBy?.id ? db().users.find((u) => u.id === setup.startedBy!.id) : undefined;
+  return { ...setup, ...(by ? { startedBy: { id: by.id, name: by.name, email: by.email } } : {}) };
+}
+
 export const orgHandlers: Handlers = {
+  /** F16: the setup wizard's progress; `204` when the org never started it. Every member may read it. */
+  getOrgSetup({ user, params }) {
+    const { org } = memberOrg(user!, params.orgId!);
+    return org.setup ? json(setupView(org.setup)) : new Response(null, { status: 204 });
+  },
+
+  /** F16 "Leaving and resuming": progress is saved step by step; `done` sets `completedAt`. */
+  putOrgSetup({ user, params, body }) {
+    const { org } = requireOrgAction(user!, params.orgId!, "finishSetup");
+    const b = body as { status?: "in_progress" | "done"; step?: NonNullable<OrgRec["setup"]>["step"]; modelVersionId?: string | null; ruleSetPresetId?: string; classificationPresetId?: string; dictionaryPresetId?: string };
+    const at = nowIso();
+    const prev = org.setup;
+    const next: NonNullable<OrgRec["setup"]> = {
+      ...(prev ?? { status: "in_progress", step: "start", startedBy: { id: user!.id, name: user!.name, email: user!.email } }),
+      ...(b.status ? { status: b.status } : {}),
+      ...(b.step ? { step: b.step } : {}),
+      ...(b.ruleSetPresetId ? { ruleSetPresetId: b.ruleSetPresetId } : {}),
+      ...(b.classificationPresetId ? { classificationPresetId: b.classificationPresetId } : {}),
+      ...(b.dictionaryPresetId ? { dictionaryPresetId: b.dictionaryPresetId } : {}),
+      updatedAt: at,
+    };
+    if (b.modelVersionId !== undefined) {
+      if (b.modelVersionId) next.modelVersionId = b.modelVersionId;
+      else delete next.modelVersionId;
+    }
+    if (b.status === "done" && prev?.status !== "done") next.completedAt = at;
+    if (b.status === "in_progress") delete next.completedAt;
+    org.setup = next;
+    persist();
+    if (b.status === "done" && prev?.status !== "done") audit({ orgId: org.id, actorId: user!.id, action: "org.setup_done", subjectType: "org", subjectId: org.id, data: {} });
+    changed("org", org.id, "updated", orgMemberIds(org.id));
+    return json(setupView(next));
+  },
+
   updateMe({ user, body }) {
     const { name, locale } = body as { name?: string; locale?: string };
     const me = db().users.find((u) => u.id === user!.id)!;

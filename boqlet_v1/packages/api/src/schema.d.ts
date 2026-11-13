@@ -3518,6 +3518,41 @@ export interface components {
         JobType: string;
         /** @enum {string} */
         JobStatus: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+        PreviewLine: {
+            key: string;
+            /** @description The BoQ item (rule) the line comes from */
+            ruleId: string;
+            description: string;
+            quantity: number | null;
+            unit: string;
+            storey?: string;
+            /** @description The values that split the line (`BoqLine.keys`), e.g. for an item text's sample */
+            keys?: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description What a `preview` job's `output.previewResultUrl` (a signed GET URL, 7 days) returns (F10 §6): the lines of the previewed document and, when compared, what changed against the latest published version, by line key. The job's output also carries `presetVersionId` (what was previewed), `lines` (count) and `compare` (the counts). */
+        PreviewResult: {
+            lines: components["schemas"]["PreviewLine"][];
+            questions: number;
+            blockingQuestions: number;
+            warnings: number;
+            compare: {
+                /** Format: uuid */
+                versionId: string;
+                versionNumber: number;
+                added: number;
+                removed: number;
+                changed: number;
+            } | null;
+            changes: {
+                key: string;
+                /** @enum {string} */
+                change: "added" | "removed" | "changed";
+                before?: components["schemas"]["PreviewLine"];
+                after?: components["schemas"]["PreviewLine"];
+            }[];
+        };
         Job: {
             /** Format: uuid */
             id: string;
@@ -3723,6 +3758,7 @@ export interface components {
             parent?: string;
             /** @description 0 = top level. Omit to derive it. */
             level?: number;
+            /** @description The item text (P14, BR-11): the written description of the BoQ item that is priced, a template with blanks the engine fills per line, same syntax as a rule's line text (`{thickness}`, `{thickness*1000}`, `{expr: …}`). Its lines show the filled text (`LineCode.text`). */
             description?: string;
             /** @description Translations of the title, by locale. */
             titles?: {
@@ -3884,6 +3920,8 @@ export interface components {
             /** @enum {string} */
             source: "decision" | "map" | "ifc" | "default";
             mapRuleId?: string;
+            /** @description The code's item text filled with this line's values (EN-010); absent when the code has none. */
+            text?: string;
         };
         codes: {
             [key: string]: components["schemas"]["LineCode"];

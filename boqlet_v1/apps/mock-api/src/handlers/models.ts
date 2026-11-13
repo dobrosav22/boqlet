@@ -363,7 +363,7 @@ export const modelHandlers: Handlers = {
 };
 
 /** The published version of the project's own dictionary (always the most specific layer). */
-function projectDictionaryVersionIds(presetId: string) {
+export function projectDictionaryVersionIds(presetId: string) {
   const versions = db().presetVersions.filter((v) => v.presetId === presetId && v.status === "published");
   const latest = versions.sort((a, b) => (b.number ?? 0) - (a.number ?? 0))[0];
   return latest ? [latest.id] : [];

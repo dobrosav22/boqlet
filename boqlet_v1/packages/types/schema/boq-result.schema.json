@@ -201,6 +201,13 @@
           },
           "description": "The slots. A standard is mostly a set of values for these."
         },
+        "setupSteps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SetupStep"
+          },
+          "description": "The setup wizard's measuring screens (F16 part 1c, EN-011), in order."
+        },
         "sections": {
           "type": "array",
           "items": {
@@ -477,6 +484,10 @@
               ],
               "additionalProperties": false,
               "description": "Only relevant when another slot has one of these values (the questionnaire dims it otherwise)."
+            },
+            "setup": {
+              "type": "string",
+              "description": "The setup wizard (F16, P42, EN-011): the id of a `RuleSet.setupSteps` entry this question appears on (part 1c), or \"skip\" to keep an item-switching yes/no question off the checklist (part 1a)."
             }
           },
           "required": [
@@ -551,6 +562,10 @@
               ],
               "additionalProperties": false,
               "description": "Only relevant when another slot has one of these values (the questionnaire dims it otherwise)."
+            },
+            "setup": {
+              "type": "string",
+              "description": "The setup wizard (F16, P42, EN-011): the id of a `RuleSet.setupSteps` entry this question appears on (part 1c), or \"skip\" to keep an item-switching yes/no question off the checklist (part 1a)."
             }
           },
           "required": [
@@ -613,6 +628,10 @@
               ],
               "additionalProperties": false,
               "description": "Only relevant when another slot has one of these values (the questionnaire dims it otherwise)."
+            },
+            "setup": {
+              "type": "string",
+              "description": "The setup wizard (F16, P42, EN-011): the id of a `RuleSet.setupSteps` entry this question appears on (part 1c), or \"skip\" to keep an item-switching yes/no question off the checklist (part 1a)."
             }
           },
           "required": [
@@ -674,6 +693,10 @@
               ],
               "additionalProperties": false,
               "description": "Only relevant when another slot has one of these values (the questionnaire dims it otherwise)."
+            },
+            "setup": {
+              "type": "string",
+              "description": "The setup wizard (F16, P42, EN-011): the id of a `RuleSet.setupSteps` entry this question appears on (part 1c), or \"skip\" to keep an item-switching yes/no question off the checklist (part 1a)."
             }
           },
           "required": [
@@ -762,6 +785,10 @@
               ],
               "additionalProperties": false,
               "description": "Only relevant when another slot has one of these values (the questionnaire dims it otherwise)."
+            },
+            "setup": {
+              "type": "string",
+              "description": "The setup wizard (F16, P42, EN-011): the id of a `RuleSet.setupSteps` entry this question appears on (part 1c), or \"skip\" to keep an item-switching yes/no question off the checklist (part 1a)."
             }
           },
           "required": [
@@ -805,6 +832,26 @@
     "Expr": {
       "type": "string",
       "description": "A formula in the small, safe expression language.\n\nGrammar (evaluated only by the engine, never by `eval`):   literals      12  0.5  \"text\"  true  false   operators     + - * /  ( )  = != > >= < <=  AND OR NOT   functions     IF(c,a,b)  MIN(a,b,..)  MAX(a,b,..)  ROUND(x,step)  CEIL(x,step)                 FLOOR(x,step)  ABS(x)  SQRT(x)  PI()  COALESCE(a,b,..)                 UNDER(term, \"concrete\")   true if a dictionary term is that term or beneath it   variables     any MeasuredField           e.g. net_area, thickness, length                 props[\"Pset_WallCommon.FireRating\"]                 p.<param>                   e.g. p.opening_threshold                 building.<field>            whole-building values (BuildingMeasures), e.g. building.gross_volume                 src.<field> / src.qty       (derived rules only: the source element / line)   aggregates    SUM | COUNT | MIN | MAX | AVG over a collection, with optional WHERE:                   SUM(openings.area WHERE area > p.opening_threshold)                   SUM(layers.volume WHERE material = \"concrete\")                   COUNT(openings WHERE kind = \"door\")                   SUM(faces.net_area WHERE side = \"a\")                 collections: openings, layers, faces, children"
+    },
+    "SetupStep": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "intro": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "additionalProperties": false,
+      "description": "One screen of the setup wizard's \"How the main items are measured\" (F16 part 1c), in order."
     },
     "RuleSection": {
       "type": "object",
@@ -2136,6 +2183,10 @@
         },
         "mapRuleId": {
           "type": "string"
+        },
+        "text": {
+          "type": "string",
+          "description": "The code's item text filled with this line's values (EN-010); absent when the code has none."
         }
       },
       "required": [

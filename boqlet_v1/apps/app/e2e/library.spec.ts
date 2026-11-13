@@ -56,7 +56,8 @@ test("a library editor lists presets by kind and layer and creates a patch on As
   await expect(page.getByTestId("preset-layer")).toHaveText("Company");
   await expect(page.getByTestId("preset-latest")).toHaveText("Not published yet");
   await expect(page.getByTestId("preset-draft")).toHaveText("no problems");
-  await expect(page.getByTestId("preset-doc")).toContainText('"extends": "as-modelled"');
+  await page.getByTestId("rule-tab-advanced").click();
+  await expect(page.getByTestId("extends")).toContainText("as-modelled");
   await page.getByTestId("preset-tab-versions").click();
   await expect(page.getByTestId("version-row")).toHaveCount(1);
   await page.getByTestId("preset-tab-usage").click();
@@ -69,16 +70,16 @@ test("a system preset is read-only with Make a copy; the copy is named after it"
   await page.locator('[data-testid="library-row"][data-name="Demo: trade sections"]').getByRole("link", { name: "Demo: trade sections" }).click();
   await expect(page.getByTestId("preset-layer")).toHaveText("System");
   await expect(page.getByTestId("preset-archive")).toHaveCount(0);
-  await expect(page.getByTestId("start-draft")).toHaveCount(0);
+  await expect(page.getByTestId("publish-open")).toHaveCount(0);
   await expect(page.getByText("System presets are read-only. Make a copy to change one.")).toBeVisible();
   const original = await page.getByTestId("preset-name").textContent();
-  await page.getByTestId("preset-copy").click();
-  await expect(page.getByTestId("preset-name-input")).toHaveValue(`${original} (copy)`);
-  await expect(page.getByTestId("start-copy")).toBeChecked();
-  await page.getByTestId("preset-name-input").fill(`Trades ${unique("c")}`);
-  await page.getByTestId("create-preset-submit").click();
+  await page.getByTestId("preset-clone").click();
+  await expect(page.getByTestId("clone-name")).toHaveValue(`${original} (copy)`);
+  await page.getByTestId("clone-name").fill(`Trades ${unique("c")}`);
+  await page.getByTestId("clone-confirm").click();
   await expect(page.getByTestId("preset-layer")).toHaveText("Company");
-  await expect(page.getByTestId("preset-doc")).toContainText('"codes"');
+  await page.getByTestId("class-tab-codes").click();
+  await expect(page.getByTestId("code-row").first()).toBeVisible();
 });
 
 test("versions: compare the draft with version 1, restore version 1 as the draft", async ({ page }) => {
@@ -146,8 +147,13 @@ test("F10-AC6: a member views org presets but sees no edit actions", async ({ pa
   await expect(page.getByTestId("library-new")).toHaveCount(0);
   await expect(page.getByTestId("make-copy")).toHaveCount(0);
   await page.goto(`/studio-demo/library/rule_set/${rules.id}`);
-  await expect(page.getByTestId("preset-doc")).toBeVisible();
-  for (const id of ["preset-details", "preset-star", "preset-copy", "preset-archive", "discard-draft", "start-draft"]) await expect(page.getByTestId(id)).toHaveCount(0);
+  await expect(page.getByTestId("preset-editor")).toBeVisible();
+  await expect(page.getByTestId("save-status")).toHaveCount(0);
+  // Every control of the editor is disabled; tabs still switch.
+  await expect(page.locator('[data-testid="answer"] input, [data-testid="answer"] select').first()).toBeDisabled();
+  await page.getByTestId("rule-tab-items").click();
+  await expect(page.getByTestId("item-story").first()).toBeVisible();
+  for (const id of ["preset-details", "preset-star", "preset-clone", "preset-archive", "discard-draft", "publish-open", "template-upload"]) await expect(page.getByTestId(id)).toHaveCount(0);
   await page.getByTestId("preset-tab-versions").click();
   await page.getByTestId("view-version").last().click();
   await expect(page.getByTestId("version-view")).toBeVisible();
