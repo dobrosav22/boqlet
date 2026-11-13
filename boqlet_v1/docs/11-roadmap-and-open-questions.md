@@ -243,6 +243,7 @@ Things the product build doesn't do yet, with the task that deals with each.
   FE-033); its data column is the event's JSON.
 - Audit (FE-033): the action filter offers a fixed list (F09's minimum set and the actions the build writes; the API has no list of the actions used); details show the event data's plain values. Retention hides older events in lists and CSVs; nothing is deleted in the mock.
 - Notifications (FE-034): `limit.near` / `limit.reached` cover the org-wide usage limits; per-action limits (models per BoQ, file size) only answer `402`. The email categories are F13's five core ones (FE-018); modules add theirs with MP1.
+- Versions e2e (FE-035): v1 criterion 3 runs on a v2 that renames one wall (no deleted or changed element, so no line changes) until EN-008's Duplex v1/v2 pair; criterion 4 is checked for one click to the formula, parameters, shares and the 3D view, not walked through by a person (M).
 - Phase-1 interim: the mock reads check details from the PoC engine's cache on the same machine, and
   drops the `null` optional fields the PoC sends in names (the worker should omit them, EN-001).
 
@@ -311,6 +312,7 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-11-13 | 0e73150 | FE-035: FL-3 end to end (`e2e/versions-flow.spec.ts`): answers, save A, v2 (v1 with a wall renamed, parsed for real), Use v2, no question asked again, the change report against A lists exactly that element, a line's explanation and 3D one click away, save B, confirm, reopen; v1 criteria 3, 4 (automated part) and 5 on the mock (approval in `e2e/versions.spec.ts`) |
 | 2026-11-13 | 94b079d | FE-034: every core notification kind of F13 is sent by the mock and rendered from the catalogue: new `project_member.added`, `limit.near` (80 %) and `limit.reached` to owners and admins (seats, active projects, company presets, processing minutes; once per org and limit per period). A test renders every kind the mock knows; 2 scenarios; 1 e2e check in the bell |
 | 2026-11-13 | 8029dcb | FE-033: activity and audit: S18 (project, leads and approvers) and S25 (org settings › Audit, owners and admins) share one view with filters by who, action, entity and date, paging, details, the project link (org), and CSV with the same filters. Mock: shared filtering with the plan's audit retention, the project audit's date filter, the org audit CSV. Contract: `from`/`to` on the project audit and its CSV, `exportOrgAuditCsv`. 5 scenarios, 1 mock test, 1 e2e flow |
 | 2026-11-13 | 8d49e51 | FE-032: the Exports tab (S12g): the working version's Excel on demand, every file of the BoQ's versions with download (working, saved, change reports); a saved version's export is always its frozen file (BR-25), downloads of it are audited; the project audit as CSV with the page's filters, from the activity page. Decisions CSV was there since FE-010. 3 scenarios, 1 e2e flow (F12-AC3) |

@@ -22,8 +22,8 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M3 (Versions, exports, sharing, notifications) |
 | Role | Frontend agent |
-| Last task done | FE-034 Notifications complete (94b079d) |
-| Next task | FE-035 Versions e2e (FL-3, v1 criteria 3, 4, 5) |
+| Last task done | FE-035 Versions e2e (0e73150) |
+| Next task | FE-036 Share links (F18) |
 | Waiting for the owner | — (the owner asked this session to stop after FE-037, the end of M3) |
 | In progress (not committed) | — |
 | Notes for the next session | Read the M3 decision entries (newest first), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
@@ -44,6 +44,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M3 decisions: FE-035 (frontend agent)
+- **Built:** FE-035, 0e73150. `e2e/versions-flow.spec.ts` (one flow, about 50 s).
+- **Decisions taken:** until EN-008, v2 is made in the test from the Duplex by renaming wall `2O2Fr$t4X7Zf8NOew3FNld` (`:138584` → `:138584 moved` in its Name): a valid IFC with the same geometry, parsed for real by the PoC engine, so the change report has exactly one changed element (`name`) and no moved quantity. The test checks the report's lines against `GET /diffs/{id}/lines` (every one caused by `elements_changed`) rather than a fixed list. "No question asked again" is `summary.questionsNew === 0` against version A plus no answers pending. The "Duplex v2 fixture" row in mock-api.md says this.
+- **For the next agent:** when EN-008 lands, point this spec at the real v2 fixture and assert F08-AC1's exact lines and elements.
 
 ### 2026-11-13 — M3 decisions: FE-034 (frontend agent)
 - **Built:** FE-034, 94b079d. `apps/mock-api/src/limits.ts` (`limitHit` for 402s of org usage limits, `usageNow` after the actions that use them), `project_member.added` in `addProjectMember`, messages for every core kind, `src/features/notifications/kinds.test.ts`.
