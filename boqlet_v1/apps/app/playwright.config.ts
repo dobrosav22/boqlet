@@ -12,6 +12,8 @@ const productRoot = path.resolve(__dirname, "..", "..");
 
 export default defineConfig({
   testDir: "e2e",
+  // Runs after the web servers are up: Studio Demo to Enterprise (e2e/global-setup.ts).
+  globalSetup: "./e2e/global-setup.ts",
   fullyParallel: true,
   // One dev server compiles routes on demand; more than two workers make first visits time out.
   workers: 2,
