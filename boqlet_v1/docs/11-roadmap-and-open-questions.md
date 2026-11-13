@@ -112,13 +112,14 @@ Things the product build doesn't do yet, with the task that deals with each.
   an old run can't be opened or compared from the run history yet (FE-030); a BoQ's model scope is shown, not editable (FE-021); "Generate a BoQ" is offered on
   the model version page, not yet in the ready notification (FE-018).
 - Sheet (FE-009): no position numbers in the No. column (FE-040); Description shows the rule set's line
-  text, not item texts (FE-027, EN-010); the line detail's "Show in 3D" opens the
-  Viewer tab, not a split view (FE-014); the app loads up to 20,000 lines at once and doesn't yet switch to the
+  text, not item texts (FE-027, EN-010); "Show in 3D" opens the Viewer tab; on
+  screens 1280 px and wider the sheet shows the model beside it (FE-014); the app loads up to 20,000 lines at once and doesn't yet switch to the
   server-side grouping above that (the mock serves it; FE-045).
-- Viewer (FE-016): the Viewer is its own tab; the side-by-side sheet and model, one filter bar for
-  both, box selection, the bulk actions and the keyboard shortcuts come with FE-014. The *Changes* and
-  *Edited* colour modes come with FE-014 and F08 (FE-030); *Source* colours an element "edited" from the
-  run's edits, not the edits made since. Coverage's "excluded" is every element neither measured,
+- Viewer (FE-016, FE-014): the *Changes* colour mode and F07-AC6 come with the change report (FE-030,
+  EN-002). The shared filter bar has the sheet's filters plus code group and "only these lines": IFC
+  class, type and material aren't on a line (they would need the element's properties, F07 §9) and
+  "changed since a revision" needs FE-030. In the Viewer tab, *Source* and *Edited* use the run's edits;
+  beside the sheet they use its current edits. The split layout and its width aren't remembered. Coverage's "excluded" is every element neither measured,
   unmatched nor covered by a parent (the PoC result doesn't say why an element was left out). Picking
   needs a click on a visible element; above 200,000 elements the merged meshes and id-buffer picking of
   architecture.md are not built (FE-045). "Show in 3D" from a question carries at most 300 GlobalIds in

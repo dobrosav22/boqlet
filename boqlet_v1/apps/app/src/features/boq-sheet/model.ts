@@ -18,6 +18,10 @@ export interface SheetFilters {
   /** Engine model id (as in the trace's elements). */
   model?: string;
   q?: string;
+  /** Top-level code in the Group-by system (`UNCLASSIFIED` for lines without one), F07 §9. */
+  group?: string;
+  /** Only these lines ("only these lines" from a selection in the model, F07 §9). */
+  keys?: ReadonlySet<string>;
 }
 
 export interface GroupRow {
@@ -43,10 +47,13 @@ export type Row = GroupRow | LineRow;
 
 export const UNCLASSIFIED = "~unclassified";
 
-export function filterLines(lines: SheetLine[], f: SheetFilters): SheetLine[] {
+export function filterLines(lines: SheetLine[], f: SheetFilters, system: string | null = null): SheetLine[] {
   const q = f.q?.trim().toLowerCase();
-  if (!f.source && !f.storey && !f.family && !f.model && !q) return lines;
+  const group = system ? f.group : undefined;
+  if (!f.source && !f.storey && !f.family && !f.model && !q && !group && !f.keys) return lines;
   return lines.filter((l) => {
+    if (f.keys && !f.keys.has(l.key)) return false;
+    if (group && (l.codes[system!]?.path[0]?.code ?? UNCLASSIFIED) !== group) return false;
     if (f.source === "edited" ? !l.edit : f.source === "excluded" ? !l.excluded : f.source && l.source !== f.source) return false;
     if (f.storey && l.location?.storey !== f.storey && !l.location?.storeys?.includes(f.storey)) return false;
     if (f.family && l.family !== f.family) return false;
@@ -54,6 +61,30 @@ export function filterLines(lines: SheetLine[], f: SheetFilters): SheetLine[] {
     if (q && !l.description.toLowerCase().includes(q) && !Object.values(l.codes).some((c) => c.code.toLowerCase().includes(q) || c.title.toLowerCase().includes(q))) return false;
     return true;
   });
+}
+
+/** The lines under a group row (its id is the code path joined by "/"), F07 §9 "Groups". */
+export function linesInGroup(lines: readonly SheetLine[], system: string | null, groupId: string): string[] {
+  if (!system) return [];
+  return lines
+    .filter((l) => {
+      const path = (l.codes[system]?.path ?? []).map((p) => p.code);
+      if (groupId === UNCLASSIFIED) return path.length === 0;
+      const id = groupId.split("/");
+      return id.every((code, i) => path[i] === code);
+    })
+    .map((l) => l.key);
+}
+
+/** Top-level groups of a system, for the code-group filter. */
+export function topGroups(lines: readonly SheetLine[], system: string | null) {
+  if (!system) return [];
+  const out = new Map<string, string>();
+  for (const l of lines) {
+    const top = l.codes[system]?.path[0];
+    out.set(top?.code ?? UNCLASSIFIED, top ? `${top.code} ${top.title}` : "");
+  }
+  return [...out].sort(([a], [b]) => (a === UNCLASSIFIED ? 1 : b === UNCLASSIFIED ? -1 : a.localeCompare(b, undefined, { numeric: true }))).map(([code, label]) => ({ code, label }));
 }
 
 /** Distinct values for the filter menus. */

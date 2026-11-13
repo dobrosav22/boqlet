@@ -19,6 +19,15 @@ export function showIn3dHref(base: string, target: { line: string } | { guids: r
   return `${base}?${q.toString()}`;
 }
 
+/** The run's model versions for the viewer, named by their file. */
+export function viewerModels(run: Run | undefined): ViewerModel[] {
+  return (run?.snapshotVersions?.models ?? []).map((m) => ({
+    versionId: m.modelVersionId,
+    traceId: m.traceId,
+    label: run?.models?.find((r) => r.id === m.traceId)?.fileName ?? m.discipline,
+  }));
+}
+
 /** The BoQ workspace's Viewer tab (F07): the current run's models, linked to its lines. */
 export function ViewerTab({ run, base }: { run: Run | undefined; base: string }) {
   const t = useTranslations("boqs.sheet");
@@ -26,15 +35,7 @@ export function ViewerTab({ run, base }: { run: Run | undefined; base: string })
   const search = useSearchParams();
   const router = useRouter();
   const lines = useLines(run?.id);
-  const models: ViewerModel[] = useMemo(
-    () =>
-      (run?.snapshotVersions?.models ?? []).map((m) => ({
-        versionId: m.modelVersionId,
-        traceId: m.traceId,
-        label: run?.models?.find((r) => r.id === m.traceId)?.fileName ?? m.discipline,
-      })),
-    [run],
-  );
+  const models = useMemo(() => viewerModels(run), [run]);
   const linkLines = useMemo(() => (lines.data ?? []).map((l) => ({ ...l, edited: !!l.overridden })), [lines.data]);
   const guids = useMemo(() => search.get("guids")?.split(",").filter(Boolean) ?? null, [search]);
 

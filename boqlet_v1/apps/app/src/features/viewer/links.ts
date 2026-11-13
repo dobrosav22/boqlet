@@ -69,7 +69,7 @@ export function elementOfMesh(mesh: string, elements: SceneElements, links: Link
 
 /* ---------------------------------------------------------------- colour modes (F07 §5) */
 
-export type ColorMode = "type" | "coverage" | "code" | "source" | "model";
+export type ColorMode = "type" | "coverage" | "code" | "source" | "edited" | "model";
 
 export interface LegendEntry {
   key: string;
@@ -83,6 +83,7 @@ export interface LegendEntry {
 
 export const COVERAGE_COLORS = { measured: 0x9fc29a, excluded: 0xbdb7ad, unmatched: 0xd9534f, coveredByParent: 0xc9dcc5 } as const;
 export const SOURCE_COLORS = { measured: 0x9fc29a, derived: 0x7d9be6, edited: 0xf2b705, none: 0xd9d4cc } as const;
+export const EDITED_COLORS = { edited: 0xf2b705, unedited: 0xd9d4cc } as const;
 const PALETTE = [0x4e79a7, 0xf28e2b, 0x59a14f, 0xb07aa1, 0x76b7b2, 0xedc948, 0xff9da7, 0x9c755f, 0xe15759, 0xbab0ac, 0x86bcb6, 0x8cd17d];
 const NO_CODE = 0xd0d0d0;
 
@@ -126,6 +127,17 @@ export function colorsFor({ mode, elements, links, coverage, system, modelOf, mo
       put(guid, { key: k, label: `source.${k}`, translate: true, color: SOURCE_COLORS[k] });
     }
     return { colors, legend: (["measured", "derived", "edited"] as const).map((k) => groups.get(k)).filter((g): g is LegendEntry => !!g) };
+  }
+
+  if (mode === "edited") {
+    // F07 §5 "Edited": elements whose lines carry an edit (F06 §6).
+    for (const guid of Object.keys(elements)) {
+      const ls = links.directLinesOf(guid);
+      if (!ls.length) continue;
+      const k = ls.some((l) => l.edited) ? "edited" : "unedited";
+      put(guid, { key: k, label: `edited.${k}`, translate: true, color: EDITED_COLORS[k] });
+    }
+    return { colors, legend: (["edited", "unedited"] as const).map((k) => groups.get(k)).filter((g): g is LegendEntry => !!g) };
   }
 
   if (mode === "model") {

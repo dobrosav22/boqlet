@@ -18,6 +18,8 @@ export interface Paint {
   focus?: ReadonlySet<string>;
   /** The picked elements' meshes, drawn in the selection colour. */
   picked?: ReadonlySet<string>;
+  /** When set, only these meshes are in scope (the shared filter, F07 §9): the rest is ghosted. */
+  scope?: ReadonlySet<string> | null;
 }
 
 export interface Box {
@@ -55,7 +57,10 @@ export class SceneView {
   private observer: ResizeObserver;
   private down: { x: number; y: number } | null = null;
   private frame = 0;
+  private band: { x: number; y: number; el: HTMLDivElement } | null = null;
   onPick: (guid: string | null, additive: boolean) => void = () => undefined;
+  /** Shift-drag selects every visible element whose centre is inside the box (F07 §9). */
+  onBoxPick: (guids: string[]) => void = () => undefined;
 
   constructor(private host: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -75,9 +80,30 @@ export class SceneView {
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(host);
     const el = this.renderer.domElement;
-    el.addEventListener("pointerdown", (e) => (this.down = { x: e.clientX, y: e.clientY }));
+    el.addEventListener("pointerdown", (e) => {
+      this.down = { x: e.clientX, y: e.clientY };
+      if (e.shiftKey && e.button === 0) {
+        // Box selection instead of panning.
+        this.controls.enabled = false;
+        const band = document.createElement("div");
+        band.style.cssText = "position:absolute;border:1px solid #1e4fb8;background:rgba(30,79,184,.12);pointer-events:none;";
+        band.dataset.testid = "viewer-box";
+        host.appendChild(band);
+        this.band = { x: e.clientX, y: e.clientY, el: band };
+        this.moveBand(e);
+      }
+    });
+    el.addEventListener("pointermove", (e) => this.band && this.moveBand(e));
     el.addEventListener("pointerup", (e) => {
-      if (this.down && Math.hypot(e.clientX - this.down.x, e.clientY - this.down.y) < 5) this.pick(e);
+      const moved = this.down ? Math.hypot(e.clientX - this.down.x, e.clientY - this.down.y) : 0;
+      if (this.band) {
+        const { x, y, el: band } = this.band;
+        band.remove();
+        this.band = null;
+        this.controls.enabled = true;
+        if (moved >= 5) this.onBoxPick(this.inBox(x, y, e.clientX, e.clientY));
+        else this.pick(e);
+      } else if (this.down && moved < 5) this.pick(e);
       this.down = null;
     });
     this.resize();
@@ -180,13 +206,13 @@ export class SceneView {
     this.fit();
   }
 
-  paint({ colors, focus, picked }: Paint) {
+  paint({ colors, focus, picked, scope }: Paint) {
     for (const [guid, m] of this.meshes) {
       if (this.spaces.has(guid) || this.openings.has(guid)) continue;
       const mat = m.material as THREE.MeshStandardMaterial;
       const edges = m.getObjectByName("edges") as THREE.LineSegments | undefined;
       const strong = picked?.has(guid) || focus?.has(guid);
-      const ghost = !strong && ((!!focus && focus.size > 0) || (!!picked && picked.size > 0 && !focus));
+      const ghost = !strong && ((!!focus && focus.size > 0) || (!!picked && picked.size > 0 && !focus) || (!!scope && !scope.has(guid)));
       mat.color.set(picked?.has(guid) ? PICKED : focus?.has(guid) ? FOCUS : ghost ? GHOST : (colors?.get(guid) ?? this.baseColor(guid)));
       mat.transparent = ghost;
       mat.opacity = ghost ? 0.12 : 1;
@@ -248,6 +274,34 @@ export class SceneView {
     const solid = hits.find((h) => !((h.object as THREE.Mesh).material as THREE.Material).transparent);
     const hit = solid ?? hits[0];
     this.onPick(hit ? hit.object.name : null, e.shiftKey || e.ctrlKey || e.metaKey);
+  }
+
+  private moveBand(e: PointerEvent) {
+    if (!this.band) return;
+    const r = this.host.getBoundingClientRect();
+    const [x0, x1] = [Math.min(this.band.x, e.clientX), Math.max(this.band.x, e.clientX)];
+    const [y0, y1] = [Math.min(this.band.y, e.clientY), Math.max(this.band.y, e.clientY)];
+    Object.assign(this.band.el.style, { left: `${x0 - r.left}px`, top: `${y0 - r.top}px`, width: `${x1 - x0}px`, height: `${y1 - y0}px` });
+  }
+
+  /** Visible meshes whose bounding-box centre projects inside the screen rectangle. */
+  private inBox(ax: number, ay: number, bx: number, by: number): string[] {
+    const r = this.renderer.domElement.getBoundingClientRect();
+    const [x0, x1] = [Math.min(ax, bx), Math.max(ax, bx)];
+    const [y0, y1] = [Math.min(ay, by), Math.max(ay, by)];
+    this.root.updateMatrixWorld(true);
+    const out: string[] = [];
+    const box = new THREE.Box3();
+    const c = new THREE.Vector3();
+    for (const [guid, m] of this.meshes) {
+      if (!m.visible || this.spaces.has(guid)) continue;
+      box.setFromObject(m).getCenter(c).project(this.camera);
+      if (c.z > 1) continue;
+      const px = r.left + ((c.x + 1) / 2) * r.width;
+      const py = r.top + ((1 - c.y) / 2) * r.height;
+      if (px >= x0 && px <= x1 && py >= y0 && py <= y1) out.push(guid);
+    }
+    return out;
   }
 
   private resize() {

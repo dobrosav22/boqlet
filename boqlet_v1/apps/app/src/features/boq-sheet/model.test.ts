@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RunLine } from "@/api/hooks/sheet";
-import { buildRows, countsBySource, displayUnit, facets, filterLines, UNCLASSIFIED, type GroupRow } from "./model";
+import { buildRows, countsBySource, displayUnit, facets, filterLines, linesInGroup, topGroups, UNCLASSIFIED, type GroupRow } from "./model";
 
 let n = 0;
 function line(path: [string, string][] | null, fields: Partial<RunLine> = {}): RunLine {
@@ -116,5 +116,25 @@ describe("countsBySource (F06 §12)", () => {
       { ...line(null), excluded: true },
     ];
     expect(countsBySource(lines)).toEqual({ measured: 2, derived: 1, manual: 1, flagged: 1 });
+  });
+});
+
+describe("the sheet's filter shared with the model (F07 §9)", () => {
+  it("filters by top-level code group of the Group-by system, and by a set of lines", () => {
+    expect(filterLines(lines, { group: "2" }, "acme").map((l) => l.key)).toEqual([lines[0]!.key, lines[3]!.key, lines[4]!.key]);
+    expect(filterLines(lines, { group: UNCLASSIFIED }, "acme").map((l) => l.description)).toEqual(["Unmapped thing"]);
+    expect(filterLines(lines, { group: "2" }, null)).toHaveLength(lines.length);
+    expect(filterLines(lines, { keys: new Set([lines[1]!.key]) }).map((l) => l.key)).toEqual([lines[1]!.key]);
+  });
+
+  it("lists the lines under a group row, by its code path", () => {
+    expect(linesInGroup(lines, "acme", "2/2.5")).toEqual([lines[0]!.key, lines[4]!.key]);
+    expect(linesInGroup(lines, "acme", "2")).toHaveLength(3);
+    expect(linesInGroup(lines, "acme", UNCLASSIFIED)).toEqual([lines[2]!.key]);
+    expect(linesInGroup(lines, null, "2")).toEqual([]);
+  });
+
+  it("offers the top-level groups in code order, Unclassified last", () => {
+    expect(topGroups(lines, "acme").map((g) => g.code)).toEqual(["2", "10", UNCLASSIFIED]);
   });
 });

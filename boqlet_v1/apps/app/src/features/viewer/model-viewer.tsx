@@ -32,8 +32,12 @@ export function ModelViewer({
   lines,
   systems = [],
   focusLine = null,
+  focusKeys = null,
   focusGuids = null,
+  scope = null,
+  stacked = false,
   onOpenLine,
+  onSelectionChange,
   className,
 }: {
   models: ViewerModel[];
@@ -43,7 +47,15 @@ export function ModelViewer({
   systems?: { id: string; name: string }[];
   focusLine?: string | null;
   focusGuids?: readonly string[] | null;
+  /** Several lines to highlight (a group row of the sheet, F07 §9). */
+  focusKeys?: readonly string[] | null;
+  /** The lines the shared filter leaves (F07 §9): only their elements are shown strongly. */
+  scope?: readonly string[] | null;
+  /** Panel under the canvas (the split view beside the sheet). */
+  stacked?: boolean;
   onOpenLine?: (key: string) => void;
+  /** The picked elements and the lines they feed ("N lines from M elements", F07 §9). */
+  onSelectionChange?: (selection: { elements: string[]; lines: string[] }) => void;
   className?: string;
 }) {
   const t = useTranslations("viewer");
@@ -121,25 +133,27 @@ export function ModelViewer({
   const focusElements = useMemo(() => {
     if (legendPick !== null) return legend.find((l) => l.key === legendPick)?.guids ?? [];
     if (focusLine) return links.elementsOf(focusLine);
+    if (focusKeys?.length) return [...new Set(focusKeys.flatMap((k) => links.elementsOf(k)))];
     return focusGuids ? [...focusGuids] : [];
-  }, [legendPick, legend, focusLine, focusGuids, links]);
+  }, [legendPick, legend, focusLine, focusKeys, focusGuids, links]);
+  const scopeMeshes = useMemo(() => (scope ? links.meshesOf(new Set(scope.flatMap((k) => links.elementsOf(k)))) : null), [scope, links]);
   const focusMeshes = useMemo(() => links.meshesOf(focusElements), [links, focusElements]);
   const pickedMeshes = useMemo(() => links.meshesOf(picked), [links, picked]);
   const allLoaded = loaded.size === models.length && models.length > 0;
 
   useEffect(() => {
-    view.current?.paint({ colors, focus: focusMeshes, picked: pickedMeshes });
-  }, [colors, focusMeshes, pickedMeshes, loaded]);
+    view.current?.paint({ colors, focus: focusMeshes, picked: pickedMeshes, scope: scopeMeshes });
+  }, [colors, focusMeshes, pickedMeshes, scopeMeshes, loaded]);
 
   // Frame what "Show in 3D" asked for, once everything is in.
   const framed = useRef<string>("");
   useEffect(() => {
     const v = view.current;
-    const key = `${focusLine ?? ""}|${focusGuids?.join(",") ?? ""}`;
+    const key = `${focusLine ?? ""}|${focusKeys?.join(",") ?? ""}|${focusGuids?.join(",") ?? ""}`;
     if (!v || !allLoaded || framed.current === key) return;
     framed.current = key;
     if (focusMeshes.size) v.fit(focusMeshes);
-  }, [allLoaded, focusLine, focusGuids, focusMeshes]);
+  }, [allLoaded, focusLine, focusKeys, focusGuids, focusMeshes]);
 
   useEffect(() => {
     const v = view.current;
@@ -155,6 +169,7 @@ export function ModelViewer({
         return next;
       });
     };
+    v.onBoxPick = (meshes) => setPicked(new Set(meshes.map((m) => elementOfMesh(m, elements, links))));
   }, [elements, links, ready]);
 
   const refresh = () => view.current && setCounts({ meshes: view.current.meshCount, visible: view.current.visibleCount });
@@ -203,15 +218,36 @@ export function ModelViewer({
   const single = picked.size === 1 ? [...picked][0]! : null;
   const pickedLines = useMemo(() => [...new Map([...picked].flatMap((g) => links.linesOf(g)).map((l) => [l.key, l])).values()], [picked, links]);
   const focusLineRow = focusLine ? lines?.find((l) => l.key === focusLine) : undefined;
+  useEffect(() => {
+    onSelectionChange?.({ elements: [...picked], lines: pickedLines.map((l) => l.key) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the selection changes
+  }, [picked, pickedLines]);
+
+  // F07 §9 keyboard: Esc clears the selection, F frames it, H hides it, I isolates it.
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.target as HTMLElement).closest("input, select, textarea") || e.ctrlKey || e.metaKey || e.altKey) return;
+    const key = e.key.toLowerCase();
+    if (key === "escape") {
+      setPicked(new Set());
+      setLegendPick(null);
+    } else if (key === "f") view.current?.fit(selection.size ? selection : undefined);
+    else if (key === "h" && picked.size) act((v) => (v.hide(pickedMeshes), setPicked(new Set())));
+    else if (key === "i" && selection.size) act((v) => v.isolate(selection));
+    else return;
+    e.preventDefault();
+  };
 
   return (
     <div
-      className={cn("flex min-h-[520px] flex-col gap-3 lg:flex-row", className)}
+      className={cn("flex min-h-[520px] flex-col gap-3 outline-none focus-visible:ring-2 focus-visible:ring-ring", !stacked && "lg:flex-row", className)}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
       data-testid="viewer"
       data-ready={allLoaded ? "true" : "false"}
       data-meshes={counts.meshes}
       data-visible={counts.visible}
       data-focus={focusMeshes.size}
+      data-scope={scopeMeshes ? scopeMeshes.size : ""}
       data-picked={picked.size}
     >
       <div className="relative min-h-[420px] flex-1 border border-border bg-muted/40">
@@ -251,7 +287,7 @@ export function ModelViewer({
         </div>
       </div>
 
-      <aside className="flex w-full flex-col gap-4 lg:w-[320px] lg:shrink-0" data-testid="viewer-panel">
+      <aside className={cn("flex w-full flex-col gap-4", !stacked && "lg:w-[320px] lg:shrink-0")} data-testid="viewer-panel">
         <section className="flex flex-col gap-1">
           <h4 className="label-caps text-muted-foreground">{t("models")}</h4>
           {models.map((m) => (
@@ -269,6 +305,7 @@ export function ModelViewer({
             </p>
           ))}
           <p className="text-muted-foreground tabular-nums">{t("shown", { shown: counts.visible, total: counts.meshes })}</p>
+          <p className="text-muted-foreground">{t("shortcuts")}</p>
         </section>
 
         <div className="flex flex-wrap gap-3">
@@ -282,7 +319,7 @@ export function ModelViewer({
               }}
               data-testid="viewer-mode"
             >
-              {(["type", ...(runId ? (["coverage", "code", "source"] as const) : []), ...(models.length > 1 ? (["model"] as const) : [])] as ColorMode[]).map((m) => (
+              {(["type", ...(runId ? (["coverage", "code", "source", "edited"] as const) : []), ...(models.length > 1 ? (["model"] as const) : [])] as ColorMode[]).map((m) => (
                 <option key={m} value={m}>
                   {t(`modes.${m}`)}
                 </option>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLinks, colorsFor, COVERAGE_COLORS, elementOfMesh, SOURCE_COLORS, type LinkLine, type SceneElements } from "./links";
+import { buildLinks, colorsFor, COVERAGE_COLORS, EDITED_COLORS, elementOfMesh, SOURCE_COLORS, type LinkLine, type SceneElements } from "./links";
 
 /** F07 §3–5: links between lines and elements, and the colour modes (FE-016). */
 
@@ -91,6 +91,16 @@ describe("colour modes (F07 §5)", () => {
     expect(legend.map((l) => [l.label, l.guids.length])).toEqual([
       ["Architecture", 4],
       ["Structure", 1],
+    ]);
+  });
+
+  it("edited colours the elements of edited lines (F07 §5)", () => {
+    const { colors, legend } = colorsFor({ mode: "edited", elements, links });
+    expect(colors.get("wall")).toBe(EDITED_COLORS.edited);
+    expect(colors.get("slab1")).toBe(EDITED_COLORS.unedited);
+    expect(legend.map((l) => [l.key, l.guids])).toEqual([
+      ["edited", ["wall"]],
+      ["unedited", ["roof"]],
     ]);
   });
 

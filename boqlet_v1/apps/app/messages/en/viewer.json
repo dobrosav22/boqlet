@@ -11,6 +11,7 @@
     "coverage": "Coverage",
     "code": "Code group",
     "source": "Source",
+    "edited": "Edited",
     "model": "Model"
   },
   "system": "Classification",
@@ -43,6 +44,10 @@
     },
     "code": {
       "none": "No code"
+    },
+    "edited": {
+      "edited": "In an edited line",
+      "unedited": "Not edited"
     }
   },
   "line": "Line",
@@ -69,5 +74,6 @@
   },
   "picked": "{elements, plural, one {# element} other {# elements}} selected · {lines, plural, one {# line} other {# lines}}",
   "openInSheet": "Open in the sheet",
-  "showIn3d": "Show in 3D"
+  "showIn3d": "Show in 3D",
+  "shortcuts": "Shift-drag selects in a box · Esc clears · F frames · H hides · I isolates"
 }

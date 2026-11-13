@@ -3,7 +3,7 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { getCoreRowModel, useReactTable, type ColumnDef, type VisibilityState } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ChevronDown, ChevronRight, Columns3, GripVertical, Plus, Undo2 } from "lucide-react";
+import { Box, ChevronDown, ChevronRight, Columns3, GripVertical, Plus, Undo2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import type { Boq, Run } from "@/api/hooks/boqs";
@@ -17,13 +17,14 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { Input } from "@/components/ui/input";
 import { useOrg } from "@/features/orgs/org-context";
 import { SearchPicker } from "@/features/questions/search-picker";
-import { showIn3dHref } from "@/features/viewer/viewer-tab";
+import { ModelViewer } from "@/features/viewer/model-viewer";
+import { showIn3dHref, viewerModels } from "@/features/viewer/viewer-tab";
 import { cn } from "@/lib/utils";
 import { ManualLineDialog, ReasonDialog } from "./edit-dialogs";
 import { batchFor, effectiveLines, restoreField, withChange, type CodeLists, type EditField, type SheetLine } from "./edits";
 import { LineDetailPanel } from "./line-detail";
 import { LineEdits, type LineActions } from "./line-edits";
-import { buildRows, displayUnit, facets, filterLines, type GroupRow, type Row, type SheetFilters, type SourceFilter } from "./model";
+import { buildRows, displayUnit, facets, filterLines, linesInGroup, topGroups, UNCLASSIFIED, type GroupRow, type Row, type SheetFilters, type SourceFilter } from "./model";
 import { SourceTag } from "./source-tag";
 import { useCodeLists } from "./use-code-lists";
 import { NotInModelsNotice } from "./not-in-models";
@@ -70,6 +71,8 @@ interface RowApi {
   drop: (from: string, target: { line?: string; group?: GroupRow }) => void;
   addToGroup: (group: GroupRow) => void;
   toggleGroup: (id: string) => void;
+  /** Selects a group row: the model highlights the elements of its lines (F07 §9). */
+  selectGroup: (id: string) => void;
 }
 
 type UndoEntry = { kind: "batch"; batch: EditBatch } | { kind: "manualAdded"; recordId: string };
@@ -121,6 +124,13 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [manualDialog, setManualDialog] = useState<{ record?: ManualItemRecord; defaults?: { codes?: Record<string, string>; sortHint?: string } } | null>(null);
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
+  // F07 §9: on screens 1280 px and wider the sheet and the model open side by side (resizable, collapsible).
+  const hasModels = (run.snapshotVersions?.models?.length ?? 0) > 0;
+  const [split, setSplit] = useState(() => typeof window !== "undefined" && window.matchMedia("(min-width: 1280px)").matches);
+  const [sheetWidth, setSheetWidth] = useState(55);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [modelSelection, setModelSelection] = useState<{ elements: string[]; lines: string[] }>({ elements: [], lines: [] });
+  const splitBox = useRef<HTMLDivElement>(null);
   const [visibility, setVisibility] = useState<VisibilityState>({ family: false, tags: false, notes: false });
   const search = useRef<HTMLInputElement>(null);
   const anchor = useRef<string | null>(null);
@@ -129,7 +139,26 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
   const all = useMemo(() => effectiveLines(lines.data ?? [], overrides.data ?? [], manual.data ?? [], lists), [lines.data, overrides.data, manual.data, lists]);
   const byKey = useMemo(() => new Map(all.map((l) => [l.key, l])), [all]);
   const options = useMemo(() => facets(all), [all]);
-  const filtered = useMemo(() => filterLines(all, filters), [all, filters]);
+  const filtered = useMemo(() => filterLines(all, filters, groupBy), [all, filters, groupBy]);
+  const groups = useMemo(() => topGroups(all, groupBy), [all, groupBy]);
+  const models3d = useMemo(() => viewerModels(run), [run]);
+  // The viewer colours "edited" from the sheet's current edits (F07 §5).
+  const linkLines = useMemo(() => all.map((l) => ({ ...l, edited: !!l.edit })), [all]);
+  const startResize = (e: React.PointerEvent) => {
+    const box = splitBox.current;
+    if (!box) return;
+    e.preventDefault();
+    const move = (ev: PointerEvent) => {
+      const r = box.getBoundingClientRect();
+      setSheetWidth(Math.min(75, Math.max(30, ((ev.clientX - r.left) / r.width) * 100)));
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
   const rows = useMemo(() => buildRows(filtered, groupBy, collapsed), [filtered, groupBy, collapsed]);
   const filtering = filtered.length !== all.length;
   // One formatter for every cell (the rule set's rounding is already applied by the engine).
@@ -326,6 +355,10 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
           else next.add(id);
           return next;
         }),
+      selectGroup: (id) => {
+        setSelectedGroup((g) => (g === id ? null : id));
+        setSelected(null);
+      },
     };
   });
   const rowApi = useMemo<RowApi>(
@@ -338,6 +371,7 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
       drop: (f, target) => live.current?.drop(f, target),
       addToGroup: (g) => live.current?.addToGroup(g),
       toggleGroup: (id) => live.current?.toggleGroup(id),
+      selectGroup: (id) => live.current?.selectGroup(id),
     }),
     [],
   );
@@ -375,6 +409,18 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
   if (!lines.data) return <p className="text-muted-foreground" aria-busy="true">{t("loading")}</p>;
 
   const selectedLine = selected ? byKey.get(selected) : undefined;
+  const renderDetail = (detailClass: string | undefined) =>
+    selectedLine &&
+          (selectedLine.pending ? (
+            <aside className={cn("flex w-full flex-col gap-4 border-l border-border pl-5 lg:w-[440px] lg:shrink-0", detailClass)} aria-label={selectedLine.description} data-testid="line-detail">
+              <h3 className="text-title">{selectedLine.description}</h3>
+              <LineEdits line={selectedLine} editable={editable} systemNames={systemNames} actions={actions} />
+            </aside>
+          ) : (
+            <LineDetailPanel run={run} lineKey={selectedLine.key} showIn3dHref={(run.snapshotVersions?.models?.length ?? 0) > 0 ? showIn3dHref(base, { line: selectedLine.key }) : undefined} modelNames={modelNames} systemNames={systemNames} onSelect={setSelected} onClose={() => setSelected(null)} className={detailClass}>
+              {(editable || selectedLine.edit || selectedLine.excluded) && <LineEdits line={selectedLine} editable={editable} systemNames={systemNames} actions={actions} />}
+            </LineDetailPanel>
+          ));
   return (
     <div className="flex flex-col gap-3" data-testid="sheet" data-editable={editable ? "true" : "false"}>
       <WarningsBar runId={run.id} />
@@ -410,6 +456,19 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
               {options.storeys.map((s) => (
                 <option key={s} value={s}>
                   {s}
+                </option>
+              ))}
+            </NativeSelect>
+          </label>
+        )}
+        {groupBy && groups.length > 1 && (
+          <label className="flex flex-col gap-1">
+            <span className="label-caps text-muted-foreground">{t("codeGroup")}</span>
+            <NativeSelect value={filters.group ?? ""} onChange={(e) => setFilter("group", e.target.value)} data-testid="filter-group">
+              <option value="">{t("all")}</option>
+              {groups.map((g) => (
+                <option key={g.code} value={g.code}>
+                  {g.code === UNCLASSIFIED ? t("unclassified") : g.label}
                 </option>
               ))}
             </NativeSelect>
@@ -457,6 +516,12 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
             </Button>
           </>
         )}
+        {hasModels && (
+          <Button variant={split ? "default" : "outline"} aria-pressed={split} onClick={() => setSplit((s) => !s)} title={t("modelToggleHint")} data-testid="toggle-model">
+            <Box aria-hidden />
+            {t("model3d")}
+          </Button>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button variant="outline" data-testid="columns-menu" />}>
             <Columns3 aria-hidden />
@@ -482,6 +547,21 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
           </button>
         </p>
       )}
+      {split && hasModels && modelSelection.elements.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 border-l-2 border-[var(--link)] pl-3" role="status" data-testid="model-selection">
+          <span>{t("fromModel", { lines: modelSelection.lines.length, elements: modelSelection.elements.length })}</span>
+          {editable && modelSelection.lines.length > 0 && (
+            <button className="text-link hover:underline" onClick={() => setChecked(new Set(modelSelection.lines.filter((k) => byKey.has(k))))} data-testid="model-selection-check">
+              {t("selectTheseLines")}
+            </button>
+          )}
+          {modelSelection.lines.length > 0 && (
+            <button className="text-link hover:underline" onClick={() => setFilters((f) => ({ ...f, keys: new Set(modelSelection.lines) }))} data-testid="model-selection-only">
+              {t("onlyTheseLines")}
+            </button>
+          )}
+        </div>
+      )}
       {editable && checkedKeys.length > 0 && (
         <BulkBar
           count={checkedKeys.length}
@@ -500,43 +580,98 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
         </p>
       ) : null}
 
-      <div className="flex flex-col gap-5 lg:flex-row">
-        <div className="min-w-0 flex-1">
-          <SheetGrid
-            rows={rows}
-            columns={visibleMetas}
-            headers={headers}
-            selected={selected}
-            onSelect={setSelected}
-            checked={checked}
-            editing={editing}
-            editable={editable}
-            allChecked={shownKeys.length > 0 && shownKeys.every((k) => checked.has(k))}
-            onCheckAll={(on) => setChecked(on ? new Set(shownKeys) : new Set())}
-            api={rowApi}
-            groupBy={groupBy}
-            lists={lists}
-            num={num}
-            labels={groupLabels}
-            emptyText={filtering ? t("noMatches") : tn("text")}
-            label={t("tableLabel")}
-            checkLabel={te("select")}
-            checkAllLabel={te("selectAll")}
-            pendingLabel={te("pending")}
+      {split && hasModels ? (
+        <div ref={splitBox} className="flex items-start" data-testid="sheet-split">
+          <div className="min-w-0 shrink-0" style={{ width: `${sheetWidth}%` }}>
+            <SheetGrid
+              rows={rows}
+              columns={visibleMetas}
+              headers={headers}
+              selected={selected}
+              onSelect={setSelected}
+              checked={checked}
+              editing={editing}
+              editable={editable}
+              allChecked={shownKeys.length > 0 && shownKeys.every((k) => checked.has(k))}
+              onCheckAll={(on) => setChecked(on ? new Set(shownKeys) : new Set())}
+              api={rowApi}
+              groupBy={groupBy}
+              selectedGroup={selectedGroup}
+              lists={lists}
+              num={num}
+              labels={groupLabels}
+              emptyText={filtering ? t("noMatches") : tn("text")}
+              label={t("tableLabel")}
+              checkLabel={te("select")}
+              checkAllLabel={te("selectAll")}
+              pendingLabel={te("pending")}
+            />
+          </div>
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={t("resize")}
+            aria-valuenow={Math.round(sheetWidth)}
+            aria-valuemin={30}
+            aria-valuemax={75}
+            tabIndex={0}
+            className="mx-2 w-1.5 shrink-0 cursor-col-resize self-stretch bg-border hover:bg-[var(--link)] focus-visible:bg-[var(--link)] focus-visible:outline-none"
+            onPointerDown={startResize}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                e.preventDefault();
+                setSheetWidth((w) => Math.min(75, Math.max(30, w + (e.key === "ArrowLeft" ? -5 : 5))));
+              }
+            }}
+            data-testid="split-handle"
           />
+          <div className="flex min-w-0 flex-1 flex-col gap-5">
+            <ModelViewer
+              key={run.id}
+              stacked
+              models={models3d}
+              runId={run.id}
+              lines={linkLines}
+              systems={systems}
+              focusLine={selected}
+              focusKeys={selectedGroup ? linesInGroup(filtered, groupBy, selectedGroup) : null}
+              scope={filtering ? filtered.map((l) => l.key) : null}
+              onOpenLine={setSelected}
+              onSelectionChange={setModelSelection}
+            />
+            {renderDetail("border-l-0 pl-0 lg:w-full")}
+          </div>
         </div>
-        {selectedLine &&
-          (selectedLine.pending ? (
-            <aside className="flex w-full flex-col gap-4 border-l border-border pl-5 lg:w-[440px] lg:shrink-0" aria-label={selectedLine.description} data-testid="line-detail">
-              <h3 className="text-title">{selectedLine.description}</h3>
-              <LineEdits line={selectedLine} editable={editable} systemNames={systemNames} actions={actions} />
-            </aside>
-          ) : (
-            <LineDetailPanel run={run} lineKey={selectedLine.key} showIn3dHref={(run.snapshotVersions?.models?.length ?? 0) > 0 ? showIn3dHref(base, { line: selectedLine.key }) : undefined} modelNames={modelNames} systemNames={systemNames} onSelect={setSelected} onClose={() => setSelected(null)}>
-              {(editable || selectedLine.edit || selectedLine.excluded) && <LineEdits line={selectedLine} editable={editable} systemNames={systemNames} actions={actions} />}
-            </LineDetailPanel>
-          ))}
-      </div>
+      ) : (
+        <div className="flex flex-col gap-5 lg:flex-row">
+          <div className="min-w-0 flex-1">
+            <SheetGrid
+              rows={rows}
+              columns={visibleMetas}
+              headers={headers}
+              selected={selected}
+              onSelect={setSelected}
+              checked={checked}
+              editing={editing}
+              editable={editable}
+              allChecked={shownKeys.length > 0 && shownKeys.every((k) => checked.has(k))}
+              onCheckAll={(on) => setChecked(on ? new Set(shownKeys) : new Set())}
+              api={rowApi}
+              groupBy={groupBy}
+              selectedGroup={selectedGroup}
+              lists={lists}
+              num={num}
+              labels={groupLabels}
+              emptyText={filtering ? t("noMatches") : tn("text")}
+              label={t("tableLabel")}
+              checkLabel={te("select")}
+              checkAllLabel={te("selectAll")}
+              pendingLabel={te("pending")}
+            />
+          </div>
+          {renderDetail(undefined)}
+        </div>
+      )}
 
       {prompt && (
         <ReasonDialog
@@ -617,6 +752,7 @@ function SheetGrid({
   onCheckAll,
   api,
   groupBy,
+  selectedGroup,
   lists,
   num,
   labels,
@@ -638,6 +774,7 @@ function SheetGrid({
   onCheckAll: (on: boolean) => void;
   api: RowApi;
   groupBy: string | null;
+  selectedGroup: string | null;
   lists: CodeLists;
   num: (v: number) => string;
   labels: GroupLabels;
@@ -712,7 +849,7 @@ function SheetGrid({
         {virtualizer.getVirtualItems().map((v) => {
           const row = rows[v.index]!;
           return row.kind === "group" ? (
-            <GroupRowView key={`g:${row.id}`} row={row} top={v.start} index={v.index} template={template} lead={editable} unitIndex={unitIndex} quantityIndex={quantityIndex} columnCount={columns.length} api={api} editable={editable} num={num} labels={labels} />
+            <GroupRowView key={`g:${row.id}`} row={row} selected={selectedGroup === row.id} top={v.start} index={v.index} template={template} lead={editable} unitIndex={unitIndex} quantityIndex={quantityIndex} columnCount={columns.length} api={api} editable={editable} num={num} labels={labels} />
           ) : (
             <LineRowView
               key={`l:${row.id}`}
@@ -740,6 +877,7 @@ function SheetGrid({
 
 const GroupRowView = memo(function GroupRowView({
   row,
+  selected,
   top,
   index,
   template,
@@ -753,6 +891,8 @@ const GroupRowView = memo(function GroupRowView({
   labels,
 }: {
   row: GroupRow;
+  /** Selected: the model highlights the elements of the group's lines (F07 §9). */
+  selected: boolean;
   top: number;
   index: number;
   template: string;
@@ -774,7 +914,12 @@ const GroupRowView = memo(function GroupRowView({
       role="row"
       aria-rowindex={index + 2}
       aria-expanded={!row.collapsed}
-      className={cn("group/row absolute top-0 left-0 grid w-full min-w-fit border-b border-border bg-muted/50 font-semibold", over && "outline-2 -outline-offset-2 outline-[var(--link)]")}
+      aria-selected={selected}
+      className={cn("group/row absolute top-0 left-0 grid w-full min-w-fit cursor-default border-b border-border bg-muted/50 font-semibold", selected && "bg-selection", over && "outline-2 -outline-offset-2 outline-[var(--link)]")}
+      onClick={(e) => {
+        // The name toggles the group; the rest of the row selects it.
+        if (!(e.target as HTMLElement).closest("button")) api.selectGroup(row.id);
+      }}
       style={{ gridTemplateColumns: template, height: ROW, transform: `translateY(${top}px)` }}
       onDragOver={(e) => {
         if (!editable || !e.dataTransfer.types.includes(DRAG_TYPE) || row.title === null) return;

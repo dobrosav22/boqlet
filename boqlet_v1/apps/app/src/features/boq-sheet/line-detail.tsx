@@ -10,6 +10,7 @@ import { useLine, useLines, usePresetVersion } from "@/api/hooks/sheet";
 import { useErrorMessage } from "@/components/errors/use-error-message";
 import { Button } from "@/components/ui/button";
 import { lexicon, toReadable } from "@/features/library/lib/readable";
+import { cn } from "@/lib/utils";
 import { useOrg } from "@/features/orgs/org-context";
 import { HowCalculated } from "./how-calculated";
 import { displayUnit } from "./model";
@@ -33,6 +34,7 @@ export function LineDetailPanel({
   onSelect,
   onClose,
   children,
+  className,
 }: {
   run: Run;
   lineKey: string;
@@ -44,6 +46,7 @@ export function LineDetailPanel({
   onClose: () => void;
   /** The line's edits and actions (F06 §6), above its explanation. */
   children?: React.ReactNode;
+  className?: string;
 }) {
   const t = useTranslations("boqs.detail");
   const tl = useTranslations("library");
@@ -66,7 +69,7 @@ export function LineDetailPanel({
   const slotLabel = (name: string) => lex.slotLabels.get(name) ?? slots[name]?.label ?? name;
 
   return (
-    <aside className="flex w-full flex-col gap-5 border-l border-border pl-5 lg:w-[440px] lg:shrink-0" aria-label={t("title")} data-testid="line-detail">
+    <aside className={cn("flex w-full flex-col gap-5 border-l border-border pl-5 lg:w-[440px] lg:shrink-0", className)} aria-label={t("title")} data-testid="line-detail">
       <div className="flex items-start gap-2">
         <h3 className="text-title flex-1">{detail.data?.description ?? ""}</h3>
         {showIn3dHref && (

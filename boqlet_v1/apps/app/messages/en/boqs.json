@@ -157,7 +157,14 @@
     },
     "toConfirm": "To confirm",
     "tableLabel": "Bill of quantities",
-    "showingRun": "Showing the run of {when}."
+    "showingRun": "Showing the run of {when}.",
+    "codeGroup": "Code group",
+    "model3d": "Model",
+    "modelToggleHint": "Show or hide the model beside the sheet",
+    "fromModel": "{lines, plural, one {# line} other {# lines}} from {elements, plural, one {# element} other {# elements}} selected in the model",
+    "selectTheseLines": "Select these lines",
+    "onlyTheseLines": "Only these lines",
+    "resize": "Resize the sheet and the model"
   },
   "setup": {
     "readOnly": "These inputs can't be changed: only a lead or estimator edits the working version of an active BoQ.",
