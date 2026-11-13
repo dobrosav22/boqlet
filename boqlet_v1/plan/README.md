@@ -188,4 +188,4 @@ merges `v_1` into it.
 | Frontend, backend specs (06–07) | Written; backend decisions open on purpose |
 | Delivery (08) | Phases, milestones, task lists, session rules and build log written (P37–P40, P44, P45) |
 | Design (06) | Design guidelines decided (P43); wordmark SVG still to come from the owner |
-| **Build** | **Phase 1 in progress.** M0 (consolidation, contract, scaffolding) done 2026-11-12; next M1, FE-005. Live position: `10-build-log.md` |
+| **Build** | **Phase 1 in progress.** M0 (consolidation, contract, scaffolding) done 2026-11-12; M1 (core loop) done 2026-11-13, except FL-1's setup wizard (FE-028, M2) and the sample project's content (docs/11); next M2, FE-021. Live position: `10-build-log.md` |

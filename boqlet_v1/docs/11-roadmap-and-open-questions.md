@@ -115,6 +115,8 @@ Things the product build doesn't do yet, with the task that deals with each.
   text, not item texts (FE-027, EN-010); "Show in 3D" opens the Viewer tab; on
   screens 1280 px and wider the sheet shows the model beside it (FE-014); the app loads up to 20,000 lines at once and doesn't yet switch to the
   server-side grouping above that (the mock serves it; FE-045).
+- Sign-out (fixed at the end of M1, FE-012's work): a late 401 or the auth gate could overtake the
+  redirect of a tab signed out with a reason; `src/auth/leaving.ts` lets the first redirect win.
 - Entitlements (FE-019): the mock bills through the `manual` adapter only (no provider, no webhooks,
   no subscription status other than active; overrides per org come with the backend); the portal just
   returns. The free-plan banner about export watermarks waits for the real export (EN-006, F12). Usage
@@ -240,6 +242,7 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-11-13 | d7ace66 | FE-020: the Duplex end-to-end test (v1 criterion 1): in the app, a new project, the Duplex uploaded (parse job), a BoQ with As modelled + ACME cost codes generated (run job); the lines API gives every line and count of the engine's `HAND_BOQ` / `COUNTS` (read from `engine/tests/test_duplex.py`, same tolerance), and the sheet shows every line. Fix: a tab signed out with a reason no longer loses it to a second redirect (late 401s, the auth gate); the limit dialog asks `GET /me` only when it opens |
 | 2026-11-13 | b27d039 | FE-019: entitlement UX (F14 part): the limit dialog with "Upgrade" (owner → billing) or "Ask your owner"; Billing (S23: plan, status, limits with usage bars, plan cards → checkout, Manage billing) and Usage (S24: minutes by project and kind, seats, active projects) in the org settings. Mock: entitlements, usage, billing, checkout and portal (manual adapter), usage per parse and run with its project. 2 scenarios, 3 e2e flows |
 | 2026-11-13 | 94026ce | FE-018: notifications (F13 part): bell with unread count and the newest items, `/notifications` (S26), email preferences per category on `/account`; toasts for one's own job results (run generated / failed, export ready / failed) without a second toast for an export this tab shows. Mock: the notification and preference endpoints, one `notify()` that also emails the kinds F13 emails. 2 unit tests, 3 scenarios, 3 e2e flows (F13-AC1) |
 | 2026-11-13 | da07e51 | FE-017: the run's Excel (F12 part): "Excel" in the sheet toolbar starts `export_xlsx` (grouped as the sheet), a toast while it runs, then the download (`{project}_{boq}_Rev{label}_{date}.xlsx`). Mock: the engine's exporter over the run's edited result (excluded lines out, edits with reason in the notes), Export records, revision list, signed download. 2 unit tests, 2 scenarios, 1 e2e flow (F12-AC1, F06-AC3 export part) |

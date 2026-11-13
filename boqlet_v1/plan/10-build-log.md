@@ -20,13 +20,13 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 
 | | |
 |---|---|
-| Phase | 1 (frontend on the mock), milestone M1 (core loop) |
+| Phase | 1 (frontend on the mock), milestone M2 (Library and setup) |
 | Role | Frontend agent |
-| Last task done | FE-019 Entitlement UX (F14 part) (b27d039) |
-| Next task | FE-020 Duplex end-to-end test (v1 criterion 1), then the M1 milestone entry |
-| Waiting for the owner | — |
+| Last task done | FE-020 Duplex end-to-end test (d7ace66); **M1 done** |
+| Next task | FE-021 Library shell (F10 §1, 2, 5, 9, 10, 11) |
+| Waiting for the owner | — (the session stopped at the end of M1 because the owner asked it to; start the next one with the usual prompt) |
 | In progress (not committed) | — |
-| Notes for the next session | Read the FE-019, FE-018, FE-017, FE-014, FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | Read the M1 entry, then the FE-019, FE-018, FE-017, FE-014, FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,49 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M1 Core loop (frontend agent)
+- **Built:** FE-005…FE-020, 8d00621..d7ace66 (plus the record commits). Order deviation: FE-016 (viewer)
+  before FE-014 (sheet and model together), which is built on it.
+- **Exit criteria:**
+  - *FL-1 end to end:* sign-up and sign-in through the mock adapter, the session takeover (1a), onboarding
+    with the org on the default tier (2), invitations (3), the empty dashboard (4) and the sample project
+    (5): `e2e/auth.spec.ts`, `orgs.spec.ts`, `sessions.spec.ts`, `projects.spec.ts`, and the F01/F02
+    scenarios. **Not met:** step 2a, the setup wizard, is FE-028 (M2), and the sample project opens empty
+    (docs/11 "Known limitations": its Duplex model, BoQ and answers aren't filled in yet).
+  - *FL-2 up to "run complete" end to end:* add a model, upload (presigned PUT), parse job with live
+    progress, report, BoQ with presets, generate, run complete with notification and toast:
+    `e2e/models.spec.ts`, `boqs.spec.ts`, `notifications.spec.ts`, `duplex.spec.ts`.
+  - *v1 criterion 1 (Duplex reproduction) on the mock:* `e2e/duplex.spec.ts` (FE-020) through the UI and
+    the lines API against `HAND_BOQ` / `COUNTS` from the engine test; green locally, in the CI e2e job from
+    this push on.
+  - *Sheet* (F06-AC1…AC8 except AC9–AC11's position numbers and co-editing, FE-040; AC11 measured in FE-008),
+    *questions* (F05, FE-010), *viewer* (F07-AC1…AC5, AC7; AC6 with FE-030), *line edits and manual lines*
+    (FE-011), *explanations* (F06-AC5 on the "Trace steps" fake), *sessions* (F01-AC5): their e2e specs and
+    shared scenarios, all green in the last full run (typecheck, lint, app 89, mock 46, contract 171,
+    scenarios 80, engine 194, e2e 64).
+  - Criteria passed on a fake (re-checked in phase 3): F06-AC3 (line edits, export), F06-AC5 (trace
+    steps), F12-AC1 (the export's layout).
+- **Decisions taken:** in the FE-005…FE-020 entries below.
+- **Deviations from the spec:** contract fixes (all additive or corrections): `RunLine` and
+  `QuestionWithDecision` by reference, `RunLine.excluded` / `overridden.fields`, `Decision.answerType`,
+  `BoqLine.trace.steps`, `Run.snapshotVersions.models`.
+- **Fakes:** "Line edits applied", "Manual items with codes", "Trace steps", "BoQ export meta" built;
+  the others wait for their tasks (mock-api.md).
+- **Known issues and debt:** the empty sample project (above); everything else is in docs/11 "Known
+  limitations of the product build".
+- **Fixed at the end of M1:** a tab signed out with a reason (`session_replaced`) could land on the sign-in
+  page without it: a late 401 or the auth gate's own redirect overtook the sign-out's navigation
+  (`src/auth/leaving.ts`); the limit dialog asked `GET /me` on every page, which made it likely, and now
+  asks only when it opens. Caught by `e2e/sessions.spec.ts` in the M1 run.
+- **For the next agent:** M2 starts with FE-021 (Library shell). The rule-set editor (FE-022) must open
+  the Settings question named by `?question=<slot>` (FE-013's links from "How it is calculated").
+
+### 2026-11-13 — M1 decisions: FE-020 (frontend agent)
+- **Built:** FE-020, d7ace66. `e2e/duplex.spec.ts` (see the M1 entry).
+- **Decisions taken:** the expected lines are not copied into the app: the test reads `HAND_BOQ` and
+  `COUNTS` from `engine/tests/test_duplex.py` with the engine's Python (`import test_duplex`), and applies
+  the engine test's `q` and tolerance (2e-3 relative, 0.011 absolute) to the lines API.
 
 ### 2026-11-13 — M1 decisions: FE-019 (frontend agent)
 - **Built:** FE-019, b27d039. `e2e/billing.spec.ts`: the Small Firm seed shows the limit dialog on New project
