@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M1 (core loop) |
 | Role | Frontend agent |
-| Last task done | FE-012 Single session (F01 §10) (924857e) |
-| Next task | FE-013 How it is calculated (F06 §5), on the "Trace steps" fake (mock-api.md) |
-| Waiting for the owner | — (the session stopped after FE-012 because the owner asked it to; start the next one with the usual prompt) |
+| Last task done | FE-013 How it is calculated (F06 §5) (04f24c7) |
+| Next task | FE-015 Not in the models (F06 §12), then FE-016 Viewer, then FE-014 Sheet and model together (FE-014 is built on FE-016's viewer, so the two swap) |
+| Waiting for the owner | — |
 | In progress (not committed) | — |
-| Notes for the next session | Read the FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | Read the FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,32 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M1 decisions: FE-013 (frontend agent)
+- **Built:** FE-013, 04f24c7. F06-AC5 runs on the Duplex (fake) in `tests/scenarios/sheet.test.ts` (every
+  line's steps add up to its quantity; the brick wall line has start, deduct with
+  `param: "wall_opening_threshold"`, result; derived lines name their source lines) and `e2e/sheet.spec.ts`
+  (the section comes before the formula, the steps add up, the setting links to its question, a derived
+  line opens its source, an edited line shows who and why). Unit tests of the fake:
+  `apps/mock-api/test/trace-steps.test.ts`.
+- **Decisions taken:**
+  - Types first: `BoqLine.trace.steps?: TraceStep[]` is in `packages/types/src/engine.ts` now, as EN-013
+    specifies, so EN-013 only has to fill it. A step's `value` is its **contribution** in its unit
+    (deductions negative, a factor or a rounding as the difference it makes, an edit as the new quantity
+    minus the engine's); the values before `result` add up to `result.value`, which is the line quantity.
+    Codes (EN-004 style) are listed in the type's comment; the app looks them up as
+    `boqs.how.codes.<code with dots as underscores>` and shows the raw code if it has no message.
+  - A deduction step's `param` is the threshold's slot (EN-013 acceptance), and `params.modeParam` names
+    the mode's slot; the app links both. A derived step carries `sourceLines` (all of them) besides the
+    engine's `sourceLine`.
+  - The edit step uses the override's author (`params.by`, the user's name) and reason, as applied by
+    the run; the step order is start → add/deduct → factor → minimum → round → (derive) → edit → result.
+  - Settings links go to `/{org}/library/rule_set/{presetId}?question=<slot>` (S20 with a query for the
+    question): FE-021/FE-022 must serve it and open that Settings question.
+- **Deviations from the spec:** none.
+- **Fakes:** "Trace steps" built (`engine/fakes/trace-steps.ts`), its row in mock-api.md updated.
+- **For the next agent:** steps are written into the stored result at run time; runs made before this
+  change have none (the detail says to generate again).
 
 ### 2026-11-13 — M1 decisions: FE-012 (frontend agent)
 - **Built:** FE-012, 924857e. F01-AC5 / v1 criterion 16 in `e2e/sessions.spec.ts`; the Session state
