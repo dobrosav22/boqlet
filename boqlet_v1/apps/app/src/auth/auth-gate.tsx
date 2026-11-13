@@ -7,6 +7,7 @@ import { useErrorMessage } from "@/components/errors/use-error-message";
 import { Button } from "@/components/ui/button";
 import { authAdapter, useSession } from "@/auth";
 import { openAppSession } from "./app-session";
+import { isLeaving } from "./leaving";
 
 /**
  * The signed-in part of the app: anonymous visitors go to sign-in and come back afterwards. A
@@ -25,7 +26,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    if (status === "anonymous") router.replace(`/sign-in?returnTo=${encodeURIComponent(returnTo)}`);
+    if (status === "anonymous" && !isLeaving()) router.replace(`/sign-in?returnTo=${encodeURIComponent(returnTo)}`);
   }, [status, returnTo, router]);
 
   useEffect(() => {

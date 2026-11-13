@@ -5,6 +5,7 @@ import { setAccessTokenSource } from "@/api/client";
 import { registerGlobalErrorHandler } from "@/api/global-errors";
 import type { AuthAdapter } from "./AuthAdapter";
 import { mockAuthAdapter } from "./adapters/mock";
+import { isLeaving, startLeaving } from "./leaving";
 
 /** The adapter in use: `NEXT_PUBLIC_AUTH_ADAPTER` (only `mock` until BE-000 decides the provider). */
 const ADAPTERS: Record<string, AuthAdapter> = { mock: mockAuthAdapter };
@@ -23,6 +24,8 @@ export const SIGNED_OUT_REASONS = new Set(["session_replaced", "session_expired"
  * says why. Used by the 401 handler and by the `session.revoked` event.
  */
 export function signedOut(reason: string) {
+  if (isLeaving()) return;
+  startLeaving();
   void authAdapter.signOut({ returnTo: window.location.pathname + window.location.search, reason });
 }
 
@@ -34,8 +37,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(
     () =>
       registerGlobalErrorHandler("unauthorized", (error) => {
+        if (isLeaving()) return;
         if (SIGNED_OUT_REASONS.has(error.code)) signedOut(error.code);
-        else void authAdapter.signIn({ returnTo: window.location.pathname + window.location.search });
+        else {
+          startLeaving();
+          void authAdapter.signIn({ returnTo: window.location.pathname + window.location.search });
+        }
       }),
     [],
   );

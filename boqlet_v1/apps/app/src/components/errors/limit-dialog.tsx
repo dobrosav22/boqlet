@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useMe } from "@/api/hooks/me";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/api/client";
+import { keys } from "@/api/keys";
 import type { ApiError } from "@/api/errors";
 import { registerGlobalErrorHandler } from "@/api/global-errors";
 import { Button } from "@/components/ui/button";
@@ -25,7 +27,9 @@ import {
 export function LimitDialog() {
   const t = useTranslations();
   const [error, setError] = useState<ApiError | null>(null);
-  const me = useMe();
+  // Who may upgrade is asked only when a limit is hit: the dialog lives on every page, sign-in and
+  // onboarding included, which must not get an extra request (it raced the sign-out redirect).
+  const me = useQuery({ queryKey: keys.me(), enabled: error !== null, queryFn: async () => (await api.GET("/me")).data! });
   // The org is the first path segment of the page the limit was hit on.
   const slug = usePathname().split("/")[1] ?? "";
   const membership = me.data?.memberships.find((m) => m.org.slug === slug);
