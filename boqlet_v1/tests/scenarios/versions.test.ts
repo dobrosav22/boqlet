@@ -304,7 +304,7 @@ describe("frozen exports and the audit CSV (F12, FE-032)", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toMatch(/text\/csv/);
     const lines = (await res.text()).replace(/^﻿/, "").trim().split(/\r\n/);
-    expect(lines[0]).toBe("at,actor,action,entityType,entityId,data");
+    expect(lines[0]).toBe("at,actor,action,entityType,entityId,project,data");
     expect(lines.length).toBeGreaterThan(1);
     expect(lines.slice(1).every((l) => l.split(",")[2] === "version.saved")).toBe(true);
     expect((await fetch(`${API_URL}/projects/${projectId}/audit.csv`, { headers: { Authorization: `Bearer ${estimator.token}` } })).status).toBe(403);
