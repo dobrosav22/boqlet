@@ -2,6 +2,7 @@
  * F01: orgs, members, invitations, my profile (FE-005). Behaviour per F01 "Behaviour" and
  * 03-domain/permissions.md; error codes per conventions.md.
  */
+import { limitHit, usageNow } from "../limits.js";
 import { randomBytes } from "node:crypto";
 import { audit, auditCsv, auditView, filterAudit } from "../audit.js";
 import { now, nowIso } from "../clock.js";
@@ -252,7 +253,7 @@ export const orgHandlers: Handlers = {
     }
     const max = planLimits(org).seats;
     const current = seatsInUse(org.id);
-    if (max !== undefined && current >= max) throw limitReached("seats", current, max);
+    if (max !== undefined && current >= max) throw limitHit(org.id, "seats", current, max);
     const at = nowIso();
     const inv: InvitationRec = {
       id: newId(),
@@ -269,6 +270,7 @@ export const orgHandlers: Handlers = {
     persist();
     sendInvitationEmail(org, inv, user!);
     audit({ orgId: org.id, actorId: user!.id, action: "member.invited", subjectType: "invitation", subjectId: inv.id, data: { email: inv.email, role } });
+    usageNow(org.id, "seats", seatsInUse(org.id), planLimits(org).seats);
     changed("invitation", inv.id, "created", orgMemberIds(org.id));
     return json(invitationView(inv), 201);
   },

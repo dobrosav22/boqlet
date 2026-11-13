@@ -61,3 +61,31 @@ describe("F14 entitlements and billing", () => {
     expect(usage).toMatchObject({ processingMinutes: 0, byProject: [], byKind: {} });
   });
 });
+
+describe("limit and membership notifications (F13, FE-034)", () => {
+  const kinds = async (token: string) => (await client(token).GET("/notifications", { params: { query: { limit: 200 } } })).data!.items;
+
+  it("limit.reached goes to the owner once when a limit is used up; a refused action doesn't repeat it", async () => {
+    const { owner, org } = await freeOrg();
+    const api = client(owner.token);
+    const max = (await api.GET("/orgs/{orgId}/entitlements", { params: { path: { orgId: org.id } } })).data!.limits.activeProjects!;
+    for (let i = 0; i < max; i++) await api.POST("/orgs/{orgId}/projects", { params: { path: { orgId: org.id } }, body: { name: `P${i}` } });
+    expect((await api.POST("/orgs/{orgId}/projects", { params: { path: { orgId: org.id } }, body: { name: "Over" } })).response.status).toBe(402);
+    const reached = (await kinds(owner.token)).filter((n) => n.kind === "limit.reached" && n.params?.limit === "activeProjects");
+    expect(reached).toHaveLength(1);
+    expect(reached[0]).toMatchObject({ params: { current: max, max } });
+    expect(reached[0]!.url).toContain("/settings/usage");
+  });
+
+  it("project_member.added tells the person added", async () => {
+    const { owner, org } = await freeOrg();
+    const email = uniqueEmail("added");
+    await client(owner.token).POST("/orgs/{orgId}/invitations", { params: { path: { orgId: org.id } }, body: { email, role: "member" } });
+    const person = await signUp("Added Person", email);
+    await client(person.token).POST("/invitations/{token}/accept", { params: { path: { token: await invitationToken(email) } } });
+    const { data: project } = await client(owner.token).POST("/orgs/{orgId}/projects", { params: { path: { orgId: org.id } }, body: { name: "Shared" } });
+    await client(owner.token).POST("/projects/{projectId}/members", { params: { path: { projectId: project!.id } }, body: { userId: person.id, role: "estimator" } });
+    const added = (await kinds(person.token)).find((n) => n.kind === "project_member.added");
+    expect(added).toMatchObject({ params: { project: "Shared", role: "estimator", by: "Billing Owner" }, entityId: project!.id });
+  });
+});

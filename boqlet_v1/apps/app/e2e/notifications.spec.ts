@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
-import { generatedDuplexBoq, signInAs } from "./helpers";
+import { apiAs, devUser, generatedDuplexBoq, signInAs, unique } from "./helpers";
 
 /** FE-018: notifications (F13): toasts for one's own jobs, the bell, the list page, email preferences. */
 
@@ -69,4 +69,18 @@ test("email preferences per category are saved (F13)", async ({ page }) => {
   await restored;
   await page.reload();
   await expect(page.getByTestId("email-jobs")).toBeChecked();
+});
+
+test("FE-034 every kind reads as text: being added to a project shows in the bell", async ({ page }) => {
+  const olivia = await devUser("olivia");
+  const ivana = await devUser("ivana");
+  const me = await apiAs<{ memberships: { org: { id: string; slug: string } }[] }>(olivia, "GET", "/me");
+  const org = me.memberships.find((m) => m.org.slug === "studio-demo")!.org;
+  const name = `Shared ${unique("p")}`;
+  const project = await apiAs<{ id: string }>(olivia, "POST", `/orgs/${org.id}/projects`, { name });
+  await apiAs(olivia, "POST", `/projects/${project.id}/members`, { userId: ivana.id, role: "estimator" });
+  await signInAs(page, "ivana");
+  await page.goto("/studio-demo");
+  await page.getByTestId("notification-bell").click();
+  await expect(page.getByTestId("notification-item").filter({ hasText: `Olivia Owner added you to ${name}` }).first()).toBeVisible();
 });

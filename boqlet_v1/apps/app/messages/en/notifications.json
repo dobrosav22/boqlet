@@ -12,7 +12,10 @@
     "revision_review_requested": "{by} asks you to review {boq}, version {revision}",
     "revision_changes_requested": "{by} requested changes to {boq}, version {revision}",
     "revision_approved": "{by} approved {boq}, version {revision}",
-    "revision_review_withdrawn": "{by} withdrew the review of {boq}, version {revision}"
+    "revision_review_withdrawn": "{by} withdrew the review of {boq}, version {revision}",
+    "project_member_added": "{by} added you to {project}",
+    "limit_near": "Your plan is nearly used up: {limit, select, seats {seats} activeProjects {active projects} processingMinutesPerMonth {processing minutes this month} libraryOrgPresets {company presets} other {a plan limit}}, {current} of {max}",
+    "limit_reached": "Your plan's limit is reached: {limit, select, seats {seats} activeProjects {active projects} processingMinutesPerMonth {processing minutes this month} libraryOrgPresets {company presets} other {a plan limit}}, {current} of {max}"
   },
   "title": "Notifications",
   "bell": "{count, plural, =0 {Notifications} other {Notifications, # unread}}",

@@ -1,8 +1,10 @@
 /** F02 projects (FE-006): create, list, read, update, archive, members, project audit. */
+import { notify } from "../notify.js";
+import { limitHit, usageNow } from "../limits.js";
 import { audit, auditCsv, auditView, filterAudit } from "../audit.js";
 import { nowIso } from "../clock.js";
 import { emit } from "../events.js";
-import { conflict, HttpError, limitReached } from "../http.js";
+import { conflict, HttpError } from "../http.js";
 import { newId } from "../ids.js";
 import { memberOrg, requireOrgAction, roleIn } from "../permissions.js";
 import { activeProjectCount, projectPermissions, projectRoleOf, visibleProject, writableProject } from "../projects.js";
@@ -161,7 +163,7 @@ export const projectHandlers: Handlers = {
     if (b.sample !== "duplex") {
       const max = planLimits(org).activeProjects;
       const current = activeProjectCount(org.id);
-      if (max !== undefined && current >= max) throw limitReached("activeProjects", current, max);
+      if (max !== undefined && current >= max) throw limitHit(org.id, "activeProjects", current, max);
     }
     if (!b.name?.trim()) throw new HttpError(400, "invalid_body", "The name can't be empty.");
     const sample = b.sample === "duplex";
@@ -170,6 +172,7 @@ export const projectHandlers: Handlers = {
     persist();
     audit({ orgId: org.id, projectId: project.id, actorId: user!.id, action: "project.created", subjectType: "project", subjectId: project.id, data: { name: project.name, sample } });
     changed(project, "created");
+    if (!sample) usageNow(org.id, "activeProjects", activeProjectCount(org.id), planLimits(org).activeProjects);
     return json(projectView(project, user!.id), 201);
   },
 
@@ -210,7 +213,7 @@ export const projectHandlers: Handlers = {
       const org = db().orgs.find((o) => o.id === project.orgId)!;
       const max = planLimits(org).activeProjects;
       const current = activeProjectCount(org.id);
-      if (!project.sample && max !== undefined && current >= max) throw limitReached("activeProjects", current, max);
+      if (!project.sample && max !== undefined && current >= max) throw limitHit(org.id, "activeProjects", current, max);
       project.status = "active";
       project.updatedAt = nowIso();
       persist();
@@ -234,6 +237,11 @@ export const projectHandlers: Handlers = {
     db().projectMembers.push({ projectId: project.id, userId, role, addedBy: user!.id, createdAt: nowIso() });
     persist();
     audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "project.member_added", subjectType: "user", subjectId: userId, data: { role } });
+    // F13 `project_member.added`: the person added is told (not when they added themselves).
+    if (userId !== user!.id) {
+      const org = db().orgs.find((o) => o.id === project.orgId)!;
+      notify({ userId, orgId: org.id, kind: "project_member.added", params: { project: project.name, role, by: user!.name }, url: `/${org.slug}/projects/${project.id}`, entity: { type: "project", id: project.id } });
+    }
     emit("entity.changed", { entityType: "project", entityId: project.id, projectId: project.id, change: "updated" }, { userIds: [...projectAudience(project)] });
     return json(memberView(project.id, userId), 201);
   },

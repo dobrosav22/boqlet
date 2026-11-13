@@ -3,6 +3,7 @@
  * Library shell's writes (FE-021): create (empty / copy / patch), details, star, archive, where used,
  * and the draft (save with ETag and the engine's check, discard); publish and preview (FE-025).
  */
+import { limitHit } from "../limits.js";
 import { audit } from "../audit.js";
 import { putBlob, signedUrl } from "../blobs.js";
 import { nowIso } from "../clock.js";
@@ -12,7 +13,7 @@ import { previewResult, previewRun, type PreviewInputs } from "../engine/fakes/p
 import { withSetupMarkers } from "../engine/fakes/setup-markers.js";
 import { createJob, jobView, runJob } from "../jobs.js";
 import { emit } from "../events.js";
-import { conflict, forbidden, HttpError, limitReached, notFound } from "../http.js";
+import { conflict, forbidden, HttpError, notFound } from "../http.js";
 import { newId } from "../ids.js";
 import { memberOrg, orgPermissions } from "../permissions.js";
 import { blankDoc, blankPatch, checkDoc, docIdOf, renamed, slugify, uniqueSlug } from "../preset-docs.js";
@@ -242,7 +243,7 @@ export const presetHandlers: Handlers = {
       const max = planLimits(org).libraryOrgPresets;
       // Per kind (05-plans-and-limits.md): a free org has one rule set, one classification, one dictionary.
       const current = db().presets.filter((p) => p.orgId === org.id && p.layer === "org" && p.kind === b.kind && !p.archived).length;
-      if (max !== undefined && current >= max) throw limitReached("libraryOrgPresets", current, max);
+      if (max !== undefined && current >= max) throw limitHit(org.id, "libraryOrgPresets", current, max);
     }
 
     let source: PresetVersionRec | undefined;
@@ -464,7 +465,7 @@ export const presetHandlers: Handlers = {
     const org = db().orgs.find((o) => o.id === project.orgId)!;
     const maxMinutes = planLimits(org).processingMinutesPerMonth;
     const used = minutesUsed(org.id);
-    if (maxMinutes !== undefined && used >= maxMinutes) throw limitReached("processingMinutesPerMonth", Math.ceil(used), maxMinutes);
+    if (maxMinutes !== undefined && used >= maxMinutes) throw limitHit(org.id, "processingMinutesPerMonth", Math.ceil(used), maxMinutes);
 
     const versionRec = (id: string) => db().presetVersions.find((v) => v.id === id);
     let source: PresetVersionRec | undefined;

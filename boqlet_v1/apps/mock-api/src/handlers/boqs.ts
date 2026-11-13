@@ -3,6 +3,7 @@
  * inputs, generating runs through the engine as `run` jobs, run history, pending changes, archive.
  * Saving versions, confirming and review come with FE-031. Runs carry the project's decisions (FE-010).
  */
+import { limitHit, usageNow } from "../limits.js";
 import { gzipSync } from "node:zlib";
 import { audit } from "../audit.js";
 import { putBlob, signedUrl } from "../blobs.js";
@@ -536,6 +537,7 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
         const current = revision.currentRunId ? db().runs.find((r) => r.id === revision.currentRunId) : undefined;
         if (!current || current.createdAt <= run.createdAt) revision.currentRunId = run.id;
         db().usage.push({ orgId: org.id, projectId: project.id, kind: "run", ms: Date.now() - started, at: nowIso() });
+        usageNow(org.id, "processingMinutesPerMonth", minutesUsed(org.id), planLimits(org).processingMinutesPerMonth);
         ctx.progress("index", 100);
         audit({ orgId: org.id, projectId: project.id, actorId: user.id, action: "run.finished", subjectType: "run", subjectId: run.id, data: { boq: boq.name, status: run.status, lines: run.stats.lines } });
         if (run.status === "needs_input")
@@ -549,6 +551,7 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
         run.status = "failed";
         run.error = { code, message: RUN_MESSAGES[code]!, ...(detail ? { details: { detail } } : {}) } as RunRec["error"];
         db().usage.push({ orgId: org.id, projectId: project.id, kind: "run", ms: Date.now() - started, at: nowIso() });
+        usageNow(org.id, "processingMinutesPerMonth", minutesUsed(org.id), planLimits(org).processingMinutesPerMonth);
         audit({ orgId: org.id, projectId: project.id, actorId: user.id, action: "run.failed", subjectType: "run", subjectId: run.id, data: { boq: boq.name, code } });
         notify(user.id, project, "job.failed", { boq: boq.name, type: "run", jobId: job.id }, `/${org.slug}/projects/${project.id}/boqs/${boq.id}`, { type: "run", id: run.id });
         finishRun();
@@ -717,7 +720,7 @@ export const boqHandlers: Handlers = {
     const org = db().orgs.find((o) => o.id === project.orgId)!;
     const maxMinutes = planLimits(org).processingMinutesPerMonth;
     const used = minutesUsed(org.id);
-    if (maxMinutes !== undefined && used >= maxMinutes) throw limitReached("processingMinutesPerMonth", Math.ceil(used), maxMinutes);
+    if (maxMinutes !== undefined && used >= maxMinutes) throw limitHit(org.id, "processingMinutesPerMonth", Math.ceil(used), maxMinutes);
     const run: RunRec = {
       id: newId(),
       revisionId: revision.id,
