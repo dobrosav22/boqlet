@@ -285,6 +285,9 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-11-13 | 210e7fa | FE-028: the setup wizard (F16): start, how you measure (checklist, details, the six measuring screens from the rule set's data), item numbers and texts, names, review with Publish all (publish, star, project defaults); progress in `Org.setup` with resume; the dashboard gate for a new org's owner, onboarding into the wizard, Guided setup in the Library, the sheet hint. Mock: `GET/PUT /orgs/{orgId}/setup`, the "Setup markers" fake; previews share the run queue. 1 scenario, 2 e2e flows, step derivation tests |
+| 2026-11-13 | 210e7fa | FE-027 (code list): the item-text box with insert buttons and Reads as (sample from the preview model), the sample text under Codes per line |
+| 2026-11-13 | 210e7fa | FE-026 (guided mode): new rule sets and classifications open in guided mode; reopen on any draft; the one-time "bring your own licence" notice |
 | 2026-11-13 | 5551323 | FE-027 (sheet, detail, Excel, run): item texts on lines (the "Item texts filled" fake), Description from the Group-by system's item text, the line detail's "Measured as", the run Excel's Description; types `LineCode.text`. The code list's item-text box follows with FE-028 |
 | 2026-11-13 | 5551323 | FE-026 (clone, templates): Clone with "Independent copy" / "Based on it"; Excel templates (download, empty template on Create, upload with the changes and problems by sheet, row and column, apply to the draft; the "Preset Excel templates" fake). Guided mode follows with FE-028 |
 | 2026-11-13 | 5551323 | FE-025: publish (change note, no problems, version n+1, BR-07) and the preview panel beside the editor (draft vs published on a model version, follows each save; the "Preview" fake; contract `PreviewResult`) |

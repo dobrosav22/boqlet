@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M2 (Library and setup) |
 | Role | Frontend agent |
-| Last task done | FE-022…FE-025, most of FE-026 and FE-027 (5551323) |
-| Next task | FE-028 Setup wizard (with FE-026's guided mode and FE-027's code-list item-text box, which reuse it) |
-| Waiting for the owner | — (the owner asked this session to stop at the end of M2) |
+| Last task done | FE-028 Setup wizard (210e7fa); **M2 done** |
+| Next task | FE-029 New model versions (F08 §1–2), M3 |
+| Waiting for the owner | — (the session stopped at the end of M2 because the owner asked it to; start the next one with the usual prompt) |
 | In progress (not committed) | — |
-| Notes for the next session | Read the FE-022…FE-027 entry and the FE-021 entry, then the M1 entry, then the FE-019, FE-018, FE-017, FE-014, FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | Read the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry, then the FE-019, FE-018, FE-017, FE-014, FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -46,7 +46,7 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ## Entries
 
 ### 2026-11-13 — M2 Library and setup (frontend agent)
-- **Built:** FE-021…FE-028, 829d61e..HASH (plus the record commits).
+- **Built:** FE-021…FE-028, 829d61e..210e7fa (plus the record commits).
 - **Exit criteria:**
   - *FL-6 (encode the office standard):* step 1 (New → changes on As modelled) and 2 (Settings, autosave)
     in `e2e/library.spec.ts` and `e2e/library-editors.spec.ts` (FE-022 test); 3 (preview on a project model
@@ -87,7 +87,7 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
   default (`{ setupDone: false }` to test the wizard); a new org's owner lands in `/{org}/setup`.
 
 ### 2026-11-13 — M2 decisions: FE-026…FE-028 (frontend agent)
-- **Built:** HASH. FE-026's guided mode (`?mode=guided` on the preset page; new rule sets and classifications
+- **Built:** 210e7fa. FE-026's guided mode (`?mode=guided` on the preset page; new rule sets and classifications
   open in it) and the "bring your own licence" notice; FE-027's item-text box in the code list (insert
   buttons, Reads as with a preview line's values) and the sample text under Codes per line; FE-028 the setup
   wizard (S30), the dashboard gate, onboarding into the wizard, the Library's Guided setup button, the sheet
