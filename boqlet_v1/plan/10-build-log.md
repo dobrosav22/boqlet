@@ -22,8 +22,8 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M3 (Versions, exports, sharing, notifications) |
 | Role | Frontend agent |
-| Last task done | FE-035 Versions e2e (0e73150) |
-| Next task | FE-036 Share links (F18) |
+| Last task done | FE-036 Share links (2f2d757) |
+| Next task | FE-037 Excel edits import (F12) |
 | Waiting for the owner | — (the owner asked this session to stop after FE-037, the end of M3) |
 | In progress (not committed) | — |
 | Notes for the next session | Read the M3 decision entries (newest first), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
@@ -44,6 +44,16 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M3 decisions: FE-036 (frontend agent)
+- **Built:** FE-036, 2f2d757. Mock `handlers/shares.ts`, `geometryUrl` in `viewer.ts`; app `features/shares/` (dialog, public page), `api/hooks/shares.ts`, `/{org}/settings/shares`, `/s/[token]` in the `(public)` group. Checked by `tests/scenarios/shares.test.ts` (10) and `e2e/shares.spec.ts` (2).
+- **Decisions taken:**
+  - Contract fixes: `PublicShare.revisionLabel`, `revisionStatus` and `runAt` are nullable (F18 §1: a link following the latest saved version shows nothing until one is saved), plus `systems`; `getPublicShareScene` takes `versionId` (F18: a BoQ of several models); `ShareLink` gained `projectId`, `projectName`, `boqName`, `revisionLabel` and `permissions` (`edit`, `revoke`) for the lists.
+  - Who may (F18 "Permissions"): create and edit with the project's `share`; revoke with `revokeShares` (lead, approver), as the link's creator, or as an org owner or admin; the org list is `manageShareLinks`. Creating while `publicLinksAllowed` is off is `409 public_links_off`; a plan without `shareLinks` is `402`.
+  - BR-56 in the mock: public lines drop `overridden` and an edit step's `by` and `reason` (the scenario scans every public response for member names, emails, the edit's reason, `decision`, `questions`, `reviewComments`, `createdBy`, prices). It caught the trace steps' author on the first run.
+  - The public page reuses `LineDetailBody` (split out of `LineDetailPanel`) and `ModelViewer` with `publicToken` (its scenes and geometry through the public endpoints).
+  - "Made with" badge: plans whose entitlements have `exportWatermark` (Free); 05-plans-and-limits names no separate flag.
+- **For the next agent:** test hooks `share-boq`, `share-dialog`, `share-label`, `share-create`, `share-url`, `share-link[data-status][data-label]`, `share-views`, `share-revoke`, `share-revoke-confirm`, `org-share-links`, `public-share[data-working]`, `share-line[data-source]`, `share-detail`, `share-gone`.
 
 ### 2026-11-13 — M3 decisions: FE-035 (frontend agent)
 - **Built:** FE-035, 0e73150. `e2e/versions-flow.spec.ts` (one flow, about 50 s).
