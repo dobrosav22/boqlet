@@ -14,6 +14,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import type { BoqResult } from "@ifc-boq/types";
+import { fileURLToPath } from "node:url";
 import { PRODUCT_ROOT } from "../../paths.js";
 import type { EditedLine } from "./line-edits.js";
 
@@ -23,9 +24,13 @@ export interface ExportMeta {
   modelName: string;
   generatedAt: string;
   dictionaries?: string[];
+  /** The BoQ the file is of: the edits import (FE-037) refuses a file of another BoQ. */
+  boqId?: string;
 }
 
 const ENGINE = path.join(PRODUCT_ROOT, "engine");
+/** The round-trip fake (FE-037): hidden line keys and the exported values, and reading an edited file back. */
+const ROUNDTRIP = path.join(path.dirname(fileURLToPath(import.meta.url)), "boq_roundtrip.py");
 const SCRIPT = [
   "import json, sys",
   "from ifc_boq.export_xlsx import export",
@@ -65,20 +70,48 @@ export function exportedResult(result: BoqResult, groupBy?: string): BoqResult {
   return { ...result, lines };
 }
 
+function runPython(args: string[], cwd?: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(python(), args, { ...(cwd ? { cwd } : {}), env: { ...process.env, PYTHONUTF8: "1" } });
+    let out = "";
+    let err = "";
+    child.stdout.on("data", (d) => (out += String(d)));
+    child.stderr.on("data", (d) => (err += String(d)));
+    child.on("error", reject);
+    child.on("close", (code) => (code === 0 ? resolve(out) : reject(new Error(`python failed (${code}): ${err.slice(-500)}`))));
+  });
+}
+
+/** One line as the import compares it: its key, its codes, whether it is excluded now. */
+export interface ImportLine {
+  key: string;
+  codes: BoqResult["lines"][number]["codes"];
+  excluded?: boolean;
+}
+
+/** Reads an edited BoQ workbook back against the BoQ's current lines (F12, FE-037): the EditsImportReport. */
+export async function readEditedXlsx(xlsx: Uint8Array, info: { boqId: string; primary: string | null; lines: ImportLine[] }): Promise<unknown> {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "boqlet-import-"));
+  try {
+    await writeFile(path.join(dir, "in.xlsx"), xlsx);
+    await writeFile(path.join(dir, "info.json"), JSON.stringify(info));
+    return JSON.parse(await runPython([ROUNDTRIP, "read", path.join(dir, "in.xlsx"), path.join(dir, "info.json")]));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
 /** Writes the BoQ Excel of a result with the engine's exporter; returns the xlsx bytes. */
 export async function exportXlsx(result: BoqResult, meta: ExportMeta): Promise<Uint8Array> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "boqlet-export-"));
   try {
-    const [resultPath, metaPath, outPath] = ["result.json", "meta.json", "boq.xlsx"].map((f) => path.join(dir, f)) as [string, string, string];
-    await writeFile(resultPath, JSON.stringify(exportedResult(result, meta.classifications[0]?.id)));
+    const [resultPath, metaPath, rawPath, infoPath, outPath] = ["result.json", "meta.json", "raw.xlsx", "info.json", "boq.xlsx"].map((f) => path.join(dir, f)) as [string, string, string, string, string];
+    const shown = exportedResult(result, meta.classifications[0]?.id);
+    await writeFile(resultPath, JSON.stringify(shown));
     await writeFile(metaPath, JSON.stringify(meta));
-    await new Promise<void>((resolve, reject) => {
-      const child = spawn(python(), ["-c", SCRIPT, resultPath, metaPath, outPath], { cwd: ENGINE, env: { ...process.env, PYTHONUTF8: "1" } });
-      let err = "";
-      child.stderr.on("data", (d) => (err += String(d)));
-      child.on("error", reject);
-      child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`export failed (${code}): ${err.slice(-500)}`))));
-    });
+    await runPython(["-c", SCRIPT, resultPath, metaPath, rawPath], ENGINE);
+    await writeFile(infoPath, JSON.stringify({ boqId: meta.boqId ?? "", primary: meta.classifications[0]?.id ?? null, lines: shown.lines.map((l) => ({ key: l.key, codes: l.codes })) }));
+    await runPython([ROUNDTRIP, "annotate", rawPath, infoPath, outPath]);
     return new Uint8Array(await readFile(outPath));
   } finally {
     await rm(dir, { recursive: true, force: true });

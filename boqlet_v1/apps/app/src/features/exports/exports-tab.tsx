@@ -15,6 +15,7 @@ import { useErrorMessage } from "@/components/errors/use-error-message";
 import { NativeSelect } from "@/components/native-select";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { EditsImport } from "./edits-import";
 
 type Export = Schemas["Export"];
 
@@ -78,6 +79,7 @@ export function ExportsTab({ boq }: { boq: Boq }) {
           </div>
         </section>
       )}
+      {working && working.permissions.editLines && working.currentRun && <EditsImport boq={boq} />}
       {list.map((r, i) => {
         const files = lists[i]?.data ?? [];
         if (r.status !== "issued" && files.length === 0) return null;

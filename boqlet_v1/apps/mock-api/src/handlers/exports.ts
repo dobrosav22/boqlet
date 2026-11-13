@@ -85,7 +85,7 @@ export function startRunExport(opts: { run: RunRec; user: UserRec; groupBy?: str
       const result = await runResult(run);
       const models = ((run.models ?? []) as { fileName: string }[]).map((m) => m.fileName).join(", ");
       const title = `${project.name} / ${boq.name}, revision ${label}${working ? " (WORKING)" : issued?.note ? `: ${issued.note}` : ""}${models ? ` / ${models}` : ""}`;
-      const bytes = await exportXlsx(result, { classifications: ordered, modelName: title, generatedAt: run.finishedAt ?? run.createdAt });
+      const bytes = await exportXlsx(result, { classifications: ordered, modelName: title, generatedAt: run.finishedAt ?? run.createdAt, boqId: boq.id });
       const id = newId();
       const createdAt = nowIso();
       const fileName = exportFileName(project.code || project.name, boq.name, label, createdAt);

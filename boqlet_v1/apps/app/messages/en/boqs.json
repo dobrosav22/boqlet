@@ -638,6 +638,40 @@
       "boq_xlsx": "BoQ (working)",
       "issued_boq_xlsx": "BoQ (saved)",
       "changes_xlsx": "Change report"
+    },
+    "cancel": "Cancel",
+    "import": {
+      "title": "Import edits from Excel",
+      "intro": "Edited the BoQ Excel? Upload it: every change it holds is listed for you to check. Nothing is applied until you apply it, and a file from another BoQ is never applied.",
+      "upload": "Upload the edited Excel",
+      "reading": "Reading the file…",
+      "nothing": "The file holds no edits: it matches this BoQ.",
+      "found": "{count, plural, one {# change found} other {# changes found}}. Tick what to apply.",
+      "line": "Line",
+      "change": "Change",
+      "reason": "Reason",
+      "reasonPlaceholder": "Why (required for quantities and exclusions)",
+      "apply": "Apply this change",
+      "row": "row {row}",
+      "cell": "{sheet} row {row} {column}",
+      "changes": {
+        "quantity": "Quantity",
+        "description": "Text",
+        "unit": "Unit",
+        "moved": "Moved",
+        "excluded": "Deleted",
+        "mixed": "Several"
+      },
+      "whatQuantity": "{from} → {to}",
+      "whatUnit": "unit {to}",
+      "whatDescription": "text \"{to}\"",
+      "whatMoved": "to section {to}",
+      "whatExcluded": "row deleted: the line will be excluded",
+      "newLines": "New rows (become manual lines)",
+      "problems": "Rows it couldn't read",
+      "applyTicked": "{count, plural, one {Apply # change} other {Apply # changes}}",
+      "reasonNeeded": "Give a reason for every ticked quantity change and deletion.",
+      "applied": "{count, plural, one {# change applied} other {# changes applied}}. Generate again to see them in the sheet."
     }
   }
 }

@@ -121,3 +121,36 @@ test("FE-032 F12-AC3 the Exports tab: a working export says WORKING; the saved v
   await page.getByTestId("audit-csv").click();
   expect((await csv).suggestedFilename()).toMatch(/_audit\.csv$/);
 });
+
+test("FE-037 F12-AC4 / v1 criterion 13: an Excel edited by hand imports as exactly its edits; the ticked ones apply as line edits", async ({ page }, testInfo) => {
+  const { url } = await generatedDuplexBoq(new Uint8Array(await readFile(DUPLEX)));
+  await signInAs(page, "olivia");
+  await page.goto(`${url}?tab=exports`);
+  const download = page.waitForEvent("download");
+  await page.getByTestId("exports-new").click();
+  const file = testInfo.outputPath("edited.xlsx");
+  await (await download).saveAs(file);
+  const engine = path.join(ROOT, "engine");
+  const py = existsSync(path.join(engine, ".venv", "Scripts", "python.exe")) ? path.join(engine, ".venv", "Scripts", "python.exe") : path.join(engine, ".venv", "bin", "python");
+  const done = JSON.parse(execFileSync(py, [path.join(ROOT, "tests", "support", "edit_boq_xlsx.py"), file], { encoding: "utf8" })) as { added: { description: string } };
+
+  await page.getByTestId("edits-import-file").setInputFiles(file);
+  const review = page.getByTestId("edits-import-review");
+  await expect(review).toBeVisible({ timeout: 30_000 });
+  await expect(review.getByTestId("edits-import-edit")).toHaveCount(3);
+  for (const change of ["quantity", "moved", "excluded"]) await expect(review.locator(`[data-testid="edits-import-edit"][data-change="${change}"]`)).toHaveCount(1);
+  await expect(review.getByTestId("edits-import-manual")).toHaveCount(1);
+  await expect(review.getByTestId("edits-import-manual")).toContainText(done.added.description);
+  await expect(review.getByTestId("edits-import-apply")).toBeDisabled();
+  const reasons = review.getByTestId("edits-import-reason");
+  await expect(reasons).toHaveCount(2);
+  for (let i = 0; i < 2; i++) await reasons.nth(i).fill("Checked on site");
+  await review.getByTestId("edits-import-apply").click();
+  await expect(page.getByTestId("edits-import-applied")).toContainText("4 changes applied");
+  await expect(page.getByTestId("pending-changes")).toContainText("line edits");
+
+  await page.getByTestId("generate").click();
+  await expect(page.getByTestId("pending-changes")).toHaveCount(0, { timeout: 60_000 });
+  await page.getByTestId("tab-sheet").click();
+  await expect(page.getByTestId("sheet")).toContainText(done.added.description);
+});
