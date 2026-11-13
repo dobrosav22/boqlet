@@ -15,9 +15,10 @@ import { NativeSelect } from "@/components/native-select";
 import { Wordmark } from "@/components/shell/wordmark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { EmailPreferences } from "@/features/notifications/email-preferences";
 import { LOCALE_COOKIE, LOCALES } from "@/i18n/config";
 
-/** S04: my name and language, my organisations, leaving one (F01). */
+/** S04: my name and language, email notifications (F13), my organisations, leaving one (F01). */
 export default function AccountPage() {
   const t = useTranslations("account");
   const roles = useTranslations("common.roles");
@@ -41,6 +42,7 @@ export default function AccountPage() {
       </Link>
       <h1 className="text-title">{t("title")}</h1>
       {me.data && <ProfileForm user={me.data.user} />}
+      {me.data && <EmailPreferences />}
       <section className="flex flex-col gap-3">
         <h2 className="label-caps">{t("orgs")}</h2>
         {me.data?.memberships.length === 0 && <p className="text-muted-foreground">{t("noOrgs")}</p>}

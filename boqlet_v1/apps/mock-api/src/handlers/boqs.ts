@@ -9,6 +9,7 @@ import { putBlob, signedUrl } from "../blobs.js";
 import { nowIso } from "../clock.js";
 import { EngineRefused, EngineUnavailable, engine, type PresetFolder } from "../engine/engine.js";
 import { emit } from "../events.js";
+import { notify as sendNotification } from "../notify.js";
 import { codeListsOf } from "../codes.js";
 import { decisionsSnapshot, unappliedQuestionIds } from "../decisions.js";
 import { applyManualCodes, applyOverrides } from "../engine/fakes/line-edits.js";
@@ -283,13 +284,8 @@ function runOf(user: UserRec, runId: string) {
 const changed = (projectId: string, entityType: string, entityId: string, change: "created" | "updated" | "deleted") =>
   emit("entity.changed", { entityType, entityId, projectId, change }, { userIds: projectAudience(projectId) });
 
-function notify(userId: string, project: ProjectRec, kind: string, params: Record<string, unknown>, url: string, entity: { type: string; id: string }) {
-  const n = { id: newId(), userId, orgId: project.orgId, kind, params, entityType: entity.type, entityId: entity.id, url, readAt: null, createdAt: nowIso() };
-  db().notifications.push(n);
-  persist();
-  const { userId: _u, ...view } = n;
-  emit("notification.created", view, { userIds: [userId] });
-}
+const notify = (userId: string, project: ProjectRec, kind: string, params: Record<string, unknown>, url: string, entity: { type: string; id: string }) =>
+  sendNotification({ userId, orgId: project.orgId, kind, params, url, entity });
 
 // ───────────────────────────── the run job ─────────────────────────────
 
@@ -417,7 +413,8 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
         ctx.progress("index", 100);
         audit({ orgId: org.id, projectId: project.id, actorId: user.id, action: "run.finished", subjectType: "run", subjectId: run.id, data: { boq: boq.name, status: run.status, lines: run.stats.lines } });
         if (run.status === "needs_input")
-          notify(user.id, project, "run.needs_input", { boq: boq.name, count: blocking }, `/${org.slug}/projects/${project.id}/boqs/${boq.id}?tab=questions`, { type: "run", id: run.id });
+          notify(user.id, project, "run.needs_input", { boq: boq.name, count: blocking, jobId: job.id }, `/${org.slug}/projects/${project.id}/boqs/${boq.id}?tab=questions`, { type: "run", id: run.id });
+        else notify(user.id, project, "job.succeeded", { boq: boq.name, type: "run", jobId: job.id }, `/${org.slug}/projects/${project.id}/boqs/${boq.id}`, { type: "run", id: run.id });
         finishRun();
         return { runId: run.id };
       } catch (e) {
@@ -427,7 +424,7 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
         run.error = { code, message: RUN_MESSAGES[code]!, ...(detail ? { details: { detail } } : {}) } as RunRec["error"];
         db().usage.push({ orgId: org.id, kind: "run", ms: Date.now() - started, at: nowIso() });
         audit({ orgId: org.id, projectId: project.id, actorId: user.id, action: "run.failed", subjectType: "run", subjectId: run.id, data: { boq: boq.name, code } });
-        notify(user.id, project, "job.failed", { boq: boq.name, type: "run" }, `/${org.slug}/projects/${project.id}/boqs/${boq.id}`, { type: "run", id: run.id });
+        notify(user.id, project, "job.failed", { boq: boq.name, type: "run", jobId: job.id }, `/${org.slug}/projects/${project.id}/boqs/${boq.id}`, { type: "run", id: run.id });
         finishRun();
         throw Object.assign(new Error(RUN_MESSAGES[code]), { code, retryable: true });
       } finally {

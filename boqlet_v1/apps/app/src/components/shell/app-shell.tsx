@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { APP_NAME } from "@/config";
+import { NotificationBell } from "@/features/notifications/notification-bell";
 import { OrgSwitcher } from "@/features/orgs/org-switcher";
 import { LeftNav } from "./left-nav";
 import { ThemeSwitch } from "./theme-switch";
@@ -9,8 +10,9 @@ import { UserMenu } from "./user-menu";
 import { Wordmark } from "./wordmark";
 
 /**
- * The chrome of every `/{org}` route: a top bar with the wordmark (org switcher, search,
- * notifications and the user menu join in FE-004…FE-006, FE-034) and the left navigation.
+ * The chrome of every `/{org}` route: a top bar with the wordmark, the org switcher, the
+ * notifications bell (FE-018), the theme switch and the user menu (search joins in FE-034), and the
+ * left navigation.
  */
 export async function AppShell({ org, children }: { org: string; children: ReactNode }) {
   const t = await getTranslations("shell");
@@ -29,6 +31,7 @@ export async function AppShell({ org, children }: { org: string; children: React
         <span className="h-5 w-px bg-border" aria-hidden />
         <OrgSwitcher />
         <div className="flex-1" />
+        <NotificationBell />
         <ThemeSwitch />
         <UserMenu />
       </header>

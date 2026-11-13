@@ -10,6 +10,7 @@ import { blobExists, blobPath, signedUrl } from "../blobs.js";
 import { nowIso } from "../clock.js";
 import { EngineRefused, EngineUnavailable, engine } from "../engine/engine.js";
 import { emit } from "../events.js";
+import { notify as sendNotification } from "../notify.js";
 import { conflict, HttpError, limitReached, notFound } from "../http.js";
 import { newId } from "../ids.js";
 import { createJob, jobView, projectAudience, requestCancel, runJob } from "../jobs.js";
@@ -99,13 +100,8 @@ export function versionOf(user: UserRec, versionId: string, write = false) {
 const changed = (projectId: string, entityType: string, entityId: string, change: "created" | "updated" | "deleted") =>
   emit("entity.changed", { entityType, entityId, projectId, change }, { userIds: projectAudience(projectId) });
 
-function notify(userId: string, orgId: string, kind: string, params: Record<string, unknown>, url: string, entity: { type: string; id: string }) {
-  const n = { id: newId(), userId, orgId, kind, params, entityType: entity.type, entityId: entity.id, url, readAt: null, createdAt: nowIso() };
-  db().notifications.push(n);
-  persist();
-  const { userId: _u, ...view } = n;
-  emit("notification.created", view, { userIds: [userId] });
-}
+const notify = (userId: string, orgId: string, kind: string, params: Record<string, unknown>, url: string, entity: { type: string; id: string }) =>
+  sendNotification({ userId, orgId, kind, params, url, entity });
 
 async function sha256Of(file: string) {
   return createHash("sha256").update(await readFile(file)).digest("hex");

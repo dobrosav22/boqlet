@@ -321,6 +321,8 @@ export interface Db {
   sessions: SessionRec[];
   usage: UsageRec[];
   notifications: NotificationRec[];
+  /** Email choices per user and category (F13); missing = on. */
+  notificationPreferences: Record<string, Record<string, boolean>>;
   audit: AuditRec[];
   /** Orgs being deleted (F01 §9): hidden everywhere, removed later. */
   deletedOrgIds: string[];
@@ -357,6 +359,7 @@ export function loadStore(): boolean {
   state.sessions ??= [];
   state.usage ??= [];
   state.notifications ??= [];
+  state.notificationPreferences ??= {};
   state.deletedOrgIds ??= [];
   return true;
 }

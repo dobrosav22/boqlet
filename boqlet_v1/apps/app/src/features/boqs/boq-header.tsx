@@ -198,7 +198,7 @@ function CurrentRunSummary({ run, base, relative }: { run: Run; base: string; re
   const t = useTranslations("boqs.run");
   const stats = run.stats;
   return (
-    <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1" data-testid="current-run" data-status={run.status}>
+    <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1" data-testid="current-run" data-status={run.status} data-run={run.id}>
       <span className="tabular-nums">
         {t("summary", { lines: stats?.lines ?? 0, flagged: stats?.flaggedLines ?? 0, when: relative(run.finishedAt ?? run.createdAt) })}
       </span>

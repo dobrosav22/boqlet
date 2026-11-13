@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { keys } from "@/api/keys";
 import { authAdapter, SIGNED_OUT_REASONS, signedOut, useSession } from "@/auth";
 import { invalidationsFor } from "./invalidation";
+import { localJobs } from "./local-jobs";
 import { connectRealtime } from "./sse";
 
 /** Opens the tab's SSE connection while signed in and turns events into query refetches. */
@@ -31,8 +32,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           return;
         }
         for (const queryKey of invalidationsFor(e)) void client.invalidateQueries({ queryKey });
-        // A toast for each notification (the bell and the list come with FE-018).
-        if (e.event === "notification.created" && typeof e.data.kind === "string") {
+        // A toast for each notification (F13), except a job's this tab shows itself (an export's toast).
+        const jobId = (e.data.params as { jobId?: unknown } | undefined)?.jobId;
+        if (e.event === "notification.created" && typeof e.data.kind === "string" && !(typeof jobId === "string" && localJobs.has(jobId))) {
           const key = `kinds.${e.data.kind.replaceAll(".", "_")}`;
           const params = (e.data.params ?? {}) as Record<string, string | number>;
           const url = typeof e.data.url === "string" ? e.data.url : null;

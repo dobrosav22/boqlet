@@ -115,6 +115,12 @@ Things the product build doesn't do yet, with the task that deals with each.
   text, not item texts (FE-027, EN-010); "Show in 3D" opens the Viewer tab; on
   screens 1280 px and wider the sheet shows the model beside it (FE-014); the app loads up to 20,000 lines at once and doesn't yet switch to the
   server-side grouping above that (the mock serves it; FE-045).
+- Notifications (FE-018): the kinds the mock sends so far are a model version ready, a run that needs
+  input, and job results for runs and exports; the others arrive with their features (versions,
+  reviews, membership, limits, the pricing module's). `model_version.ready` is never emailed (F13: only
+  when parsing took over 2 min); offer batching comes with MP1. Email preferences hold the core
+  categories only. The bell's count refreshes on new notifications and on this tab's reads, not on reads
+  in another tab.
 - Run Excel (FE-017): the PoC engine's layout (the "BoQ export" fake until EN-006): no cover sheet,
   "Excluded lines" or "Calculation" sheet, no item-text columns, no hidden line keys; the WORKING mark is
   in the title line, not a watermark; edits are written into the line's notes. The Exports tab, saved

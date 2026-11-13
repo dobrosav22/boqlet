@@ -9,6 +9,7 @@ import { nowIso } from "../clock.js";
 import { exportXlsx } from "../engine/fakes/export-xlsx.js";
 import { HttpError, notFound } from "../http.js";
 import { newId } from "../ids.js";
+import { notify } from "../notify.js";
 import { createJob, jobView, runJob } from "../jobs.js";
 import { visibleProject } from "../projects.js";
 import { json, type Handlers } from "../router.js";
@@ -33,8 +34,18 @@ export const exportView = (e: ExportRec) => ({
 });
 
 /** `{projectCode or name}_{boqName}_Rev{label}_{yyyy-mm-dd}.xlsx`, sanitised (F12). */
-export function exportFileName(project: string, boq: string, label: string, at: string) {
-  const clean = (s: string) => s.normalize("NFKD").replace(/[^\w.-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+export function exportFileName(
+  project: string,
+  boq: string,
+  label: string,
+  at: string,
+) {
+  const clean = (s: string) =>
+    s
+      .normalize("NFKD")
+      .replace(/[^\w.-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
   return `${clean(project)}_${clean(boq)}_Rev${clean(label)}_${at.slice(0, 10)}.xlsx`;
 }
 
@@ -48,38 +59,120 @@ function exportOf(user: UserRec, exportId: string) {
 export const exportHandlers: Handlers = {
   async exportRun({ user, params, body }) {
     const run = runFor(user!, params.runId!);
-    if (!run.resultKey) throw new HttpError(409, "run_not_finished", "The run has no result yet.", { status: run.status });
+    if (!run.resultKey)
+      throw new HttpError(
+        409,
+        "run_not_finished",
+        "The run has no result yet.",
+        { status: run.status },
+      );
     const revision = db().revisions.find((r) => r.id === run.revisionId)!;
     const boq = db().boqs.find((b) => b.id === revision.boqId)!;
     const project = db().projects.find((p) => p.id === boq.projectId)!;
     const b = (body ?? {}) as { format?: string; groupBy?: string };
     const systems = run.classifications ?? [];
-    if (b.groupBy && !systems.some((s) => s.id === b.groupBy)) throw new HttpError(400, "invalid_body", "groupBy is not a classification of this run.", { groupBy: b.groupBy });
-    const ordered = b.groupBy ? [...systems.filter((s) => s.id === b.groupBy), ...systems.filter((s) => s.id !== b.groupBy)] : systems;
-    const job = createJob({ type: "export_xlsx", subjectType: "run", subjectId: run.id, projectId: project.id, orgId: project.orgId, createdBy: user!.id });
+    if (b.groupBy && !systems.some((s) => s.id === b.groupBy))
+      throw new HttpError(
+        400,
+        "invalid_body",
+        "groupBy is not a classification of this run.",
+        { groupBy: b.groupBy },
+      );
+    const ordered = b.groupBy
+      ? [
+          ...systems.filter((s) => s.id === b.groupBy),
+          ...systems.filter((s) => s.id !== b.groupBy),
+        ]
+      : systems;
+    const job = createJob({
+      type: "export_xlsx",
+      subjectType: "run",
+      subjectId: run.id,
+      projectId: project.id,
+      orgId: project.orgId,
+      createdBy: user!.id,
+    });
     const label = String.fromCharCode(64 + revision.number);
     const working = revision.status === "draft";
-    void runJob(job, async (ctx) => {
-      ctx.progress("export", 10);
-      const result = await runResult(run);
-      const models = ((run.models ?? []) as { fileName: string }[]).map((m) => m.fileName).join(", ");
-      const bytes = await exportXlsx(result, {
-        classifications: ordered,
-        modelName: `${project.name} / ${boq.name}, revision ${label}${working ? " (WORKING)" : ""}${models ? ` / ${models}` : ""}`,
-        generatedAt: run.finishedAt ?? run.createdAt,
-      });
-      const id = newId();
-      const createdAt = nowIso();
-      const fileName = exportFileName(project.code || project.name, boq.name, label, createdAt);
-      const storageKey = `orgs/${project.orgId}/exports/${id}/${fileName}`;
-      await putBlob(storageKey, bytes);
-      const rec: ExportRec = { id, kind: "boq_xlsx", subjectType: "run", subjectId: run.id, revisionId: revision.id, projectId: project.id, orgId: project.orgId, fileName, storageKey, sizeBytes: bytes.byteLength, jobId: job.id, createdBy: user!.id, createdAt };
-      db().exports.push(rec);
-      persist();
-      audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "export.created", subjectType: "export", subjectId: id, data: { boq: boq.name, fileName } });
-      ctx.progress("export", 100);
-      return { exportId: id };
-    });
+    const org = db().orgs.find((o) => o.id === project.orgId)!;
+    const boqUrl = `/${org.slug}/projects/${project.id}/boqs/${boq.id}`;
+    void runJob(
+      job,
+      async (ctx) => {
+        ctx.progress("export", 10);
+        const result = await runResult(run);
+        const models = ((run.models ?? []) as { fileName: string }[])
+          .map((m) => m.fileName)
+          .join(", ");
+        const bytes = await exportXlsx(result, {
+          classifications: ordered,
+          modelName: `${project.name} / ${boq.name}, revision ${label}${working ? " (WORKING)" : ""}${models ? ` / ${models}` : ""}`,
+          generatedAt: run.finishedAt ?? run.createdAt,
+        });
+        const id = newId();
+        const createdAt = nowIso();
+        const fileName = exportFileName(
+          project.code || project.name,
+          boq.name,
+          label,
+          createdAt,
+        );
+        const storageKey = `orgs/${project.orgId}/exports/${id}/${fileName}`;
+        await putBlob(storageKey, bytes);
+        const rec: ExportRec = {
+          id,
+          kind: "boq_xlsx",
+          subjectType: "run",
+          subjectId: run.id,
+          revisionId: revision.id,
+          projectId: project.id,
+          orgId: project.orgId,
+          fileName,
+          storageKey,
+          sizeBytes: bytes.byteLength,
+          jobId: job.id,
+          createdBy: user!.id,
+          createdAt,
+        };
+        db().exports.push(rec);
+        persist();
+        audit({
+          orgId: project.orgId,
+          projectId: project.id,
+          actorId: user!.id,
+          action: "export.created",
+          subjectType: "export",
+          subjectId: id,
+          data: { boq: boq.name, fileName },
+        });
+        ctx.progress("export", 100);
+        notify({
+          userId: user!.id,
+          orgId: project.orgId,
+          kind: "job.succeeded",
+          params: {
+            boq: boq.name,
+            type: "export",
+            file: fileName,
+            jobId: job.id,
+          },
+          url: boqUrl,
+          entity: { type: "export", id },
+        });
+        return { exportId: id };
+      },
+      (done) => {
+        if (done.status === "failed")
+          notify({
+            userId: user!.id,
+            orgId: project.orgId,
+            kind: "job.failed",
+            params: { boq: boq.name, type: "export", jobId: job.id },
+            url: boqUrl,
+            entity: { type: "run", id: run.id },
+          });
+      },
+    );
     return json(jobView(job), 202);
   },
 
@@ -89,7 +182,10 @@ export const exportHandlers: Handlers = {
 
   downloadExport({ user, params }) {
     const e = exportOf(user!, params.exportId!);
-    return new Response(null, { status: 302, headers: { Location: signedUrl(e.storageKey, "GET", 300).url } });
+    return new Response(null, {
+      status: 302,
+      headers: { Location: signedUrl(e.storageKey, "GET", 300).url },
+    });
   },
 
   listRevisionExports({ user, params }) {

@@ -39,4 +39,5 @@ export const keys = {
   job: (jobId: string) => ["job", jobId] as const,
   jobProgress: (jobId: string) => ["jobProgress", jobId] as const,
   notifications: () => ["notifications"] as const,
+  notificationPreferences: () => ["notificationPreferences"] as const,
 };

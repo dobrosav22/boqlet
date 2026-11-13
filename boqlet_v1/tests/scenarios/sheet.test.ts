@@ -275,3 +275,38 @@ describe("run export (F12, FE-017)", () => {
     expect(response.status).toBe(400);
   });
 });
+
+describe("notifications (F13, FE-018)", () => {
+  it("the run's creator gets its result; one or all can be marked read", async () => {
+    const api = client(owner.token);
+    const { data: list } = await api.GET("/notifications", { params: { query: { limit: 200 } } });
+    const mine = list!.items.filter((n) => n.entityId === run.id);
+    expect(mine.map((n) => n.kind)).toContain(run.status === "complete" ? "job.succeeded" : "run.needs_input");
+    expect(list!.unreadCount).toBeGreaterThan(0);
+    const first = list!.items[0]!;
+    expect((await api.POST("/notifications/{notificationId}/read", { params: { path: { notificationId: first.id } } })).response.status).toBe(204);
+    const { data: unread } = await api.GET("/notifications", { params: { query: { unreadOnly: true } } });
+    expect(unread!.items.map((n) => n.id)).not.toContain(first.id);
+    expect(unread!.unreadCount).toBe(list!.unreadCount - 1);
+    expect((await api.POST("/notifications/read-all")).response.status).toBe(204);
+    expect((await api.GET("/notifications")).data!.unreadCount).toBe(0);
+  });
+
+  it("someone else's notification is not found", async () => {
+    const other = await signUp("Other", uniqueEmail("other"));
+    const { data } = await client(owner.token).GET("/notifications");
+    const { response } = await client(other.token).POST("/notifications/{notificationId}/read", { params: { path: { notificationId: data!.items[0]!.id } } });
+    expect(response.status).toBe(404);
+  });
+
+  it("email preferences per category: all on by default, saved per category, unknown categories refused", async () => {
+    const api = client(owner.token);
+    const { data: prefs } = await api.GET("/me/notification-preferences");
+    expect(prefs!.email).toMatchObject({ jobs: true, versions: true, reviews: true, membership: true, limits: true });
+    const { data: saved } = await api.PUT("/me/notification-preferences", { body: { email: { jobs: false } } });
+    expect(saved!.email).toMatchObject({ jobs: false, versions: true });
+    expect((await api.GET("/me/notification-preferences")).data!.email!.jobs).toBe(false);
+    const { response } = await api.PUT("/me/notification-preferences", { body: { email: { nonsense: true } } });
+    expect(response.status).toBe(400);
+  });
+});

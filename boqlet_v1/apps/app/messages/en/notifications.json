@@ -3,6 +3,41 @@
   "kinds": {
     "model_version_ready": "{model} v{version} is ready",
     "run_needs_input": "{boq}: {count, plural, one {# question needs} other {# questions need}} an answer",
-    "job_failed": "{boq}: generating failed"
+    "job_failed": "{type, select, run {{boq}: generating failed} export {{boq}: the Excel export failed} other {A job failed}}",
+    "job_succeeded": "{type, select, run {{boq} is generated} export {{file} is ready} other {A job finished}}"
+  },
+  "title": "Notifications",
+  "bell": "{count, plural, =0 {Notifications} other {Notifications, # unread}}",
+  "markAllRead": "Mark all read",
+  "markRead": "Mark read",
+  "empty": "Nothing yet.",
+  "all": "All notifications",
+  "unreadOnly": "Unread only",
+  "more": "Show more",
+  "preferences": {
+    "title": "Email",
+    "intro": "Choose what is also sent by email. Everything always shows under the bell.",
+    "categories": {
+      "jobs": {
+        "label": "Jobs",
+        "hint": "When generating a BoQ or reading a model fails"
+      },
+      "versions": {
+        "label": "Versions",
+        "hint": "When a BoQ is confirmed or reopened"
+      },
+      "reviews": {
+        "label": "Reviews",
+        "hint": "Review requests, approvals and requested changes"
+      },
+      "membership": {
+        "label": "Projects",
+        "hint": "When you are added to a project"
+      },
+      "limits": {
+        "label": "Plan limits",
+        "hint": "When your organisation nears or reaches a limit"
+      }
+    }
   }
 }

@@ -2,6 +2,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/api/client";
+import { localJobs } from "@/realtime/local-jobs";
 
 /** How often an export job is asked about while it runs (exports take seconds, F12). */
 const POLL_MS = 500;
@@ -27,6 +28,7 @@ export function useExportRun(runId: string) {
   return useMutation({
     mutationFn: async ({ groupBy }: { groupBy?: string | null }) => {
       const job = (await api.POST("/runs/{runId}/exports", { params: { path: { runId } }, body: { format: "xlsx", ...(groupBy ? { groupBy } : {}) } })).data!;
+      localJobs.add(job.id);
       const deadline = Date.now() + TIMEOUT_MS;
       let current = job;
       while (current.status === "queued" || current.status === "running") {

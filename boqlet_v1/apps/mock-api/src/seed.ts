@@ -146,7 +146,7 @@ export function buildSeed(): Db {
     member("small", "olivia", "owner"),
   ];
   const { presets, presetVersions } = systemPresets(at);
-  const store: Db = { version: 1, seededAt: at, users, orgs, memberships, plans: PLANS, presets, presetVersions, invitations: [], projects: [], projectMembers: [], models: [], modelVersions: [], jobs: [], boqs: [], revisions: [], runs: [], decisions: [], overrides: [], manualItems: [], exports: [], sessions: [], usage: [], notifications: [], audit: [], deletedOrgIds: [] };
+  const store: Db = { version: 1, seededAt: at, users, orgs, memberships, plans: PLANS, presets, presetVersions, invitations: [], projects: [], projectMembers: [], models: [], modelVersions: [], jobs: [], boqs: [], revisions: [], runs: [], decisions: [], overrides: [], manualItems: [], exports: [], sessions: [], usage: [], notifications: [], notificationPreferences: {}, audit: [], deletedOrgIds: [] };
   seedProjects(store, at);
   // mock-api.md "Seed data": Marko is signed in elsewhere, so the takeover screen can be tried.
   store.sessions.push({ id: seedId("session:marko"), userId: SEED.users.marko, status: "active", deviceLabel: "Firefox on macOS", place: "Amsterdam", lastSeenAt: at, createdAt: at });
