@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M1 (core loop) |
 | Role | Frontend agent |
-| Last task done | FE-016 Viewer (F07) (2b39f98) |
-| Next task | FE-014 Sheet and model together (F07 §9), then FE-017 Exports |
+| Last task done | FE-014 Sheet and model together (F07 §9) (4a372cd) |
+| Next task | FE-017 Exports (run Excel) (F12 part) |
 | Waiting for the owner | — |
 | In progress (not committed) | — |
-| Notes for the next session | Read the FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | Read the FE-014, FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,26 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M1 decisions: FE-014 (frontend agent)
+- **Built:** FE-014, 4a372cd. F07-AC5 in `e2e/sheet-model.spec.ts` (storey + code group narrow the sheet to
+  the expected lines and the model's scope to exactly their meshes; a Shift-drag box selection lists
+  "N lines from M elements" with "Select these lines" → the bulk bar and "Only these lines"); group row →
+  its elements, `I` isolates, Esc clears, a selected line is highlighted, the divider resizes; the
+  *Edited* mode counts an edited line's elements. F07-AC6 (Changes) waits for FE-030.
+- **Decisions taken:**
+  - The split is the Sheet tab itself at ≥ 1280 px (`matchMedia` on first render), toggled by a "Model"
+    button; the sheet keeps 55 % (30–75 %, pointer or arrow keys on the divider). The line detail moves
+    under the model in the split. The Viewer tab stays for narrower screens and "Show in 3D" links.
+  - Filters are the sheet's (`SheetFilters` gained `group`, the Group-by system's top-level code, and
+    `keys`); the model gets the filtered lines as `scope` and ghosts every other element.
+  - Selection: the sheet's line → `focusLine`; a selected group row (click outside its name) →
+    `focusKeys`; picks in the model come back through `onSelectionChange`. Shift-drag is box selection
+    (elements whose bounding-box centre is inside the box); Shift-click adds to the pick.
+  - Keyboard in the model (when it has focus): Esc, F, H, I (F07 §9).
+- **Deviations from the spec:** none; the filters not built are in docs/11.
+- **For the next agent:** Playwright's Desktop Chrome is 1280 px wide, so e2e tests run with the split
+  view open; a group row is wider than the sheet's half, so click it with `dispatchEvent("click")`.
 
 ### 2026-11-13 — M1 decisions: FE-016 (frontend agent)
 - **Built:** FE-016, 2b39f98. F07 criteria 1–4 and 7 in `e2e/viewer.spec.ts` (a line highlights exactly its
