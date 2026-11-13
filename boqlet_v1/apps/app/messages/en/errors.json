@@ -46,6 +46,14 @@
     "duplicate_id": "Another manual line already has this id.",
     "invalid_quantity": "A quantity is a number of zero or more.",
     "session_replaced": "You were signed out because your account was opened on another device.",
-    "session_expired": "You were signed out after a long time without activity."
+    "session_expired": "You were signed out after a long time without activity.",
+    "not_ready": "Generate the BoQ again first: a version is saved from a finished run that reflects the current inputs, answers and line edits.",
+    "label_taken": "That label is used by another version of this BoQ. Choose another one.",
+    "not_approved": "With approval on, a version is saved once it is approved.",
+    "four_eyes": "Someone other than the person who submitted it has to approve or save this version (four-eyes).",
+    "revision_in_review": "This version is in review. Withdraw the review to change it.",
+    "approval_off": "Approval isn't switched on: save the version instead.",
+    "invalid_reviewer": "Reviewers are the project's leads and approvers.",
+    "not_saved": "With approval on, save the approved working version before confirming the BoQ."
   }
 }

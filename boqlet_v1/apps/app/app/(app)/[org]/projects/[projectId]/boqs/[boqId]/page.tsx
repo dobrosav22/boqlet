@@ -8,7 +8,9 @@ import { useBoq, useRuns, type Run } from "@/api/hooks/boqs";
 import { useErrorMessage } from "@/components/errors/use-error-message";
 import { DimensionRule } from "@/components/dimension-rule";
 import { BoqHeader } from "@/features/boqs/boq-header";
-import { RunHistory } from "@/features/boqs/run-history";
+import { useRevisions } from "@/api/hooks/diffs";
+import { ReviewTab } from "@/features/versions/review-tab";
+import { VersionsTab } from "@/features/versions/versions-tab";
 import { SetupTab } from "@/features/boqs/setup-tab";
 import { ChangesTab } from "@/features/changes/changes-tab";
 import { LogTab } from "@/features/boq-sheet/log-tab";
@@ -19,7 +21,9 @@ import { ViewerTab } from "@/features/viewer/viewer-tab";
 import { useProjectScope } from "@/features/projects/project-context";
 import { cn } from "@/lib/utils";
 
-const TABS = ["sheet", "questions", "viewer", "changes", "log", "setup", "versions"] as const;
+const TABS = ["review", "sheet", "questions", "viewer", "changes", "log", "setup", "versions"] as const;
+/** Tabs that show a saved version opened read-only (`?version=`, F09 §3). */
+const VERSION_TABS: readonly Tab[] = ["sheet", "viewer", "log"];
 type Tab = (typeof TABS)[number];
 
 /**
@@ -31,27 +35,46 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
   const t = useTranslations("boqs");
   const message = useErrorMessage();
   const { org } = useOrg();
+  const format = useFormatter();
   const { project, can } = useProjectScope();
   const search = useSearchParams();
   const boq = useBoq(boqId);
   const runs = useRuns(boq.data?.currentRevision.id);
+  const revisions = useRevisions(boqId);
   const requested = search.get("tab") as Tab | null;
-  // S12d: the change report is for leads, estimators and approvers (seeAudit: lead, approver).
-  const tabs = TABS.filter((k) => k !== "changes" || can("seeAudit") || can("editBoqs"));
+  // F09 §3: a saved version opened read-only.
+  const versionId = search.get("version");
+  const viewing = versionId ? revisions.data?.find((r) => r.id === versionId && r.status === "issued") : undefined;
+  const status = boq.data?.currentRevision.status;
+  // S12d: the change report is for leads, estimators and approvers (seeAudit: lead, approver). The
+  // review screen shows while a version is in review or approved (F09 §4).
+  const tabs = TABS.filter(
+    (k) => (k !== "changes" || can("seeAudit") || can("editBoqs")) && (k !== "review" || status === "in_review" || status === "approved") && (!viewing || VERSION_TABS.includes(k)),
+  );
   const tab: Tab = requested && (tabs as readonly string[]).includes(requested) ? requested : "sheet";
   const base = `/${org.slug}/projects/${project.id}/boqs/${boqId}`;
+  const approval = org.settings?.approvalRequired === true;
 
   if (boq.isError) return <p role="alert" className="text-error">{message(boq.error)}</p>;
   if (!boq.data) return <div className="h-40" aria-busy="true" />;
-  const current = boq.data.currentRevision.currentRun;
+  const current = viewing ? viewing.currentRun : boq.data.currentRevision.currentRun;
+  const href = (key: Tab) => `${base}?${new URLSearchParams({ tab: key, ...(viewing ? { version: viewing.id } : {}) }).toString()}`;
   return (
     <div className="flex flex-col gap-6" data-testid="boq-workspace">
-      <BoqHeader boq={boq.data} runs={runs.data} base={base} canArchive={can("archive")} />
+      <BoqHeader boq={boq.data} runs={runs.data} base={base} canArchive={can("archive")} approval={approval} />
+      {viewing && (
+        <p className="flex flex-wrap items-center gap-x-3 border-l-2 border-foreground pl-3" role="status" data-testid="viewing-version" data-label={viewing.label}>
+          <span>{t("versions.viewing", { label: viewing.label, when: viewing.issuedAt ? format.dateTime(new Date(viewing.issuedAt), { dateStyle: "medium", timeStyle: "short" }) : "", by: viewing.issuedBy?.name ?? "" })}</span>
+          <Link href={`${base}?tab=sheet`} className="text-link hover:underline" data-testid="back-to-working">
+            {t("versions.backToWorking")}
+          </Link>
+        </p>
+      )}
       <nav aria-label={t("tabs.label")} className="flex gap-6 border-b border-border">
         {tabs.map((key) => (
           <Link
             key={key}
-            href={`${base}?tab=${key}`}
+            href={href(key)}
             aria-current={tab === key ? "page" : undefined}
             className={cn("label-caps -mb-px border-b-2 border-transparent pb-2 text-muted-foreground hover:text-foreground", tab === key && "border-link text-foreground")}
             data-testid={`tab-${key}`}
@@ -60,13 +83,14 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
           </Link>
         ))}
       </nav>
-      {tab === "sheet" && (current ? <Sheet key={current.id} run={current} boq={boq.data} /> : <RunFigures run={current} />)}
+      {tab === "review" && <ReviewTab boq={boq.data} runs={runs.data} base={base} />}
+      {tab === "sheet" && (current ? <Sheet key={`${current.id}|${viewing?.id ?? ""}`} run={current} boq={boq.data} readOnly={!!viewing} /> : <RunFigures run={current} />)}
       {tab === "viewer" && <ViewerTab run={current} base={base} />}
       {tab === "changes" && <ChangesTab boq={boq.data} runs={runs.data} base={base} />}
       {tab === "log" && <LogTab key={current?.id ?? "none"} run={current} />}
       {tab === "questions" && <QuestionsTab boq={boq.data} />}
       {tab === "setup" && <SetupTab boq={boq.data} orgId={org.id} />}
-      {tab === "versions" && <RunHistory runs={runs.data} currentRunId={current?.id} base={base} canCompare={tabs.includes("changes")} />}
+      {tab === "versions" && <VersionsTab boq={boq.data} runs={runs.data} base={base} canCompare={tabs.includes("changes")} />}
     </div>
   );
 }

@@ -40,7 +40,7 @@ type InputsPatch = Partial<RevisionInputs>;
 /** Progress stages of a run job (F04 §3.3). */
 export const RUN_STAGES = ["load", "names", "measure", "federate", "rules", "classify", "export", "index"] as const;
 
-const userRef = (id: string) => {
+export const userRef = (id: string) => {
   const u = db().users.find((x) => x.id === id);
   return u ? { id: u.id, name: u.name, email: u.email } : { id, name: "Unknown" };
 };
@@ -165,7 +165,7 @@ export function adjustmentsOf(boqId: string, empty = false) {
 }
 
 /** What of the edits changes a run's result: their content, not who made them or when. */
-function adjustmentsKey(a: ReturnType<typeof adjustmentsOf>) {
+export function adjustmentsKey(a: ReturnType<typeof adjustmentsOf>) {
   const overrides = a.overrides
     .map(({ lineKey, quantity, description, unit, codes, sortAfter, excluded }) => ({ lineKey, quantity, description, unit, codes, sortAfter, excluded }))
     .sort((x, y) => x.lineKey.localeCompare(y.lineKey));
@@ -202,21 +202,62 @@ export function runView(run: RunRec) {
   };
 }
 
-/** Writes on a BoQ stop when it's archived or confirmed, and on a revision that isn't the working one. */
-export function writeBlock(boq: BoqRec, revision?: RevisionRec): HttpError | null {
+/**
+ * Writes on a BoQ stop when it's archived or confirmed, and on a saved version (BR-20). A revision in
+ * review (or approved) takes edits only where `review` allows them: they withdraw the review (BR-23,
+ * `settleReviews`); other writes (generating) answer `409 revision_in_review`.
+ */
+export function writeBlock(boq: BoqRec, revision?: RevisionRec, review: "allow" | "refuse" = "refuse"): HttpError | null {
   if (boq.archived) return conflict("boq_archived", "The BoQ is archived and read-only. Restore it first.");
   if (boq.status === "confirmed") return conflict("boq_confirmed", "The BoQ is confirmed and read-only. Reopen it first.");
-  if (revision && revision.status !== "draft") return conflict("revision_locked", "This version is saved and can't be changed.");
+  if (revision?.status === "issued") return conflict("revision_locked", "This version is saved and can't be changed.");
+  if (revision && revision.status !== "draft" && review === "refuse") return conflict("revision_in_review", "This version is in review. Withdraw the review to change it.");
   return null;
+}
+
+/** Approval is on when the org switched it on and its plan has the feature (F09 §4, 05-plans-and-limits.md). */
+export function approvalOn(orgId: string) {
+  const org = db().orgs.find((o) => o.id === orgId)!;
+  return !!org.settings?.approvalRequired && planLimits(org).approvalWorkflow === true;
+}
+
+/** Four-eyes (BR-24): with approval and `fourEyes` on, the submitter can't approve or save the same version. */
+export function fourEyesBlocks(orgId: string, revision: RevisionRec, userId: string) {
+  const org = db().orgs.find((o) => o.id === orgId)!;
+  return approvalOn(orgId) && !!org.settings?.fourEyes && revision.submittedBy === userId;
 }
 
 const WRITE_KEYS = new Set(["editBoqs", "answerQuestions", "editLines", "saveVersion"]);
 
+/**
+ * The project role's keys, with writes off where the revision can't take them (archived, confirmed,
+ * saved, or in review: the UI withdraws the review first), plus the version actions this caller can
+ * take now (F09): `saveVersion` (approval off), `submit`, `approve` (and request changes), `saveApproved`,
+ * `withdraw`, `comment`, `confirm`, `reopen`.
+ */
 function revisionPermissions(project: ProjectRec, boq: BoqRec, revision: RevisionRec, userId: string) {
   const { role } = visibleProject(db().users.find((u) => u.id === userId)!, project.id);
   const base = projectPermissions(project, role);
   const blocked = !!writeBlock(boq, revision);
-  return Object.fromEntries(Object.entries(base).map(([k, v]) => [k, v && !(blocked && WRITE_KEYS.has(k))]));
+  const out: Record<string, boolean> = Object.fromEntries(Object.entries(base).map(([k, v]) => [k, v && !(blocked && WRITE_KEYS.has(k))]));
+  const approval = approvalOn(project.orgId);
+  const live = !boq.archived && boq.status === "working" && revision.id === boq.currentRevisionId;
+  const eyes = fourEyesBlocks(project.orgId, revision, userId);
+  out.saveVersion = out.saveVersion === true && !approval;
+  out.submit = base.saveVersion && approval && live && revision.status === "draft";
+  out.approve = base.approve && approval && live && revision.status === "in_review" && !eyes;
+  out.saveApproved = base.approve && approval && live && revision.status === "approved" && !eyes;
+  out.withdraw = live && (revision.status === "in_review" || revision.status === "approved") && (base.saveVersion || base.approve || revision.submittedBy === userId);
+  out.comment = live && revision.status === "in_review" && (base.approve || base.saveVersion || (revision.reviewerIds ?? []).includes(userId));
+  // Confirming is the lead's; with approval on, approvers too (permissions.md, note 2).
+  out.confirm = base.confirm && live && (role === "lead" || approval) && revision.status !== "in_review";
+  out.reopen = base.reopen && boq.status === "confirmed" && !boq.archived;
+  return out;
+}
+
+/** A version's label: the letter of its number (BR-26), or the one given when it was saved (F09 §2). */
+export function labelOf(revision: RevisionRec) {
+  return revision.label ?? revisionLabel(revision.number);
 }
 
 export function revisionView(revision: RevisionRec, userId: string) {
@@ -228,17 +269,29 @@ export function revisionView(revision: RevisionRec, userId: string) {
     const latest = readyVersionsOf(m.modelId)[0];
     return { ...m, newerVersionAvailable: chosen && latest && latest.number > chosen.number ? latest.number : null };
   });
+  const basedOn = revision.basedOnRevisionId ? db().revisions.find((r) => r.id === revision.basedOnRevisionId) : undefined;
   return {
     id: revision.id,
     boqId: revision.boqId,
     number: revision.number,
-    label: revisionLabel(revision.number),
+    label: labelOf(revision),
     status: revision.status,
     inputs: { ...revision.inputs, models },
     ...(run ? { currentRun: runView(run) } : {}),
     basedOnRevisionId: revision.basedOnRevisionId,
-    basedOnRunId: null,
-    pendingChanges: pendingChanges(revision, project),
+    basedOnRunId: basedOn?.frozen?.runId ?? null,
+    // A saved version's inputs are what its run was made with: nothing is pending.
+    pendingChanges: revision.status === "issued" ? [] : pendingChanges(revision, project),
+    ...(revision.reviewerIds ? { reviewers: revision.reviewerIds.map(userRef) } : {}),
+    ...(revision.comments?.length
+      ? { reviewComments: revision.comments.map((c) => ({ id: c.id, by: userRef(c.by), at: c.at, text: c.text, ...(c.lineKey ? { lineKey: c.lineKey } : {}), ...(c.outcome ? { outcome: c.outcome } : {}) })) }
+      : {}),
+    ...(revision.submittedBy ? { submittedBy: userRef(revision.submittedBy), submittedAt: revision.submittedAt } : {}),
+    ...(revision.approvedBy ? { approvedBy: userRef(revision.approvedBy), approvedAt: revision.approvedAt } : {}),
+    ...(revision.issuedBy ? { issuedBy: userRef(revision.issuedBy), issuedAt: revision.issuedAt } : {}),
+    ...(revision.issueNote ? { issueNote: revision.issueNote } : {}),
+    ...(revision.status === "issued" ? { openQuestionsAtSave: revision.openQuestionsAtSave ?? null } : {}),
+    ...(revision.frozen ? { frozen: { runId: revision.frozen.runId, exportIds: revision.frozen.exportIds } } : {}),
     permissions: revisionPermissions(project, boq, revision, userId),
   };
 }
@@ -252,6 +305,8 @@ export function boqView(boq: BoqRec, userId: string) {
     name: boq.name,
     ...(boq.description ? { description: boq.description } : {}),
     status: boq.status,
+    ...(boq.confirmedBy ? { confirmedBy: userRef(boq.confirmedBy) } : {}),
+    confirmedAt: boq.confirmedAt ?? null,
     currentRevision: view,
     latestIssuedRevisionId: boq.latestIssuedRevisionId,
     newModelVersionsAvailable: view.inputs.models.some((m) => m.newerVersionAvailable !== null),
@@ -261,16 +316,49 @@ export function boqView(boq: BoqRec, userId: string) {
   };
 }
 
+/**
+ * BR-23: a revision in review or approved whose run no longer matches its inputs, the project's
+ * answers or the BoQ's line edits goes back to the working state, and its reviewers are told.
+ * Called after every write that can change a run's result (inputs, line edits, answers).
+ */
+export function settleReviews(projectId: string, actorId: string) {
+  const project = db().projects.find((p) => p.id === projectId)!;
+  for (const boq of db().boqs.filter((b) => b.projectId === projectId)) {
+    const revision = db().revisions.find((r) => r.id === boq.currentRevisionId);
+    if (!revision || (revision.status !== "in_review" && revision.status !== "approved")) continue;
+    if (pendingChanges(revision, project).length) withdrawReview(revision, actorId, "edited");
+  }
+}
+
+/** Ends a review: back to the working state (F09 §4); the reviewers get `revision.review_withdrawn`. */
+export function withdrawReview(revision: RevisionRec, actorId: string, why: "edited" | "decision_changed" | "withdrawn") {
+  const boq = db().boqs.find((b) => b.id === revision.boqId)!;
+  const project = db().projects.find((p) => p.id === boq.projectId)!;
+  const org = db().orgs.find((o) => o.id === project.orgId)!;
+  const was = revision.status;
+  revision.status = "draft";
+  delete revision.approvedBy;
+  delete revision.approvedAt;
+  boq.updatedAt = nowIso();
+  persist();
+  audit({ orgId: project.orgId, projectId: project.id, actorId, action: "revision.reopened", subjectType: "revision", subjectId: revision.id, data: { boq: boq.name, revision: labelOf(revision), was, why } });
+  for (const reviewer of revision.reviewerIds ?? [])
+    if (reviewer !== actorId)
+      notify(reviewer, project, "revision.review_withdrawn", { boq: boq.name, revision: labelOf(revision), by: userRef(actorId).name }, `/${org.slug}/projects/${project.id}/boqs/${boq.id}`, { type: "revision", id: revision.id });
+  changed(project.id, "revision", revision.id, "updated");
+  changed(project.id, "boq", boq.id, "updated");
+}
+
 // ───────────────────────────── access ─────────────────────────────
 
-function boqOf(user: UserRec, boqId: string, permission?: keyof typeof PROJECT_PERMISSIONS) {
+export function boqOf(user: UserRec, boqId: string, permission?: keyof typeof PROJECT_PERMISSIONS) {
   const boq = db().boqs.find((b) => b.id === boqId);
   if (!boq) throw notFound("BoQ");
   const access = permission ? writableProject(user, boq.projectId, permission) : visibleProject(user, boq.projectId);
   return { boq, ...access };
 }
 
-function revisionOf(user: UserRec, revisionId: string, permission?: keyof typeof PROJECT_PERMISSIONS) {
+export function revisionOf(user: UserRec, revisionId: string, permission?: keyof typeof PROJECT_PERMISSIONS) {
   const revision = db().revisions.find((r) => r.id === revisionId);
   if (!revision) throw notFound("revision");
   return { revision, ...boqOf(user, revision.boqId, permission) };
@@ -282,10 +370,10 @@ function runOf(user: UserRec, runId: string) {
   return { run, ...revisionOf(user, run.revisionId) };
 }
 
-const changed = (projectId: string, entityType: string, entityId: string, change: "created" | "updated" | "deleted") =>
+export const changed = (projectId: string, entityType: string, entityId: string, change: "created" | "updated" | "deleted") =>
   emit("entity.changed", { entityType, entityId, projectId, change }, { userIds: projectAudience(projectId) });
 
-const notify = (userId: string, project: ProjectRec, kind: string, params: Record<string, unknown>, url: string, entity: { type: string; id: string }) =>
+export const notify = (userId: string, project: ProjectRec, kind: string, params: Record<string, unknown>, url: string, entity: { type: string; id: string }) =>
   sendNotification({ userId, orgId: project.orgId, kind, params, url, entity });
 
 /**
@@ -571,45 +659,12 @@ export const boqHandlers: Handlers = {
     return json(boqView(boq, user!.id));
   },
 
-  /**
-   * F09 §6 (lead, reason required, audited): a confirmed BoQ becomes workable again, in a new working
-   * version carried over from the last saved one (`basedOnRevisionId`). Used by F08 §1's "Reopen to update".
-   */
-  reopenBoq({ user, params, body }) {
-    const { boq, project } = boqOf(user!, params.boqId!, "reopen");
-    if (boq.archived) throw conflict("boq_archived", "The BoQ is archived and read-only. Restore it first.");
-    const reason = ((body as { reason?: string } | undefined)?.reason ?? "").trim();
-    if (!reason) throw new HttpError(400, "invalid_body", "Say why the BoQ is reopened.");
-    if (boq.status !== "confirmed") throw conflict("invalid_transition", "Only a confirmed BoQ can be reopened.", { status: boq.status });
-    const revisions = db().revisions.filter((r) => r.boqId === boq.id);
-    const saved = revisions.filter((r) => r.status === "issued").sort((a, b) => b.number - a.number)[0];
-    const from = saved ?? db().revisions.find((r) => r.id === boq.currentRevisionId)!;
-    const revision: RevisionRec = {
-      id: newId(),
-      boqId: boq.id,
-      number: Math.max(...revisions.map((r) => r.number)) + 1,
-      status: "draft",
-      inputs: structuredClone(from.inputs),
-      // The saved version's run stays the working version's current run until the next generate.
-      currentRunId: from.currentRunId,
-      basedOnRevisionId: saved?.id ?? null,
-      createdAt: nowIso(),
-    };
-    db().revisions.push(revision);
-    boq.status = "working";
-    boq.currentRevisionId = revision.id;
-    boq.updatedAt = nowIso();
-    persist();
-    audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "boq.reopened", subjectType: "boq", subjectId: boq.id, data: { name: boq.name, reason, revision: revisionLabel(revision.number) } });
-    changed(project.id, "boq", boq.id, "updated");
-    return json(boqView(boq, user!.id));
-  },
-
   listRevisions({ user, params }) {
     const { boq } = boqOf(user!, params.boqId!);
     return json(
       db()
-        .revisions.filter((r) => r.boqId === boq.id)
+        // A working version closed by confirming isn't listed (F09 §5).
+        .revisions.filter((r) => r.boqId === boq.id && !r.closed)
         .sort((a, b) => b.number - a.number)
         .map((r) => revisionView(r, user!.id)),
     );
@@ -621,7 +676,7 @@ export const boqHandlers: Handlers = {
 
   updateRevisionInputs({ user, params, body }) {
     const { revision, boq, project } = revisionOf(user!, params.revisionId!, "editBoqs");
-    const blocked = writeBlock(boq, revision);
+    const blocked = writeBlock(boq, revision, "allow");
     if (blocked) throw blocked;
     const patch = (body as { inputs: InputsPatch }).inputs;
     const next = mergeInputs(revision.inputs, patch);
@@ -633,6 +688,7 @@ export const boqHandlers: Handlers = {
     audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "revision.inputs_changed", subjectType: "revision", subjectId: revision.id, data: { boq: boq.name, fields: Object.keys(patch) } });
     changed(project.id, "revision", revision.id, "updated");
     changed(project.id, "boq", boq.id, "updated");
+    settleReviews(project.id, user!.id);
     return json(revisionView(revision, user!.id));
   },
 

@@ -15,7 +15,7 @@ import { projectAudience } from "../jobs.js";
 import { visibleProject, writableProject } from "../projects.js";
 import { json, noContent, type Handlers } from "../router.js";
 import { db, persist, type BoqRec, type ManualItemRec, type OverrideRec, type ProjectRec, type UserRec } from "../store.js";
-import { enginePresetId, presetsSettled, writeBlock } from "./boqs.js";
+import { enginePresetId, presetsSettled, settleReviews, writeBlock } from "./boqs.js";
 
 type OverrideInput = Omit<OverrideRec, "id" | "boqId" | "createdBy" | "createdAt">;
 type ManualInput = { item: ManualItemRec["item"]; codes?: Record<string, string>; sortHint?: string };
@@ -45,7 +45,8 @@ function editableBoq(user: UserRec, boqId: string) {
   const found = boqFor(user, boqId);
   writableProject(user, found.project.id, "editLines");
   const revision = db().revisions.find((r) => r.id === found.boq.currentRevisionId)!;
-  const blocked = writeBlock(found.boq, revision);
+  // BR-23: an edit to a version in review is taken, and withdraws the review (`touch`).
+  const blocked = writeBlock(found.boq, revision, "allow");
   if (blocked) throw blocked;
   return { ...found, revision };
 }
@@ -119,9 +120,10 @@ function addManual(boq: BoqRec, m: ManualInput, user: UserRec): ManualItemRec {
   return rec;
 }
 
-const touch = (boq: BoqRec) => {
+const touch = (boq: BoqRec, actorId?: string) => {
   boq.updatedAt = nowIso();
   persist();
+  if (actorId) settleReviews(boq.projectId, actorId);
 };
 
 const FOLDER: Record<string, PresetFolder> = { rule_set: "rules", classification: "classifications", dictionary: "dictionaries" };
@@ -135,7 +137,7 @@ export const adjustmentHandlers: Handlers = {
   setOverride({ user, params, body }) {
     const { boq, project } = editableBoq(user!, params.boqId!);
     const rec = upsertOverride(boq, normalizeOverride(boq, body as OverrideInput), user!);
-    touch(boq);
+    touch(boq, user!.id);
     audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "line.edited", subjectType: "boq", subjectId: boq.id, data: { boq: boq.name, lineKey: rec.lineKey, fields: Object.keys(rec).filter((k) => !["id", "boqId", "lineKey", "createdBy", "createdAt", "reason"].includes(k)) } });
     changed(project, boq, "override");
     return json(overrideView(rec));
@@ -146,7 +148,7 @@ export const adjustmentHandlers: Handlers = {
     if (!rec) throw notFound("line edit");
     const { boq, project } = editableBoq(user!, rec.boqId);
     db().overrides.splice(db().overrides.indexOf(rec), 1);
-    touch(boq);
+    touch(boq, user!.id);
     audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "line.restored", subjectType: "boq", subjectId: boq.id, data: { boq: boq.name, lineKey: rec.lineKey } });
     changed(project, boq, "override");
     return noContent();
@@ -168,7 +170,7 @@ export const adjustmentHandlers: Handlers = {
     db().overrides = db().overrides.filter((o) => !(o.boqId === boq.id && remove.has(o.lineKey)));
     const written = overrides.map((o) => upsertOverride(boq, o, user!));
     const added = manual.map((m) => addManual(boq, m, user!));
-    touch(boq);
+    touch(boq, user!.id);
     audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "line.edited", subjectType: "boq", subjectId: boq.id, data: { boq: boq.name, lines: written.length, restored: remove.size, manualLines: added.length } });
     changed(project, boq, "override");
     if (added.length) changed(project, boq, "manualItem");
@@ -183,7 +185,7 @@ export const adjustmentHandlers: Handlers = {
   addManualItem({ user, params, body }) {
     const { boq, project } = editableBoq(user!, params.boqId!);
     const rec = addManual(boq, normalizeManual(boq, body as ManualInput), user!);
-    touch(boq);
+    touch(boq, user!.id);
     audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "manual_line.added", subjectType: "boq", subjectId: boq.id, data: { boq: boq.name, id: rec.item.id } });
     changed(project, boq, "manualItem");
     return json(manualView(rec), 201);
@@ -199,7 +201,7 @@ export const adjustmentHandlers: Handlers = {
     else delete rec.codes;
     if (next.sortHint) rec.sortHint = next.sortHint;
     else delete rec.sortHint;
-    touch(boq);
+    touch(boq, user!.id);
     audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "manual_line.updated", subjectType: "boq", subjectId: boq.id, data: { boq: boq.name, id: rec.item.id } });
     changed(project, boq, "manualItem");
     return json(manualView(rec));
@@ -210,7 +212,7 @@ export const adjustmentHandlers: Handlers = {
     if (!rec) throw notFound("manual line");
     const { boq, project } = editableBoq(user!, rec.boqId);
     db().manualItems.splice(db().manualItems.indexOf(rec), 1);
-    touch(boq);
+    touch(boq, user!.id);
     audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "manual_line.removed", subjectType: "boq", subjectId: boq.id, data: { boq: boq.name, id: rec.item.id } });
     changed(project, boq, "manualItem");
     return noContent();

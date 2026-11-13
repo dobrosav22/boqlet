@@ -29,17 +29,9 @@ describe("ModelVersion (upload, parse, failure, dedupe: scenarios/models.test.ts
 // Run (queued → running → complete | needs_input; immutable once finished; currentRunId moves to the
 // newest finished run) are covered in scenarios/boqs.test.ts (FE-008).
 
-describe("BoqRevision", () => {
-  it.todo("draft → issued on save version; the next draft is created with the same inputs (FE-031)");
-  it.todo("BR-27 a saved version refuses writes with 409 revision_locked (FE-031)");
-  it.todo("with approvalRequired: draft → in_review → approved → issued; any edit sends it back to draft (FE-031)");
-  it.todo("four-eyes: the approver must not be the submitter (FE-031)");
-});
-
-describe("Boq", () => {
-  it.todo("working → confirmed; every write answers 409 boq_confirmed (FE-031)");
-  it.todo("confirmed → working on reopen by the lead, with a reason (FE-031)");
-});
+// BoqRevision (draft → issued with the next draft; in_review → approved → issued; edits back to draft;
+// four-eyes; saved means locked) and Boq (working → confirmed → working on reopen) are covered in
+// scenarios/versions.test.ts (FE-031).
 
 describe("Session (BR-54, F01 §10)", () => {
   const open = (u: TestUser, deviceLabel: string, takeover = false) => client(u.token).POST("/sessions", { body: { deviceLabel, takeover } });

@@ -93,7 +93,11 @@
     "more": "More actions",
     "archive": "Archive BoQ",
     "restore": "Restore",
-    "archivedBanner": "This BoQ is archived: it is hidden from the list and read-only. A lead can restore it."
+    "archivedBanner": "This BoQ is archived: it is hidden from the list and read-only. A lead can restore it.",
+    "submit": "Submit for review",
+    "saveApproved": "Save approved version",
+    "confirm": "Confirm BoQ",
+    "reopen": "Reopen"
   },
   "tabs": {
     "label": "BoQ",
@@ -103,7 +107,8 @@
     "setup": "Setup",
     "versions": "Versions",
     "log": "Log",
-    "changes": "Changes"
+    "changes": "Changes",
+    "review": "Review"
   },
   "sheet": {
     "empty": "Generate the BoQ to see its lines.",
@@ -224,7 +229,56 @@
     "current": "Current",
     "compare": "Compare",
     "compareHint": "Tick two runs to compare them",
-    "pick": "Pick for comparing"
+    "pick": "Pick for comparing",
+    "lastSaved": "last saved {label}",
+    "saved": "Saved versions",
+    "noSaved": "No saved version yet. Save a version to keep a fixed point you can send, compare and go back to.",
+    "label": "Version",
+    "note": "Note",
+    "savedBy": "Saved by",
+    "savedAt": "Saved",
+    "linesCol": "Lines",
+    "openQuestions": "{count, plural, =0 {} one {# question open} other {# questions open}}",
+    "open": "Open",
+    "download": "Excel",
+    "compareWith": "Compare with current",
+    "viewing": "You are looking at saved version {label} (read-only), saved {when} by {by}.",
+    "backToWorking": "Back to the working version",
+    "noExcel": "Writing the Excel…",
+    "dialog": {
+      "title": "Save version",
+      "text": "A saved version is locked: nothing in it can change. Work continues at once in a new working version.",
+      "saveApprovedTitle": "Save the approved version",
+      "confirmTitle": "Confirm {name}",
+      "confirmText": "Mark this BoQ as done: it becomes read-only for everyone. If the working version changed since the last saved version, it is saved first as version {label}.",
+      "confirmApproval": "Mark this BoQ as done: it becomes read-only for everyone. With approval on, the working version must have been approved and saved first.",
+      "label": "Label",
+      "labelHint": "The next letter, or a name of your own. Labels are never reused.",
+      "labelConfirmHint": "Used only if a final version is saved.",
+      "note": "Note (optional)",
+      "openQuestions": "{count, plural, one {# question is} other {# questions are}} still open. The version can be saved; it will show \"{count} open\".",
+      "seeQuestions": "See the questions",
+      "manualCount": "{count, plural, =0 {No manual lines in this BoQ yet.} one {# manual line in this BoQ.} other {# manual lines in this BoQ.}}",
+      "tick": "I have added the work the models don't contain.",
+      "save": "Save version",
+      "confirm": "Confirm BoQ",
+      "cancel": "Cancel",
+      "submitTitle": "Submit version {label} for review",
+      "submitText": "The reviewers get the change report first. Until they approve, the version can't be changed without withdrawing the review.",
+      "reviewers": "Reviewers",
+      "noReviewers": "The project has no lead or approver to review it. Add one in the project settings.",
+      "you": "you",
+      "roles": {
+        "lead": "Lead",
+        "approver": "Approver"
+      },
+      "message": "Message (optional)",
+      "submit": "Submit for review",
+      "requestTitle": "Request changes",
+      "requestText": "The version goes back to the working state and the submitter is told what to change.",
+      "comment": "What should change?",
+      "requestChanges": "Request changes"
+    }
   },
   "detail": {
     "title": "Line detail",
@@ -534,5 +588,33 @@
       "storey": "storey",
       "material": "material"
     }
+  },
+  "review": {
+    "inReview": "In review: submitted by {by} {when} to {reviewers}.",
+    "approved": "Approved by {by} {when}. It can be saved now.",
+    "open": "Open the review",
+    "approve": "Approve",
+    "requestChanges": "Request changes",
+    "withdraw": "Withdraw review",
+    "withdrawTitle": "Withdraw the review?",
+    "withdrawBody": "The version goes back to the working state so it can be changed. {reviewers} will be told.",
+    "waiting": "Waiting for the reviewers.",
+    "readOnly": "While it is in review, this version can't be changed.",
+    "editHint": "To change it, withdraw the review first.",
+    "title": "Review",
+    "changes": "Changes against the last saved version",
+    "comments": "Comments",
+    "noComments": "No comments yet.",
+    "addComment": "Add a comment",
+    "line": "On a line (optional)",
+    "overall": "The whole version",
+    "post": "Comment",
+    "outcome": {
+      "approved": "approved",
+      "changes_requested": "requested changes"
+    },
+    "summary": "{questions, plural, =0 {No open questions} one {# open question} other {# open questions}} · {edits, plural, =0 {no line edits} one {# line edit} other {# line edits}} · {manual, plural, =0 {no manual lines} other {# manual lines}} · {warnings, plural, =0 {no warnings} one {# warning} other {# warnings}}",
+    "edits": "Line edits and their reasons",
+    "noEdits": "No line edits."
   }
 }

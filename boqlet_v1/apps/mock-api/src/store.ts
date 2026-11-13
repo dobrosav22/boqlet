@@ -178,9 +178,21 @@ export interface BoqRec {
   currentRevisionId: string;
   latestIssuedRevisionId: string | null;
   archived: boolean;
+  /** F09 §5: who confirmed it, when (cleared on reopen). */
+  confirmedBy?: string;
+  confirmedAt?: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+}
+/** A review comment (F09 §4): overall or on a line; approve and request changes leave one with their outcome. */
+export interface ReviewCommentRec {
+  id: string;
+  by: string;
+  at: string;
+  text: string;
+  lineKey?: string;
+  outcome?: "approved" | "changes_requested";
 }
 export interface RevisionRec {
   id: string;
@@ -191,6 +203,25 @@ export interface RevisionRec {
   currentRunId: string | null;
   basedOnRevisionId: string | null;
   createdAt: string;
+  /** A working version closed by confirming a BoQ that had nothing new (F09 §5); reopening takes it up again. */
+  closed?: boolean;
+  /** A saved version's label when it isn't the default letter (F09 §2: editable, never reused, BR-26). */
+  label?: string;
+  // Review (F09 §4, approval on).
+  reviewerIds?: string[];
+  submittedBy?: string;
+  submittedAt?: string;
+  submitMessage?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  comments?: ReviewCommentRec[];
+  // Saved (F09 §2).
+  issuedBy?: string;
+  issuedAt?: string;
+  issueNote?: string;
+  openQuestionsAtSave?: number | null;
+  /** What saving froze: the run, the BoQ's line edits and manual lines as they were, the Excel (BR-25). */
+  frozen?: { runId: string; exportIds: string[]; adjustments: { overrides: OverrideRec[]; manualItems: ManualItemRec[] } };
 }
 export interface RunRec {
   id: string;

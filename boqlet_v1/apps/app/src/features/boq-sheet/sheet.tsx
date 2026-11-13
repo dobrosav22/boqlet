@@ -94,7 +94,7 @@ type Prompt = { title: string; summary: string; initial?: string; apply: (reason
  * scroll re-renders neither the toolbar nor the rows already on screen (`LineRowView` is memoised
  * and gets only stable props).
  */
-export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
+export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; readOnly?: boolean }) {
   const t = useTranslations("boqs.sheet");
   const te = useTranslations("boqs.edits");
   const tn = useTranslations("boqs.notInModels");
@@ -124,7 +124,8 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
   const saveManual = useSaveManualItem(boq.id);
   const removeManual = useRemoveManualItem(boq.id);
   // Edits are for the working version's current run, by leads and estimators (F06 §6, §11).
-  const editable = boq.currentRevision.permissions.editLines === true && boq.currentRevision.currentRun?.id === run.id;
+  // A saved version opened read-only (F09 §3) shares its run with the next working version: `readOnly` wins.
+  const editable = !readOnly && boq.currentRevision.permissions.editLines === true && boq.currentRevision.currentRun?.id === run.id;
 
   const systems = useMemo(() => run.classifications ?? [], [run.classifications]);
   const systemNames = useMemo(() => new Map(systems.map((s) => [s.id, s.name])), [systems]);

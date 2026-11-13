@@ -5,7 +5,14 @@
     "run_needs_input": "{boq}: {count, plural, one {# question needs} other {# questions need}} an answer",
     "job_failed": "{type, select, run {{boq}: generating failed} export {{boq}: the Excel export failed} other {A job failed}}",
     "job_succeeded": "{type, select, run {{boq} is generated} export {{file} is ready} other {A job finished}}",
-    "boq_new_version_available": "{boq}: {model} v{version} is available"
+    "boq_new_version_available": "{boq}: {model} v{version} is available",
+    "version_saved": "{boq}: version {label} was saved",
+    "boq_confirmed": "{boq} was confirmed",
+    "boq_reopened": "{boq} was reopened: {reason}",
+    "revision_review_requested": "{by} asks you to review {boq}, version {revision}",
+    "revision_changes_requested": "{by} requested changes to {boq}, version {revision}",
+    "revision_approved": "{by} approved {boq}, version {revision}",
+    "revision_review_withdrawn": "{by} withdrew the review of {boq}, version {revision}"
   },
   "title": "Notifications",
   "bell": "{count, plural, =0 {Notifications} other {Notifications, # unread}}",

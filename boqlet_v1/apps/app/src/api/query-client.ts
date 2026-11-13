@@ -28,7 +28,8 @@ export function makeQueryClient(): QueryClient {
         if (error.status === 401) h.unauthorized(error);
         else if (error.status === 402) h.limitReached(error);
         else if (error.status === 409) {
-          h.conflict(error);
+          // A mutation that explains its own conflicts inline (meta.ownConflicts) gets no toast.
+          if (!mutation.meta?.ownConflicts) h.conflict(error);
           void client.invalidateQueries();
         } else if (!mutation.options.onError) h.failed(error);
       },

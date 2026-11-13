@@ -165,6 +165,8 @@ export const orgHandlers: Handlers = {
     const { org } = requireOrgAction(user!, params.orgId!, "editOrgSettings");
     const { name, slug, settings } = body as { name?: string; slug?: string; settings?: OrgRec["settings"] };
     if (slug !== undefined && slug !== org.slug && db().orgs.some((o) => o.slug === slug)) throw conflict("slug_taken", `The address ${slug} is taken.`, { slug });
+    // Review and approval is a plan feature (F09 §4, 05-plans-and-limits.md `approvalWorkflow`).
+    if (settings?.approvalRequired === true && !org.settings?.approvalRequired && planLimits(org).approvalWorkflow !== true) throw limitReached("approvalWorkflow", 0, 0);
     const before = { name: org.name, slug: org.slug };
     if (name !== undefined) {
       if (!name.trim()) throw new HttpError(400, "invalid_body", "The name can't be empty.");

@@ -25,7 +25,7 @@ import { memberOrg, requireOrgAction } from "../permissions.js";
 import { visibleProject, writableProject } from "../projects.js";
 import { json, noContent, type Handlers } from "../router.js";
 import { db, persist, type DecisionRec, type PresetRec, type ProjectRec, type QuestionRec, type RevisionRec, type RunRec, type UserRec } from "../store.js";
-import { revisionLabel } from "./boqs.js";
+import { revisionLabel, withdrawReview } from "./boqs.js";
 import { runResult } from "./lines.js";
 import { latestPublished, presetVersionView } from "./presets.js";
 
@@ -157,13 +157,9 @@ function decisionsChanged(project: ProjectRec, revisions: RevisionRec[]) {
 }
 
 /** BR-23: the revisions go back to draft, audited. */
-function reopen(project: ProjectRec, revisions: RevisionRec[], user: UserRec) {
-  for (const r of revisions) {
-    const from = r.status;
-    r.status = "draft";
-    const boq = db().boqs.find((b) => b.id === r.boqId)!;
-    audit({ orgId: project.orgId, projectId: project.id, actorId: user.id, action: "revision.reopened", subjectType: "revision", subjectId: r.id, data: { boq: boq.name, from, reason: "decision_changed" } });
-  }
+/** BR-23: answers a run in review used or asked about send it back to the working state (reviewers told). */
+function reopen(_project: ProjectRec, revisions: RevisionRec[], user: UserRec) {
+  for (const r of revisions) withdrawReview(r, user.id, "decision_changed");
 }
 
 const csvCell = (v: unknown) => {

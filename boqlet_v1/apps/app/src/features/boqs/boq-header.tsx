@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Check, Ellipsis } from "lucide-react";
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { api } from "@/api/client";
@@ -16,7 +17,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useRelativeTime } from "@/i18n/use-relative-time";
 import { cn } from "@/lib/utils";
 import { counts } from "@/features/questions/model";
+import { useRevisions } from "@/api/hooks/diffs";
+import { SaveVersionDialog, SubmitDialog, type SaveMode } from "@/features/versions/version-dialogs";
+import { ReviewStrip } from "@/features/versions/review-strip";
 import { NewModelVersions } from "./new-model-versions";
+import { ReopenBoqDialog } from "./reopen-boq-dialog";
 import { headerState, saveBlockedReason } from "./run-state";
 
 export function Tag({ children, filled, className, ...rest }: { children: React.ReactNode; filled?: boolean; className?: string; "data-testid"?: string }) {
@@ -32,7 +37,7 @@ export function Tag({ children, filled, className, ...rest }: { children: React.
  * the run's progress or result, Generate / Cancel / Retry, Save version (blocked while inputs are
  * pending, BR-22), "N answers not applied yet" (F05 §3), and archive / restore for the lead.
  */
-export function BoqHeader({ boq, runs, base, canArchive }: { boq: Boq; runs: Run[] | undefined; base: string; canArchive: boolean }) {
+export function BoqHeader({ boq, runs, base, canArchive, approval }: { boq: Boq; runs: Run[] | undefined; base: string; canArchive: boolean; approval: boolean }) {
   const t = useTranslations("boqs");
   const relative = useRelativeTime();
   const message = useErrorMessage();
@@ -56,15 +61,13 @@ export function BoqHeader({ boq, runs, base, canArchive }: { boq: Boq; runs: Run
     onSuccess: () => Promise.all([refresh(), client.invalidateQueries({ queryKey: keys.boqs(boq.projectId) })]),
     onError: () => {},
   });
-  // Saving versions is built with F09 (FE-031); the button's blocking rule is F04's (BR-22).
-  const save = useMutation({
-    mutationFn: async () => api.POST("/revisions/{revisionId}/issue", { params: { path: { revisionId: revision.id } }, body: {} }),
-    onSuccess: refresh,
-    onError: () => {},
-  });
+  // F09: save version (approval off), submit for review / save the approved version (on), confirm, reopen.
+  const [dialog, setDialog] = useState<SaveMode | "submit" | "reopen" | null>(null);
+  const revisions = useRevisions(boq.id);
+  const lastSaved = boq.latestIssuedRevisionId && boq.latestIssuedRevisionId !== revision.id ? revisions.data?.find((r) => r.id === boq.latestIssuedRevisionId)?.label : undefined;
 
   const blocked = saveBlockedReason(boq);
-  const error = generate.error ?? cancel.error ?? archive.error ?? save.error;
+  const error = generate.error ?? cancel.error ?? archive.error;
   const stage = progress.data?.stage;
   // F05 §3: answers wait for a regenerate; the count comes from the current run's questions.
   const answersPending = revision.pendingChanges.includes("decisions");
@@ -80,6 +83,7 @@ export function BoqHeader({ boq, runs, base, canArchive }: { boq: Boq; runs: Run
         </h2>
         <Tag data-testid="revision-status">
           {revision.label} · {t(`status.${revision.status}`)}
+          {lastSaved ? ` · ${t("versions.lastSaved", { label: lastSaved })}` : ""}
         </Tag>
         {boq.status === "confirmed" && <Tag filled>{t("status.confirmed")}</Tag>}
         {boq.archived && <Tag className="border-muted-foreground text-muted-foreground">{t("status.archived")}</Tag>}
@@ -104,24 +108,39 @@ export function BoqHeader({ boq, runs, base, canArchive }: { boq: Boq; runs: Run
               {state.kind === "none" ? t("actions.generate") : t("actions.regenerate")}
             </Button>
           )}
-          {can("saveVersion") && (
+          {(can("saveVersion") || can("submit")) && (
             <Button
               variant="outline"
-              onClick={() => save.mutate()}
-              disabled={blocked !== null || save.isPending}
+              onClick={() => setDialog(can("submit") ? "submit" : "save")}
+              disabled={blocked !== null}
               title={blocked === "pending" ? t("actions.saveBlockedPending") : blocked === "noRun" ? t("actions.saveBlockedNoRun") : undefined}
-              data-testid="save-version"
+              data-testid={can("submit") ? "submit-for-review" : "save-version"}
             >
-              {t("actions.saveVersion")}
+              {can("submit") ? t("actions.submit") : t("actions.saveVersion")}
             </Button>
           )}
-          {canArchive && (
+          {can("saveApproved") && (
+            <Button onClick={() => setDialog("saveApproved")} data-testid="save-approved">
+              {t("actions.saveApproved")}
+            </Button>
+          )}
+          {boq.status === "confirmed" && can("reopen") && (
+            <Button variant="outline" onClick={() => setDialog("reopen")} data-testid="reopen-boq">
+              {t("actions.reopen")}
+            </Button>
+          )}
+          {(canArchive || can("confirm")) && (
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button variant="ghost" aria-label={t("actions.more")} data-testid="boq-menu" />}>
                 <Ellipsis aria-hidden />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {boq.archived ? (
+                {can("confirm") && (
+                  <DropdownMenuItem onClick={() => setDialog("confirm")} data-testid="confirm-boq">
+                    {t("actions.confirm")}
+                  </DropdownMenuItem>
+                )}
+                {!canArchive ? null : boq.archived ? (
                   <DropdownMenuItem onClick={() => archive.mutate(false)} data-testid="restore-boq">
                     {t("actions.restore")}
                   </DropdownMenuItem>
@@ -177,6 +196,7 @@ export function BoqHeader({ boq, runs, base, canArchive }: { boq: Boq; runs: Run
             }).join(", ") })}
           </p>
         )}
+        <ReviewStrip boq={boq} base={base} compact />
         <NewModelVersions boq={boq} base={base} />
         {error ? (
           <p role="alert" className="text-error">
@@ -184,6 +204,11 @@ export function BoqHeader({ boq, runs, base, canArchive }: { boq: Boq; runs: Run
           </p>
         ) : null}
       </div>
+      {(dialog === "save" || dialog === "saveApproved" || dialog === "confirm") && (
+        <SaveVersionDialog boq={boq} mode={dialog} open onOpenChange={(v) => !v && setDialog(null)} base={base} approval={approval} />
+      )}
+      {dialog === "submit" && <SubmitDialog boq={boq} open onOpenChange={(v) => !v && setDialog(null)} base={base} />}
+      {dialog === "reopen" && <ReopenBoqDialog boq={boq} open onOpenChange={(v) => !v && setDialog(null)} />}
     </div>
   );
 }
