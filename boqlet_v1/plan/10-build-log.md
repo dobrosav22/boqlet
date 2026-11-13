@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M1 (core loop) |
 | Role | Frontend agent |
-| Last task done | FE-009 BoQ sheet (F06 §1–5, 8–11) (94c6cc4) |
-| Next task | FE-010 Questions and decisions (F05) |
-| Waiting for the owner | — (the session stopped after FE-009 because the owner asked it to; start the next one with the usual prompt) |
+| Last task done | FE-010 Questions and decisions (F05) (fa27738, 8e0d40f, 5050aea) |
+| Next task | FE-011 Line edits and manual lines (F06 §6–7), on the "Line edits applied" and "Manual items with codes" fakes (mock-api.md) |
+| Waiting for the owner | — |
 | In progress (not committed) | — |
-| Notes for the next session | FE-010 must also restate `QuestionWithDecision` in `openapi.yaml` the way FE-009 restated `RunLine` (see the FE-008/FE-009 entry). Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | Read the FE-010 entry below (decisions on runs, answer controls). Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,51 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M1 decisions: FE-010 (frontend agent)
+- **Built:** FE-010, fa27738..5050aea. F05 criteria 1 and 3 run on the Duplex (`tests/scenarios/questions.test.ts`,
+  `e2e/questions.spec.ts`): a BoQ with no dictionaries needs input (the Duplex's materials and wall types
+  are unknown names), answering them and regenerating gives `complete`, bulk answers are one request.
+  Criterion 4 (BR-23) is checked in `apps/mock-api/test/decisions.test.ts` with an approved revision
+  written into the store: reaching `approved` through the API comes with FE-031, whose scenario should
+  repeat it end to end. Criterion 5 waits for org dictionaries (FE-021, M2); the promote endpoint is tested.
+- **Decisions taken:**
+  - A run's `request.decisions` is the snapshot of the project's decisions it was sent, each with the
+    question it answers; `askedQuestionIds` / `blockingQuestionIds` are the result's open questions.
+    "Answered after this run" and the pending change `decisions` both mean: for a question the run asked
+    or was sent an answer for, the current answer differs from the one sent (`apps/mock-api/src/decisions.ts`).
+    The engine drops answered questions from its result, so `GET /runs/{id}/questions` adds them back from
+    the snapshot, listed as answered.
+  - Decisions keep history (`supersededAt`); repeating an answer unchanged keeps its row. Name answers
+    become exact, case-sensitive entries `answer:{field}:{raw}` in the project dictionary (a new published
+    version per request), and the same entry goes to an org dictionary on promote.
+  - Answer values per control: a term id; a number or `"flag"` (flag the line); a rule id or `"exclude"`;
+    a code; an option value; `null` = "leave it". The mock checks the answer against the question the
+    project's runs asked (`400 invalid_answer`); kind mismatch is `400 invalid_body`. Error codes added:
+    `invalid_answer`, `not_promotable` (409), `invalid_preset` (400).
+  - BR-23 in the app: the dry run is sent only when a BoQ of the project is `in_review` or `approved`
+    (from the BoQ list), so an answer is otherwise one request (F05-AC3). Clearing has no dry run in the
+    contract: the app dry-runs a different valid answer for the same question, which lists the same
+    revisions; clearing reopens them like an answer does.
+  - Bulk selection: same kind and same control (`term:<category>`, `code:<system>`, `number:<unit>`,
+    the choice's option values); "Select all like these" fills it from the first selected row.
+  - The decisions page is shown to every project member; changing is for `answerQuestions`. Edit uses
+    `Decision.answerType`; rule and code answers are typed there (their lists come from a run's presets).
+  - New message namespace `questions` (tab and decisions page). Realtime: `entity.changed` with
+    `entityType: "decision"` (entityId = the project) refreshes decisions and every run's questions.
+- **Deviations from the spec:**
+  - Contract fix: `QuestionWithDecision` lists Question's fields by reference (as `RunLine`) and
+    `answeredAfterRun` is required. `Decision.answerType` added (optional): S13 must edit an answer, and
+    a decision had no way to say which control its question takes.
+  - No "Show in 3D" or model filter yet (F05 §1, §9): the viewer is FE-016 (docs/11).
+- **Fakes:** none added; mock-api.md "What it implements" gains a Decisions row (how "used by latest runs"
+  is approximated until EN-002).
+- **Known issues and debt:** the sample project is still created empty (docs/11).
+- **For the next agent:**
+  - `generatedDuplexBoq(bytes, slugs, inputs)` (e2e helpers) takes input overrides; `{ dictionaryVersionIds: [] }`
+    gives a run that needs input. In the mock, that run asks 34 blocking questions (materials and wall
+    types); the engine CLI with `presets/dictionaries/project-duplex.json` asks 33.
+  - The PoC CLI on Windows needs `PYTHONUTF8=1` to read its own JSON output.
 
 ### 2026-11-12 — M1 decisions: FE-008 and FE-009 (frontend agent)
 - **Decisions taken:**

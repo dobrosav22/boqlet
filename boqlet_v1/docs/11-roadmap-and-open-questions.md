@@ -95,12 +95,13 @@ Things the product build doesn't do yet, with the task that deals with each.
   after BE-000, FE-043).
 - Unknown fields are rejected only at the top level of a request body in the mock (nested objects
   pass); Java should reject them at every level.
-- The sample project (FL-1 step 5) is created empty: its Duplex model, BoQ and answered questions are
-  copied in once questions exist in the mock (FE-010).
+- The sample project (FL-1 step 5) is created empty: its Duplex model, BoQ and answered questions need
+  a parse and a run when the sample is created. Questions exist since FE-010; filling the sample is
+  still open (with the seed's Duplex BoQ, mock-api.md "Seed data").
 - The dashboard's "Needs you" list is always empty: its items (reviews, runs needing input, new model
   versions, failed jobs) arrive with their features; F02-AC5 (a review request within 5 s) is checked
   in FE-031.
-- Project cards count blocking questions and reviews as 0 until those exist (FE-010, FE-031).
+- Project cards count reviews as 0 until those exist (FE-031).
 - Project default presets can't be chosen in the project's settings yet; every project starts with As
   modelled and the global seed dictionary (per-BoQ pickers exist since FE-008; project defaults and
   starred presets come with FE-021).
@@ -110,8 +111,7 @@ Things the product build doesn't do yet, with the task that deals with each.
   (the mock's scheduler, M6); processing minutes are counted for runs only, not parses (FE-019).
 - BoQs (FE-008): Save version calls `POST /revisions/{id}/issue`, which the mock answers
   `501 not_implemented` until FE-031 (the button's blocking rule, BR-22, works); the Questions tab shows
-  the current run's counts only (FE-010); runs carry no decisions yet, so pending changes cover inputs
-  only (FE-010); an old run can't be opened or compared from the run history yet (FE-030); a BoQ's model scope is shown, not editable (FE-021); "Generate a BoQ" is offered on
+  an old run can't be opened or compared from the run history yet (FE-030); a BoQ's model scope is shown, not editable (FE-021); "Generate a BoQ" is offered on
   the model version page, not yet in the ready notification (FE-018).
 - Sheet (FE-009): no position numbers in the No. column (FE-040); Description shows the rule set's line
   text, not item texts (FE-027, EN-010); the line detail has the formula in words, settings, element
@@ -119,6 +119,14 @@ Things the product build doesn't do yet, with the task that deals with each.
   3D" (FE-014, FE-016); no "not in the models" notice (FE-015); no edits, manual lines or "Edited" /
   "overridden" filter (FE-011); the app loads up to 20,000 lines at once and doesn't yet switch to the
   server-side grouping above that (the mock serves it; FE-045).
+- Questions and decisions (FE-010): no "Show in 3D" or element properties from a question (F05 §9,
+  FE-016); no model filter (questions carry no model; FE-016 with the element index); promoting needs an
+  org dictionary, which can only be created with the Library (FE-021), so F05-AC5 is checked in M2;
+  F05-AC2 (a new model version asks nothing again) is checked with new model versions (FE-029);
+  clearing a name answer keeps the entry it added to the project dictionary (edit it in the Library,
+  FE-024); on the decisions page, rule and code answers are edited as text (the lists come from a run);
+  the BR-23 dry run is skipped when no BoQ of the project is in review or approved, so answering stays one
+  request; "used by latest runs" is approximate in the mock (mock-api.md "Decisions").
 - Phase-1 interim (FE-008): federation and resolution settings are stored with the inputs but not sent
   to the engine (the PoC API takes neither; EN-001); a rule-set patch is run as saved, so its parent must
   be a shipped preset (org-level patch chains with FE-025).
@@ -190,6 +198,7 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-11-13 | fa27738, 8e0d40f, 5050aea | FE-010: F05 on the mock and in the app: runs send the project's decisions and remember them and the questions they asked; questions joined with decisions (`answeredAfterRun`), answering one or many with a dry run listing the versions BR-23 would reopen, name answers added to the project dictionary, clear, promote to an org dictionary, terms for the picker, CSV; pending changes and the header's "N answers not applied yet – Regenerate"; the Questions tab (answer controls per `AnswerType`, suggestion preselected, leave it, bulk answers of one kind and control) and the Decisions page (edit, clear, promote, export); project cards count open blocking questions; contract fix for `QuestionWithDecision`, `Decision.answerType` added; 13 mock tests, 6 scenarios on the Duplex (F05-AC1, AC3), 2 e2e flows |
 | 2026-11-12 | e7bdf31 | Fix (FE-008): a Setup change (e.g. unticking a model) now shows at once even while the BoQ is being refetched (the optimistic update waited for the refetch to be cancelled first; CI caught it in `e2e/boqs.spec.ts`); the 20,000-line perf test warms up for a second before measuring (a cold CI runner measured 44 fps) |
 | 2026-11-12 | 94c6cc4 | FE-009: F06 sheet on the mock and in the app: lines, line detail, warnings and the paged log served from the run's stored result (with server-side grouping for large runs); the Sheet tab, virtualised and grouped by any attached classification with subtotals, filters, toggleable columns and keyboard; the line detail with the formula in words (PoC `readable.ts` ported), settings, element shares and their total, codes, notes and log; the warnings bar and the Log tab; contract fix for `RunLine`; 10 sheet scenarios, 5 e2e flows, the 20,000-line perf test (60 fps scrolling, Group by switch 27 ms on a production build) |
 | 2026-11-12 | c5d3b33 | FE-008: F04 on the mock and in the app: BoQs with their working version, inputs prefilled from the project defaults and every model's latest ready version, the Setup tab (models with version pickers and the newer-version hint, rule set with versions, ordered classifications and dictionary layers with the project dictionary last, advanced settings), runs as jobs through the PoC engine with live stages, complete / needs input / failed / cancelled, run history, pending changes blocking Save version (BR-22), archive and restore, "Generate a BoQ" from a ready model version; fixes the mock router checking inline query parameters against the wrong schema; 11 F04 scenarios (incl. BR-02), 3 e2e flows |

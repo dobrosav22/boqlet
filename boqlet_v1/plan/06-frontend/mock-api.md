@@ -63,6 +63,7 @@ Everything in `openapi.yaml`, with these simplifications:
 | Billing | `manual` adapter: checkout returns `/_dev/checkout?plan=…`, which switches the plan immediately |
 | Jobs | Executed immediately, one at a time per type, via the engine HTTP transport. Progress relayed. Cancel closes the stream |
 | Ingestion | Lines, questions, log kept as arrays per run (no DB). Paging and filters done in memory |
+| Decisions | Kept per project with history (`supersededAt`). A run's request keeps the decisions it was sent, each with the question it answers, and the run keeps the ids of the questions it asked; `GET /runs/{id}/questions` lists the asked ones plus the ones the run was answered out of, joined with the current decisions (FE-010). "Used by latest runs" means sent with a BoQ's current run with the same answer: the PoC engine doesn't say which answers it applied, so a decision whose question no longer arises still counts as used (EN-002 reports applied decisions) |
 | Scheduler | Core tasks and module-registered tasks every 10 s against the mock clock |
 | Search, audit | Audit events appended. Filters in memory |
 | Email | Outbox files |
