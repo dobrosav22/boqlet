@@ -3,11 +3,13 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { getCoreRowModel, useReactTable, type ColumnDef, type VisibilityState } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Box, ChevronDown, ChevronRight, Columns3, GripVertical, Plus, Undo2 } from "lucide-react";
+import { Box, ChevronDown, ChevronRight, Columns3, Download, GripVertical, Plus, Undo2 } from "lucide-react";
+import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import type { Boq, Run } from "@/api/hooks/boqs";
 import { useEditLines, useManualItems, useOverrides, useRemoveManualItem, useSaveManualItem, type EditBatch, type LineOverrideInput, type ManualItemRecord } from "@/api/hooks/edits";
+import { useExportRun } from "@/api/hooks/exports";
 import { useMe } from "@/api/hooks/me";
 import { useLines } from "@/api/hooks/sheet";
 import { useErrorMessage } from "@/components/errors/use-error-message";
@@ -100,6 +102,18 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
   const lines = useLines(run.id);
   const me = useMe();
   const searchParams = useSearchParams();
+  const exporting = useExportRun(run.id);
+  // F12: the run's Excel, grouped as the sheet is; a toast while the job runs, then the download.
+  const exportExcel = () => {
+    const id = toast.loading(t("exporting"));
+    exporting.mutate(
+      { groupBy },
+      {
+        onSuccess: (e) => toast.success(t("exported", { file: e.fileName }), { id }),
+        onError: (err) => toast.error(message(err), { id }),
+      },
+    );
+  };
   const { org } = useOrg();
   const base = `/${org.slug}/projects/${boq.projectId}/boqs/${boq.id}`;
   const overrides = useOverrides(boq.id);
@@ -516,6 +530,10 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
             </Button>
           </>
         )}
+        <Button variant="outline" onClick={exportExcel} disabled={exporting.isPending} data-testid="export-xlsx">
+          <Download aria-hidden />
+          {t("exportExcel")}
+        </Button>
         {hasModels && (
           <Button variant={split ? "default" : "outline"} aria-pressed={split} onClick={() => setSplit((s) => !s)} title={t("modelToggleHint")} data-testid="toggle-model">
             <Box aria-hidden />

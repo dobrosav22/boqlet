@@ -243,3 +243,35 @@ describe("viewer data (F07 §1–5)", () => {
     }
   });
 });
+
+describe("run export (F12, FE-017)", () => {
+  it("an export job writes the run's Excel, listed for the revision and downloadable", async () => {
+    const api = client(owner.token);
+    const { data: job, response } = await api.POST("/runs/{runId}/exports", { params: { path: { runId: run.id } }, body: { format: "xlsx", groupBy: SYSTEM } });
+    expect(response.status).toBe(202);
+    expect(job!.type).toBe("export_xlsx");
+    const deadline = Date.now() + 60_000;
+    let done = job!;
+    while (done.status === "queued" || done.status === "running") {
+      if (Date.now() > deadline) throw new Error("export did not finish");
+      await new Promise((r) => setTimeout(r, 250));
+      done = (await api.GET("/jobs/{jobId}", { params: { path: { jobId: job!.id } } })).data!;
+    }
+    expect(done.status).toBe("succeeded");
+    const exportId = (done.output as { exportId: string }).exportId;
+    const { data: meta } = await api.GET("/exports/{exportId}", { params: { path: { exportId } } });
+    expect(meta).toMatchObject({ id: exportId, kind: "boq_xlsx", subjectType: "run", subjectId: run.id });
+    expect(meta!.fileName).toMatch(/^Duplex_Sheet_RevA_\d{4}-\d{2}-\d{2}\.xlsx$/);
+    const { data: list } = await api.GET("/revisions/{revisionId}/exports", { params: { path: { revisionId: run.revisionId } } });
+    expect(list!.map((e) => e.id)).toContain(exportId);
+    const { response: download } = await api.GET("/exports/{exportId}/download", { params: { path: { exportId } }, redirect: "manual" } as never);
+    expect(download.status).toBe(302);
+    const bytes = new Uint8Array(await (await fetch(download.headers.get("location")!)).arrayBuffer());
+    expect(String.fromCharCode(bytes[0]!, bytes[1]!)).toBe("PK");
+  });
+
+  it("refuses a groupBy that isn't one of the run's classifications", async () => {
+    const { response } = await client(owner.token).POST("/runs/{runId}/exports", { params: { path: { runId: run.id } }, body: { groupBy: "nope" } });
+    expect(response.status).toBe(400);
+  });
+});

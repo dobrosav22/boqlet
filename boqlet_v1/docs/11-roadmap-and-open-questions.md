@@ -115,6 +115,11 @@ Things the product build doesn't do yet, with the task that deals with each.
   text, not item texts (FE-027, EN-010); "Show in 3D" opens the Viewer tab; on
   screens 1280 px and wider the sheet shows the model beside it (FE-014); the app loads up to 20,000 lines at once and doesn't yet switch to the
   server-side grouping above that (the mock serves it; FE-045).
+- Run Excel (FE-017): the PoC engine's layout (the "BoQ export" fake until EN-006): no cover sheet,
+  "Excluded lines" or "Calculation" sheet, no item-text columns, no hidden line keys; the WORKING mark is
+  in the title line, not a watermark; edits are written into the line's notes. The Exports tab, saved
+  versions' frozen exports and the CSVs are FE-032; downloads aren't audited yet (`export.downloaded`).
+  The export job's toast is the sheet's own; the bell and job notifications are FE-018.
 - Viewer (FE-016, FE-014): the *Changes* colour mode and F07-AC6 come with the change report (FE-030,
   EN-002). The shared filter bar has the sheet's filters plus code group and "only these lines": IFC
   class, type and material aren't on a line (they would need the element's properties, F07 §9) and
@@ -139,11 +144,9 @@ Things the product build doesn't do yet, with the task that deals with each.
   names the device and the last activity only; a platform admin can't end a session yet (F19, FE-038);
   tokens without a session id (the shared suites, e2e helpers, dev tools) skip the one-session check in
   the mock: Java needs its own test-token strategy (`tests/support/users.ts`, BE-000).
-- Line edits and manual lines (FE-011): edits aren't in an Excel export yet, so F06-AC3's export part is
-  checked with FE-017; a derived line doesn't follow an edited quantity and an edit whose line is gone
+- Line edits and manual lines (FE-011): a derived line doesn't follow an edited quantity and an edit whose line is gone
   raises no question (the mock's "Line edits applied" fake, EN-003); map rules don't see a manual line's
-  chosen codes (EN-007); no position numbers to renumber (FE-040), no live co-editing (FE-040), no
-  selection from the 3D view (FE-014); a manual line has no notes (`ManualItem` has no field for them);
+  chosen codes (EN-007); no position numbers to renumber (FE-040), no live co-editing (FE-040); a manual line has no notes (`ManualItem` has no field for them);
   undo keeps the last 20 edits of the open sheet only (not across reloads); edits on a version in review
   are refused (`409 revision_locked`) until FE-031 builds BR-23 for them. The engine's check doesn't
   syntax-check a manual item's `formula` key (`presets.py` EXPR_KEYS): the app sends the formula as a

@@ -164,7 +164,10 @@
     "fromModel": "{lines, plural, one {# line} other {# lines}} from {elements, plural, one {# element} other {# elements}} selected in the model",
     "selectTheseLines": "Select these lines",
     "onlyTheseLines": "Only these lines",
-    "resize": "Resize the sheet and the model"
+    "resize": "Resize the sheet and the model",
+    "exportExcel": "Excel",
+    "exporting": "Preparing the Excel…",
+    "exported": "Downloaded {file}"
   },
   "setup": {
     "readOnly": "These inputs can't be changed: only a lead or estimator edits the working version of an active BoQ.",

@@ -8,3 +8,4 @@ Fakes never measure (BR-01): they only rearrange, relabel or apply values a pers
 
 - `line-edits.ts`: "Line edits applied" (EN-003) and "Manual items with codes" (EN-007), FE-011.
 - `trace-steps.ts`: "Trace steps" (EN-013), FE-013.
+- `export-xlsx.ts`: "BoQ export meta" (EN-006), FE-017.

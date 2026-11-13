@@ -113,6 +113,22 @@ export interface ModelVersionRec {
   engineModelId?: string;
   archived?: boolean;
 }
+/** A file made by an export job (F12): `Export` in the contract, with where it is kept. */
+export interface ExportRec {
+  id: string;
+  kind: string;
+  subjectType: "run";
+  subjectId: string;
+  revisionId: string;
+  projectId: string;
+  orgId: string;
+  fileName: string;
+  storageKey: string;
+  sizeBytes: number;
+  jobId: string;
+  createdBy: string;
+  createdAt: string;
+}
 export interface JobRec {
   id: string;
   type: string;
@@ -301,6 +317,7 @@ export interface Db {
   decisions: DecisionRec[];
   overrides: OverrideRec[];
   manualItems: ManualItemRec[];
+  exports: ExportRec[];
   sessions: SessionRec[];
   usage: UsageRec[];
   notifications: NotificationRec[];
@@ -336,6 +353,7 @@ export function loadStore(): boolean {
   state.decisions ??= [];
   state.overrides ??= [];
   state.manualItems ??= [];
+  state.exports ??= [];
   state.sessions ??= [];
   state.usage ??= [];
   state.notifications ??= [];
