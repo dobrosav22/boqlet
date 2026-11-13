@@ -5,10 +5,12 @@ import { X } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import type { Param } from "@ifc-boq/types";
 import type { Run } from "@/api/hooks/boqs";
-import { useLine, usePresetVersion } from "@/api/hooks/sheet";
+import { useLine, useLines, usePresetVersion } from "@/api/hooks/sheet";
 import { useErrorMessage } from "@/components/errors/use-error-message";
 import { Button } from "@/components/ui/button";
 import { lexicon, toReadable } from "@/features/library/lib/readable";
+import { useOrg } from "@/features/orgs/org-context";
+import { HowCalculated } from "./how-calculated";
 import { displayUnit } from "./model";
 import { SourceTag } from "./source-tag";
 
@@ -18,8 +20,8 @@ const FROM_SLOT = /\s*\(from slot ([A-Za-z0-9_]+)\)\s*$/;
 /**
  * The line detail (F06 §5): quantity and source, the formula in words (the PoC's readable
  * formulas) and as written, the settings used, every element's share with their total, the source
- * line of a derived line, codes per system, location, notes and the line's log entries.
- * The plain-words "How it is calculated" steps come with FE-013.
+ * line of a derived line, codes per system, location, notes and the line's log entries. It starts
+ * with the plain-words "How it is calculated" (FE-013), before any formula.
  */
 export function LineDetailPanel({
   run,
@@ -43,7 +45,10 @@ export function LineDetailPanel({
   const tl = useTranslations("library");
   const format = useFormatter();
   const message = useErrorMessage();
+  const { org } = useOrg();
   const detail = useLine(run.id, lineKey);
+  const lines = useLines(run.id);
+  const descriptions = useMemo(() => new Map((lines.data ?? []).map((l) => [l.key, l.description])), [lines.data]);
   const ruleSet = usePresetVersion(run.snapshotVersions?.ruleSetVersionId);
   const slots = useMemo(() => {
     const doc = (ruleSet.data?.flattened ?? ruleSet.data?.doc) as { params?: Record<string, Param> } | undefined;
@@ -52,6 +57,8 @@ export function LineDetailPanel({
   const lex = useMemo(() => lexicon(slots, (name) => (tl.has(`names.${name}.label`) ? tl(`names.${name}.label`) : name)), [slots, tl]);
   const num = (v: number) => format.number(v, { maximumFractionDigits: 6 });
   const value = (v: unknown) => (typeof v === "boolean" ? (v ? t("yes") : t("no")) : typeof v === "number" ? num(v) : typeof v === "string" ? v : JSON.stringify(v));
+  const presetId = ruleSet.data?.presetId;
+  const libraryHref = presetId ? `/${org.slug}/library/rule_set/${presetId}` : null;
   const slotLabel = (name: string) => lex.slotLabels.get(name) ?? slots[name]?.label ?? name;
 
   return (
@@ -85,6 +92,10 @@ export function LineDetailPanel({
                 </span>
                 <SourceTag source={line.source} />
               </div>
+
+              <Section title={t("howCalculated")}>
+                <HowCalculated line={line} slots={slots} lex={lex} libraryHref={libraryHref} modelNames={modelNames} describe={(key) => descriptions.get(key)} onSelect={onSelect} />
+              </Section>
 
               <Section title={t("formula")}>
                 <p className="text-prose" data-testid="detail-formula">

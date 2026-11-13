@@ -48,7 +48,7 @@ a fake are marked "(fake)" in phase-1 test runs and re-checked in phase 3.
 | Item texts filled | Fills `{name}` blanks in a code's `description` with the line's values by plain substitution | No expressions (`{thickness*1000}`), no `item_text_blank` warning | EN-010 |
 | Setup markers | The F16 "Wizard content for As modelled" markers (`setupSteps`, `setup` per slot) kept in the mock's config and merged into the flattened rule set it serves; parts 1a and 1b are derived from the rule set as F16 says | Only "As modelled" and patches on it have markers | EN-011 |
 | Preset Excel templates | SheetJS writes and reads a simple Settings / Codes / Names layout | No data validation dropdowns | EN-012 |
-| Trace steps | Builds `start`/`deduct`/`result` steps from the existing trace (formula, params, element shares) | Approximate wording; derived chains shallow | EN-013 |
+| Trace steps | Builds `trace.steps` after the run from the existing trace (formula, params, element shares and their notes): start (gross), deduct per kind of opening with the threshold's slot, reveals, factor, line minimum, rounding, derive (source lines found by element GlobalId), manual, edit (with its author and reason), result; values add up to the quantity (`engine/fakes/trace-steps.ts`, FE-013) | Approximate wording; a line whose element notes can't be read is one start step with the elements' sum | EN-013 |
 | Pricing workbooks (MP1) | SheetJS for offer request and pricebook workbooks | Simplified layouts | EN-P1 |
 
 ## What it implements

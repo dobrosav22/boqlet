@@ -123,6 +123,46 @@ describe("line detail (F06 §5)", () => {
   });
 });
 
+describe("how it is calculated (F06 §5, EN-013; fake in phase 1)", () => {
+  const stepsOf = (l: Schemas["RunLine"]) => l.trace.steps ?? [];
+
+  it("F06-AC5 every line's steps add up to its quantity and end with the result", () => {
+    for (const l of lines) {
+      const steps = stepsOf(l);
+      expect(steps.length, l.key).toBeGreaterThan(1);
+      const result = steps.at(-1)!;
+      expect(result.kind, l.key).toBe("result");
+      expect(result.value, l.key).toBe(l.quantity);
+      if (l.quantity === null) continue;
+      const sum = steps.slice(0, -1).reduce((s, x) => s + (x.value ?? 0), 0);
+      expect(Math.abs(sum - l.quantity), l.key).toBeLessThanOrEqual(0.005);
+    }
+  });
+
+  it("the brick wall line has start, deduct with the opening size setting, and result", () => {
+    const brick = lines.find((l) => l.ruleKind === "item" && l.description.includes("Brick on Block"))!;
+    const kinds = stepsOf(brick).map((s) => s.kind);
+    expect(kinds[0]).toBe("start");
+    expect(kinds.at(-1)).toBe("result");
+    const deduct = stepsOf(brick).find((s) => s.kind === "deduct")!;
+    expect(deduct.param).toBe("wall_opening_threshold");
+    expect(deduct.value).toBeLessThan(0);
+    expect(deduct.elements!.length).toBeGreaterThan(0);
+    expect(Object.keys(brick.trace.params)).toContain(deduct.param);
+  });
+
+  it("derived lines have a derive step naming their source lines", () => {
+    const derived = lines.filter((l) => l.ruleKind === "derived");
+    expect(derived.length).toBeGreaterThan(0);
+    const keys = new Set(lines.map((l) => l.key));
+    for (const l of derived) {
+      const step = stepsOf(l).find((s) => s.kind === "derive")!;
+      expect(step.params.sourceLine, l.key).toBe(l.trace.sourceLine);
+      for (const key of step.params.sourceLines as string[]) expect(keys.has(key), key).toBe(true);
+    }
+  });
+});
+
 describe("warnings and log (F06 §8, §9)", () => {
   it("lists the run's warnings", async () => {
     const { data } = await client(owner.token).GET("/runs/{runId}/warnings", { params: { path: { runId: run.id } } });

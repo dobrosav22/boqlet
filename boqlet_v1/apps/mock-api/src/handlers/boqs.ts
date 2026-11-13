@@ -12,6 +12,7 @@ import { emit } from "../events.js";
 import { codeListsOf } from "../codes.js";
 import { decisionsSnapshot, unappliedQuestionIds } from "../decisions.js";
 import { applyManualCodes, applyOverrides } from "../engine/fakes/line-edits.js";
+import { addTraceSteps } from "../engine/fakes/trace-steps.js";
 import { conflict, HttpError, limitReached, notFound } from "../http.js";
 import { newId } from "../ids.js";
 import { createJob, jobView, projectAudience, runJob } from "../jobs.js";
@@ -386,6 +387,10 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
         const codeLists = codeListsOf(inputs);
         applyManualCodes(result, adjustments.manualItems, codeLists);
         applyOverrides(result, adjustments.overrides, adjustments.manualItems, codeLists);
+        addTraceSteps(result, (key) => {
+          const by = adjustments.overrides.find((o) => o.lineKey === key && o.quantity !== undefined)?.createdBy;
+          return by ? db().users.find((u) => u.id === by)?.name : undefined;
+        });
         ctx.progress("index", 95);
         run.resultKey = `orgs/${org.id}/runs/${run.id}/result.json.gz`;
         await putBlob(run.resultKey, gzipSync(JSON.stringify(result)));

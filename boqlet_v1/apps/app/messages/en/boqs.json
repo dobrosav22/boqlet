@@ -249,6 +249,40 @@
     "yes": "yes",
     "no": "no"
   },
+  "how": {
+    "noSteps": "This run has no step-by-step explanation. Generate the BoQ again to see one.",
+    "elements": "{count, plural, one {# element} other {# elements}}",
+    "yourAnswer": "Your answer “{name}”: {value}",
+    "reason": "Reason: {reason}",
+    "missingNote": "{count, plural, one {# element has} other {# elements have}} no value and {count, plural, one {is} other {are}} not included.",
+    "yes": "yes",
+    "no": "no",
+    "what": "{what, select, openings {{count, plural, one {# opening} other {# openings}}} doors {{count, plural, one {# door} other {# doors}}} windows {{count, plural, one {# window} other {# windows}}} voids {{count, plural, one {# void} other {# voids}}} recesses {{count, plural, one {# recess} other {# recesses}}} embedded {{count, plural, one {# embedded column or beam} other {# embedded columns and beams}}} other {# {raw}}}",
+    "codes": {
+      "trace_start_area": "{surface, select, main {Area} both {Area of both faces} side_a {Area of side A} side_b {Area of side B} larger {Area of the larger face} smaller {Area of the smaller face} mean {Mean area of the two faces} top {Top area} bottom {Bottom area} footprint {Footprint area} developed {Developed area} edges {Area of the edges} other {Area}}{start, select, gross {, gross,} net {, net,} other {}} of {count, plural, one {# element} other {# elements}}",
+      "trace_start_volume": "Volume{start, select, gross {, gross,} net {, net,} other {}} of {count, plural, one {# element} other {# elements}}",
+      "trace_start_length": "Length{basis, select, axis { along the axis} overall {, overall,} girth { of the girth} perimeter { of the perimeter} other {}} of {count, plural, one {# element} other {# elements}}",
+      "trace_start_count": "Count of {count, plural, one {# element} other {# elements}}",
+      "trace_start_mass": "Mass of {count, plural, one {# element} other {# elements}}",
+      "trace_start_perimeter": "Perimeter of {count, plural, one {# element} other {# elements}}",
+      "trace_start_value": "Sum of {count, plural, one {# element} other {# elements}}",
+      "trace_start_missing": "No value could be determined for {count, plural, one {# element} other {# elements}}",
+      "trace_deduct_all": "Minus {things}, all deducted",
+      "trace_deduct_over_threshold": "Minus {things} larger than {threshold}{kept, plural, =0 {} one {; # smaller one kept} other {; # smaller ones kept}}",
+      "trace_deduct_excess": "Minus the part of {things} above {threshold}",
+      "trace_add_reveals": "Plus the reveals of the deducted openings",
+      "trace_add_minimum": "Raised to the rule set's minimum of {minimum}",
+      "trace_factor": "{hasFactor, select, yes {Times the factor {factor}} other {Times the rule set's factors}}",
+      "trace_round": "Rounded as the rule set says",
+      "trace_derive": "Derived from {count, plural, one {# element} other {# elements}} of {lines, plural, =0 {its source line} one {the line <line>{source}</line>} other {# lines}}",
+      "trace_derive_missing": "Derived from {lines, plural, =0 {its source line} one {the line <line>{source}</line>} other {# lines}}: no value",
+      "trace_manual": "Entered by hand",
+      "trace_manual_missing": "Entered by hand; the quantity is still to be entered",
+      "trace_edit_quantity": "{hasBy, select, yes {Edited by {by}} other {Edited}}: {quantity} instead of the engine's {engineQuantity}",
+      "trace_edit_flagged": "{hasBy, select, yes {Marked as to confirm by {by}} other {Marked as to confirm}} (the engine's value: {engineQuantity})",
+      "trace_result": "Result"
+    }
+  },
   "warnings": {
     "title": "{count, plural, one {# warning} other {# warnings}}",
     "elements": "{count, plural, one {# element} other {# elements}}"

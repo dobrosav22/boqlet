@@ -113,6 +113,34 @@ export interface Decision {
 /** Where a line's quantity comes from. */
 export type LineSource = "measured" | "derived" | "manual" | "flagged";
 
+/**
+ * One step of a line's "How it is calculated" (P25, F06 §5, EN-013), in the order they apply:
+ * start (gross, or the elements' sum), add, deduct, factor, round, derive (a derived line's source),
+ * edit (a person's quantity edit), result. The UI writes each step as a sentence from `code`.
+ */
+export interface TraceStep {
+  kind: "start" | "add" | "deduct" | "factor" | "round" | "derive" | "edit" | "result";
+  /**
+   * Message code (EN-004) of the step's sentence: `trace.start.area|volume|length|count|mass|perimeter|value|missing`,
+   * `trace.add.reveals|minimum`, `trace.deduct.all|over_threshold|excess`, `trace.factor`, `trace.round`,
+   * `trace.derive`, `trace.derive.missing`, `trace.manual`, `trace.manual.missing`, `trace.edit.quantity|flagged`,
+   * `trace.result`.
+   */
+  code: string;
+  /** Values the sentence names (count, surface, what, mode, threshold, formula, sourceLine, by, reason…). */
+  params: Record<string, unknown>;
+  /**
+   * The step's contribution in `unit` (deductions negative); for `result`, the line quantity.
+   * The values of the steps before `result` add up to it (within rounding). null: no value (to confirm).
+   */
+  value: number | null;
+  unit?: Unit;
+  /** GlobalIds of the elements the step covers (to expand the step). */
+  elements?: string[];
+  /** The rule-set slot (Settings question) a value of this step came from, e.g. `wall_opening_threshold`. */
+  param?: string;
+}
+
 export interface BoqLine {
   key: string;                     // stable within a run: rule id + line key values
   ruleId: string;
@@ -130,6 +158,8 @@ export interface BoqLine {
     params: Record<string, unknown>;
     elements: { guid: string; name?: string; quantity: number | null; note?: string; model?: string }[];
     sourceLine?: string;           // derived lines: the line they were derived from
+    /** "How it is calculated" in steps (P25, F06 §5, EN-013): the values of the steps before `result` add up to it. */
+    steps?: TraceStep[];
   };
   codes: Record<string, LineCode>; // keyed by CodeList.id
   location?: { storey?: string; storeys?: string[] };

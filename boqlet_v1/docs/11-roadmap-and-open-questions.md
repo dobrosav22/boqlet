@@ -112,10 +112,16 @@ Things the product build doesn't do yet, with the task that deals with each.
   an old run can't be opened or compared from the run history yet (FE-030); a BoQ's model scope is shown, not editable (FE-021); "Generate a BoQ" is offered on
   the model version page, not yet in the ready notification (FE-018).
 - Sheet (FE-009): no position numbers in the No. column (FE-040); Description shows the rule set's line
-  text, not item texts (FE-027, EN-010); the line detail has the formula in words, settings, element
-  shares, codes and the log, but not yet the plain-words "How it is calculated" steps (FE-013) or "Show in
-  3D" (FE-014, FE-016); no "not in the models" notice (FE-015); the app loads up to 20,000 lines at once and doesn't yet switch to the
+  text, not item texts (FE-027, EN-010); the line detail has no "Show in
+  3D" yet (FE-014, FE-016); no "not in the models" notice (FE-015); the app loads up to 20,000 lines at once and doesn't yet switch to the
   server-side grouping above that (the mock serves it; FE-045).
+- How it is calculated (FE-013): the steps come from the mock's "Trace steps" fake, which reads the PoC
+  engine's element notes (approximate wording; a line whose notes it can't read is one "sum of n elements"
+  step; a derived line's source lines are found by element GlobalId) until EN-013; runs made before FE-013
+  have no steps ("Generate again"). Each setting links to `/{org}/library/rule_set/{presetId}?question=<slot>`,
+  a page that comes with FE-021, and FE-022 has to open the Settings question named by `?question=`. The edit
+  step shows the edit the run applied; an edit made since shows in the line's edits, not in the steps, until
+  the next run. The Excel "Calculation" sheet with the same sentences comes with EN-013 / FE-017.
 - Sessions (FE-012): the mock knows no place for a session (no IP lookup), so the takeover question
   names the device and the last activity only; a platform admin can't end a session yet (F19, FE-038);
   tokens without a session id (the shared suites, e2e helpers, dev tools) skip the one-session check in

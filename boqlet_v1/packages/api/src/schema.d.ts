@@ -3826,6 +3826,24 @@ export interface components {
         keys: {
             [key: string]: string | number | boolean | null;
         };
+        /** @description One step of a line's "How it is calculated" (P25, F06 §5, EN-013), in the order they apply: start (gross, or the elements' sum), add, deduct, factor, round, derive (a derived line's source), edit (a person's quantity edit), result. The UI writes each step as a sentence from `code`. */
+        TraceStep: {
+            /** @enum {string} */
+            kind: "start" | "add" | "deduct" | "factor" | "round" | "derive" | "edit" | "result";
+            /** @description Message code (EN-004) of the step's sentence: `trace.start.area|volume|length|count|mass|perimeter|value|missing`, `trace.add.reveals|minimum`, `trace.deduct.all|over_threshold|excess`, `trace.factor`, `trace.round`, `trace.derive`, `trace.derive.missing`, `trace.manual`, `trace.manual.missing`, `trace.edit.quantity|flagged`, `trace.result`. */
+            code: string;
+            /** @description Values the sentence names (count, surface, what, mode, threshold, formula, sourceLine, by, reason…). */
+            params: {
+                [key: string]: unknown;
+            };
+            /** @description The step's contribution in `unit` (deductions negative); for `result`, the line quantity. The values of the steps before `result` add up to it (within rounding). null: no value (to confirm). */
+            value: number | null;
+            unit?: components["schemas"]["Unit"];
+            /** @description GlobalIds of the elements the step covers (to expand the step). */
+            elements?: string[];
+            /** @description The rule-set slot (Settings question) a value of this step came from, e.g. `wall_opening_threshold`. */
+            param?: string;
+        };
         /** @description Why this number: the formula, the parameter values used, and every element's share. */
         trace: {
             formula: string;
@@ -3840,6 +3858,8 @@ export interface components {
                 model?: string;
             }[];
             sourceLine?: string;
+            /** @description "How it is calculated" in steps (P25, F06 §5, EN-013): the values of the steps before `result` add up to it. */
+            steps?: components["schemas"]["TraceStep"][];
         };
         /** @description What each BoQ line carries per system (see engine.ts BoqLine.codes). */
         LineCode: {
