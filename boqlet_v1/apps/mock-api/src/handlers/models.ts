@@ -90,7 +90,7 @@ function modelOf(user: UserRec, modelId: string, write = false) {
   return { model, ...access };
 }
 
-function versionOf(user: UserRec, versionId: string, write = false) {
+export function versionOf(user: UserRec, versionId: string, write = false) {
   const version = db().modelVersions.find((v) => v.id === versionId);
   if (!version) throw notFound("model version");
   return { version, ...modelOf(user, version.modelId, write) };

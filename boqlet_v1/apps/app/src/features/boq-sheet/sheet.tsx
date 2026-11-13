@@ -4,6 +4,7 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "rea
 import { getCoreRowModel, useReactTable, type ColumnDef, type VisibilityState } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronDown, ChevronRight, Columns3, GripVertical, Plus, Undo2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import type { Boq, Run } from "@/api/hooks/boqs";
 import { useEditLines, useManualItems, useOverrides, useRemoveManualItem, useSaveManualItem, type EditBatch, type LineOverrideInput, type ManualItemRecord } from "@/api/hooks/edits";
@@ -14,7 +15,9 @@ import { NativeSelect } from "@/components/native-select";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { useOrg } from "@/features/orgs/org-context";
 import { SearchPicker } from "@/features/questions/search-picker";
+import { showIn3dHref } from "@/features/viewer/viewer-tab";
 import { cn } from "@/lib/utils";
 import { ManualLineDialog, ReasonDialog } from "./edit-dialogs";
 import { batchFor, effectiveLines, restoreField, withChange, type CodeLists, type EditField, type SheetLine } from "./edits";
@@ -93,6 +96,9 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
   const message = useErrorMessage();
   const lines = useLines(run.id);
   const me = useMe();
+  const searchParams = useSearchParams();
+  const { org } = useOrg();
+  const base = `/${org.slug}/projects/${boq.projectId}/boqs/${boq.id}`;
   const overrides = useOverrides(boq.id);
   const manual = useManualItems(boq.id);
   const lists = useCodeLists(run);
@@ -108,7 +114,8 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
   const [groupBy, setGroupBy] = useState<string | null>(systems[0]?.id ?? null);
   const [filters, setFilters] = useState<SheetFilters>({});
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
-  const [selected, setSelected] = useState<string | null>(null);
+  // "Open in the sheet" from the viewer (F07 §4) arrives as `?line=`.
+  const [selected, setSelected] = useState<string | null>(() => searchParams.get("line"));
   const [checked, setChecked] = useState<ReadonlySet<string>>(new Set());
   const [editing, setEditing] = useState<{ key: string; column: EditableColumn } | null>(null);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
@@ -525,7 +532,7 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
               <LineEdits line={selectedLine} editable={editable} systemNames={systemNames} actions={actions} />
             </aside>
           ) : (
-            <LineDetailPanel run={run} lineKey={selectedLine.key} modelNames={modelNames} systemNames={systemNames} onSelect={setSelected} onClose={() => setSelected(null)}>
+            <LineDetailPanel run={run} lineKey={selectedLine.key} showIn3dHref={(run.snapshotVersions?.models?.length ?? 0) > 0 ? showIn3dHref(base, { line: selectedLine.key }) : undefined} modelNames={modelNames} systemNames={systemNames} onSelect={setSelected} onClose={() => setSelected(null)}>
               {(editable || selectedLine.edit || selectedLine.excluded) && <LineEdits line={selectedLine} editable={editable} systemNames={systemNames} actions={actions} />}
             </LineDetailPanel>
           ))}
@@ -653,6 +660,12 @@ function SheetGrid({
     const list = groupBy ? lists.get(groupBy) : undefined;
     return list ? [...list.values()].map((c) => ({ value: c.code, label: c.code, hint: c.title })) : [];
   }, [groupBy, lists]);
+
+  // Keep the selected line in view (also when it was chosen elsewhere: the viewer, `?line=`).
+  const selectedIndex = selected ? rows.findIndex((r) => r.id === selected) : -1;
+  useEffect(() => {
+    if (selectedIndex >= 0) virtualizer.scrollToIndex(selectedIndex, { align: "auto" });
+  }, [selectedIndex, virtualizer]);
 
   const move = (by: number) => {
     if (!lineIndexes.length) return;

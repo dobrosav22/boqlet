@@ -102,7 +102,10 @@
       "unassigned_storey": "Not on a storey",
       "proxy_element": "Generic proxy elements"
     },
-    "generateBoq": "Generate a BoQ"
+    "generateBoq": "Generate a BoQ",
+    "showIn3d": "Show in 3D",
+    "view3d": "View in 3D",
+    "close3d": "Close the 3D view"
   },
   "names": {
     "title": "Names in the model",

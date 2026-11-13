@@ -186,6 +186,10 @@ export function runView(run: RunRec) {
       ruleSetVersionId: run.request.inputs.ruleSetVersionId,
       classificationVersionIds: run.request.inputs.classificationVersionIds,
       dictionaryVersionIds: [...run.request.inputs.dictionaryVersionIds, ...(run.request.projectDictionaryVersionId ? [run.request.projectDictionaryVersionId] : [])],
+      models: run.request.inputs.models.map((m) => {
+        const engineId = db().modelVersions.find((v) => v.id === m.modelVersionId)?.engineModelId;
+        return { modelId: m.modelId, modelVersionId: m.modelVersionId, discipline: m.discipline, ...(engineId ? { traceId: engineId } : {}) };
+      }),
     },
     ...(run.classifications ? { classifications: run.classifications } : {}),
     ...(run.engineVersion ? { engineVersion: run.engineVersion } : {}),

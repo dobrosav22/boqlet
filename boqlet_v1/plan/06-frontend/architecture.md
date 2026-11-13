@@ -40,6 +40,7 @@ Set in FE-001; change them deliberately and update this table.
 | `next-intl` | 4.15.1 | `apps/app` (no locale in the URL; the cookie `boqlet-locale` carries the user's language) |
 | `@tanstack/react-query` | 5.107.1 | `apps/app` |
 | `@tanstack/react-table`, `@tanstack/react-virtual` | 8.21.3, 3.13.12 | `apps/app` (the BoQ sheet, FE-009: Table owns the columns and their visibility, Virtual the rows; both are skipped by the React Compiler, see the `incompatible-library` comments) |
+| `three`, `@types/three` | 0.169.0 | `apps/app` (the 3D viewer, FE-016; the PoC's version, loaded on demand when a viewer opens) |
 | `next-themes`, `sonner` | 0.4.6, 2.0.8 | `apps/app` (theme class on `<html>`, default "system"; toasts) |
 | `@fontsource-variable/jetbrains-mono`, `@fontsource-variable/inter-tight` | 5.3.0 | `apps/app` (self-hosted, every subset incl. Latin Extended and Cyrillic) |
 | `eslint`, `eslint-config-next` | 9.39.5, 16.4.6 | `apps/app` (ESLint 10 is not supported by `eslint-plugin-react` yet) |

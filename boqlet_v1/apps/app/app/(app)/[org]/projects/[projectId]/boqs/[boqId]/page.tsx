@@ -14,15 +14,16 @@ import { LogTab } from "@/features/boq-sheet/log-tab";
 import { Sheet } from "@/features/boq-sheet/sheet";
 import { useOrg } from "@/features/orgs/org-context";
 import { QuestionsTab } from "@/features/questions/questions-tab";
+import { ViewerTab } from "@/features/viewer/viewer-tab";
 import { useProjectScope } from "@/features/projects/project-context";
 import { cn } from "@/lib/utils";
 
-const TABS = ["sheet", "questions", "log", "setup", "versions"] as const;
+const TABS = ["sheet", "questions", "viewer", "log", "setup", "versions"] as const;
 type Tab = (typeof TABS)[number];
 
 /**
- * S12: the BoQ workspace: header, Sheet (FE-009), Questions (FE-010), Log, Setup and the run
- * history (FE-008).
+ * S12: the BoQ workspace: header, Sheet (FE-009), Questions (FE-010), Viewer (FE-016), Log, Setup
+ * and the run history (FE-008).
  */
 export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: string }> }) {
   const { boqId } = use(params);
@@ -57,6 +58,7 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
         ))}
       </nav>
       {tab === "sheet" && (current ? <Sheet key={current.id} run={current} boq={boq.data} /> : <RunFigures run={current} />)}
+      {tab === "viewer" && <ViewerTab run={current} base={base} />}
       {tab === "log" && <LogTab key={current?.id ?? "none"} run={current} />}
       {tab === "questions" && <QuestionsTab boq={boq.data} />}
       {tab === "setup" && <SetupTab boq={boq.data} orgId={org.id} />}

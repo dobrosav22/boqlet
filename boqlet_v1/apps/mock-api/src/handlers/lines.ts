@@ -25,7 +25,7 @@ export async function runResult(run: RunRec): Promise<BoqResult> {
   return result;
 }
 
-function runFor(user: UserRec, runId: string) {
+export function runFor(user: UserRec, runId: string) {
   const run = db().runs.find((r) => r.id === runId);
   if (!run) throw notFound("run");
   const revision = db().revisions.find((r) => r.id === run.revisionId)!;

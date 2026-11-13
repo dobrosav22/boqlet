@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useGenerate, type Boq } from "@/api/hooks/boqs";
@@ -9,6 +10,7 @@ import { NativeSelect } from "@/components/native-select";
 import { Button } from "@/components/ui/button";
 import { Tag } from "@/features/boqs/boq-header";
 import { useOrg } from "@/features/orgs/org-context";
+import { showIn3dHref } from "@/features/viewer/viewer-tab";
 import { cn } from "@/lib/utils";
 import { AnswerControl, type AnswerContext } from "./answer-control";
 import { useAnswerFlow } from "./answer-flow";
@@ -151,6 +153,7 @@ export function QuestionsTab({ boq }: { boq: Boq }) {
                 checked={selected.has(q.id)}
                 selectable={selectable(selection, q)}
                 onToggle={() => toggle(q)}
+                showIn3d={q.guids?.length && boq.currentRevision.currentRun ? showIn3dHref(`/${org.slug}/projects/${boq.projectId}/boqs/${boq.id}`, { guids: q.guids }) : undefined}
                 busy={flow.busy}
                 onAnswer={(answer) => save([q], answer)}
                 onClear={() => q.decision && flow.remove(q.decision)}
@@ -173,6 +176,7 @@ function QuestionRow({
   checked,
   selectable: canSelect,
   onToggle,
+  showIn3d,
   busy,
   onAnswer,
   onClear,
@@ -184,6 +188,8 @@ function QuestionRow({
   checked: boolean;
   selectable: boolean;
   onToggle: () => void;
+  /** "Show in 3D" (F07 §7): the Viewer tab on the question's elements. */
+  showIn3d?: string;
   busy: boolean;
   onAnswer: (answer: Answer) => void;
   onClear: () => void;
@@ -213,6 +219,11 @@ function QuestionRow({
         <p className="text-foreground">
           {q.message}
           {q.occurrences ? <span className="text-muted-foreground"> — {t("elements", { count: q.occurrences })}</span> : null}
+          {showIn3d && (
+            <Link href={showIn3d} className="ml-2 text-link hover:underline" data-testid="question-show-in-3d">
+              {t("showIn3d")}
+            </Link>
+          )}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           {answered && shownAnswer && (

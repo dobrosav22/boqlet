@@ -1,0 +1,73 @@
+{
+  "title": "3D view",
+  "loading": "Loading {name}…",
+  "elements": "{count, plural, one {# element} other {# elements}}",
+  "shown": "{shown} of {total} shown",
+  "failed": "{name} could not be loaded.",
+  "models": "Models",
+  "colour": "Colour",
+  "modes": {
+    "type": "By element type",
+    "coverage": "Coverage",
+    "code": "Code group",
+    "source": "Source",
+    "model": "Model"
+  },
+  "system": "Classification",
+  "storey": "Storey",
+  "allStoreys": "All storeys",
+  "fit": "Fit",
+  "isolate": "Isolate",
+  "hide": "Hide",
+  "showAll": "Show all",
+  "section": "Section box",
+  "sectionAxes": {
+    "x": "East–west",
+    "y": "Up–down",
+    "z": "North–south"
+  },
+  "sectionFrom": "{axis} from",
+  "sectionTo": "{axis} to",
+  "clearSelection": "Clear selection",
+  "legend": {
+    "coverage": {
+      "measured": "Measured",
+      "coveredByParent": "Covered by its parent",
+      "excluded": "Excluded",
+      "unmatched": "Unmatched (a question)"
+    },
+    "source": {
+      "measured": "Measured",
+      "derived": "Only in derived lines",
+      "edited": "In an edited line"
+    },
+    "code": {
+      "none": "No code"
+    }
+  },
+  "line": "Line",
+  "lineElements": "{count, plural, one {# element of this line} other {# elements of this line}}",
+  "focusElements": "{count, plural, one {# element shown} other {# elements shown}}",
+  "element": {
+    "title": "Element",
+    "class": "IFC class",
+    "name": "Name",
+    "type": "Type",
+    "storey": "Storey",
+    "model": "Model",
+    "status": "Status",
+    "lines": "Lines it feeds",
+    "noLines": "This element feeds no line.",
+    "share": "Share",
+    "statuses": {
+      "measured": "Measured",
+      "excluded": "Excluded",
+      "unmatched": "Unmatched",
+      "covered_by_parent": "Covered by its parent"
+    },
+    "globalId": "GlobalId"
+  },
+  "picked": "{elements, plural, one {# element} other {# elements}} selected · {lines, plural, one {# line} other {# lines}}",
+  "openInSheet": "Open in the sheet",
+  "showIn3d": "Show in 3D"
+}

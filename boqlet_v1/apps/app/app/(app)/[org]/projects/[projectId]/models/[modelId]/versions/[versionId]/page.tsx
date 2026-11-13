@@ -5,6 +5,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useModel, useModelVersion } from "@/api/hooks/models";
 import { useErrorMessage } from "@/components/errors/use-error-message";
 import { InputCheckReport } from "@/features/models/input-check-report";
+import { ModelViewer } from "@/features/viewer/model-viewer";
 import { NamesPreview } from "@/features/models/names-preview";
 import { VersionStatus } from "@/features/models/version-status";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,8 @@ export default function ModelVersionPage({ params }: { params: Promise<{ modelId
   const { org } = useOrg();
   const { project, can } = useProjectScope();
   const [generating, setGenerating] = useState(false);
+  // The 3D view of this version (F07 §7: no run, so no coverage), open on a check's elements or on all.
+  const [viewer, setViewer] = useState<{ guids: string[] | null } | null>(null);
 
   if (version.isError) return <p role="alert" className="text-error">{message(version.error)}</p>;
   if (!version.data) return <div className="h-40" aria-busy="true" />;
@@ -56,7 +59,26 @@ export default function ModelVersionPage({ params }: { params: Promise<{ modelId
       )}
       {v.status === "ready" && v.summary && (
         <>
-          <InputCheckReport summary={v.summary} />
+          <div className="flex flex-col gap-3">
+            <Button variant="outline" className="self-start" onClick={() => setViewer(viewer ? null : { guids: null })} data-testid="version-view-3d">
+              {viewer ? t("close3d") : t("view3d")}
+            </Button>
+            {viewer && (
+              <ModelViewer
+                key={viewer.guids?.join(",") ?? "all"}
+                models={[{ versionId: v.id, label: v.fileName }]}
+                focusGuids={viewer.guids}
+                className="h-[640px]"
+              />
+            )}
+          </div>
+          <InputCheckReport
+            summary={v.summary}
+            onShowIn3d={(guids) => {
+              setViewer({ guids });
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
           <NamesPreview versionId={v.id} />
         </>
       )}

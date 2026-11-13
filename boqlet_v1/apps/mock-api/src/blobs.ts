@@ -21,8 +21,10 @@ export function blobPath(key: string) {
 const sign = (key: string, method: string, exp: number) =>
   createHmac("sha256", SECRET).update(`${method}\n${key}\n${exp}`).digest("hex");
 
-export function signedUrl(key: string, method: "GET" | "PUT", ttlSeconds = 3600) {
-  const exp = Math.floor(now().getTime() / 1000) + ttlSeconds;
+/** `stable`: the expiry is rounded up to a multiple of the TTL, so the URL stays the same for a while and browsers can cache it. */
+export function signedUrl(key: string, method: "GET" | "PUT", ttlSeconds = 3600, options: { stable?: boolean } = {}) {
+  const t = Math.floor(now().getTime() / 1000) + ttlSeconds;
+  const exp = options.stable ? Math.ceil(t / ttlSeconds) * ttlSeconds : t;
   const encoded = key.split("/").map(encodeURIComponent).join("/");
   const url = `${publicBaseUrl()}/_blobs/${encoded}?method=${method}&exp=${exp}&sig=${sign(key, method, exp)}`;
   return { url, expiresAt: new Date(exp * 1000).toISOString() };

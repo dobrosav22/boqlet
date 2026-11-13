@@ -101,6 +101,7 @@
     "label": "BoQ",
     "sheet": "Sheet",
     "questions": "Questions",
+    "viewer": "Viewer",
     "setup": "Setup",
     "versions": "Versions",
     "log": "Log"
@@ -247,7 +248,8 @@
     "noLog": "No log entries for this line.",
     "missing": "missing",
     "yes": "yes",
-    "no": "no"
+    "no": "no",
+    "showIn3d": "Show in 3D"
   },
   "how": {
     "noSteps": "This run has no step-by-step explanation. Generate the BoQ again to see one.",

@@ -17,9 +17,9 @@ interface CheckDetail {
 
 /**
  * The input-check report (F03 §5): storeys, counts by IFC class (sortable), and the checks grouped
- * by code with severity and the affected GlobalIds. Opening them in 3D comes with the viewer (FE-016).
+ * by code with severity and the affected GlobalIds, which open in 3D (F07 §7, FE-016).
  */
-export function InputCheckReport({ summary }: { summary: Summary }) {
+export function InputCheckReport({ summary, onShowIn3d }: { summary: Summary; onShowIn3d?: (guids: string[]) => void }) {
   const t = useTranslations("models.report");
   const format = useFormatter();
   const [sort, setSort] = useState<"count" | "class">("count");
@@ -100,6 +100,11 @@ export function InputCheckReport({ summary }: { summary: Summary }) {
                     <summary className="cursor-pointer text-muted-foreground">{t("affected", { n: g.elements.length })}</summary>
                     <p className="mt-1 break-all text-muted-foreground">{g.elements.slice(0, 50).join(" · ")}</p>
                   </details>
+                )}
+                {g.elements.length > 0 && onShowIn3d && (
+                  <button type="button" className="self-start text-link hover:underline" onClick={() => onShowIn3d(g.elements)} data-testid="check-show-in-3d">
+                    {t("showIn3d")}
+                  </button>
                 )}
               </li>
             ))}

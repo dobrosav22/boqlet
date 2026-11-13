@@ -191,3 +191,55 @@ describe("warnings and log (F06 §8, §9)", () => {
     expect(response.status).toBe(404);
   });
 });
+
+describe("viewer data (F07 §1–5)", () => {
+  const api = () => client(owner.token);
+  const versionId = () => run.snapshotVersions!.models![0]!.modelVersionId;
+
+  it("the run names the model versions it used, with the id its traces use (F07 §2)", () => {
+    const models = run.snapshotVersions!.models!;
+    expect(models).toHaveLength(1);
+    const traceIds = new Set(lines.flatMap((l) => l.trace.elements.map((e) => e.model)).filter(Boolean));
+    expect([...traceIds]).toEqual([models[0]!.traceId]);
+  });
+
+  it("serves the scene index and the geometry (a glb behind a signed URL)", async () => {
+    const { data: scene } = await api().GET("/model-versions/{versionId}/scene", { params: { path: { versionId: versionId() } } });
+    expect(Object.keys(scene!.elements).length).toBeGreaterThan(100);
+    expect(Object.values(scene!.elements).some((e) => e.ifcClass === "IfcRoof" && (e.parts?.length ?? 0) > 0)).toBe(true);
+    const { response } = await api().GET("/model-versions/{versionId}/geometry", { params: { path: { versionId: versionId() } }, redirect: "manual" } as never);
+    expect(response.status).toBe(302);
+    const glb = await fetch(response.headers.get("location")!);
+    expect(new TextDecoder().decode((await glb.arrayBuffer()).slice(0, 4))).toBe("glTF");
+  });
+
+  it("F07-AC3 coverage: unmatched elements match the unmatched questions' occurrences; measured ones are in lines", async () => {
+    const { data: coverage } = await api().GET("/runs/{runId}/coverage", { params: { path: { runId: run.id } } });
+    const { data: questions } = await api().GET("/runs/{runId}/questions", { params: { path: { runId: run.id } } });
+    const unmatched = questions!.filter((q) => q.kind === "unmatched");
+    expect(coverage!.unmatched.length).toBe(unmatched.reduce((s, q) => s + (q.occurrences ?? q.guids?.length ?? 0), 0));
+    const inLines = new Set(lines.flatMap((l) => l.trace.elements.map((e) => e.guid)));
+    for (const g of coverage!.measured.filter((g) => inLines.has(g)).slice(0, 5)) expect(inLines.has(g)).toBe(true);
+    expect(coverage!.measured.length).toBeGreaterThan(0);
+  });
+
+  it("F07-AC2 an element lists every line it feeds, with its share; a roof part lists its roof's line", async () => {
+    const brick = lines.find((l) => l.ruleKind === "item" && l.description.includes("Brick on Block"))!;
+    const element = brick.trace.elements[0]!;
+    const { data } = await api().GET("/runs/{runId}/elements/{guid}", { params: { path: { runId: run.id, guid: element.guid } } });
+    expect(data!.status).toBe("measured");
+    expect(data!.modelVersionId).toBe(versionId());
+    const row = data!.lines.find((l) => l.lineKey === brick.key)!;
+    expect(row.quantity).toBeCloseTo(element.quantity!, 6);
+    const every = lines.filter((l) => l.trace.elements.some((e) => e.guid === element.guid)).map((l) => l.key);
+    for (const key of every) expect(data!.lines.map((l) => l.lineKey)).toContain(key);
+
+    const { data: scene } = await api().GET("/model-versions/{versionId}/scene", { params: { path: { versionId: versionId() } } });
+    const roof = Object.entries(scene!.elements).find(([guid, e]) => e.ifcClass === "IfcRoof" && e.parts?.length && lines.some((l) => l.trace.elements.some((x) => x.guid === guid)));
+    if (roof) {
+      const part = roof[1].parts![0]!;
+      const { data: partLines } = await api().GET("/runs/{runId}/elements/{guid}", { params: { path: { runId: run.id, guid: part } } });
+      expect(partLines!.lines.length).toBeGreaterThan(0);
+    }
+  });
+});

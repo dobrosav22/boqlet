@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { X } from "lucide-react";
+import Link from "next/link";
+import { Box, X } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import type { Param } from "@ifc-boq/types";
 import type { Run } from "@/api/hooks/boqs";
@@ -26,6 +27,7 @@ const FROM_SLOT = /\s*\(from slot ([A-Za-z0-9_]+)\)\s*$/;
 export function LineDetailPanel({
   run,
   lineKey,
+  showIn3dHref,
   modelNames,
   systemNames,
   onSelect,
@@ -34,6 +36,8 @@ export function LineDetailPanel({
 }: {
   run: Run;
   lineKey: string;
+  /** "Show in 3D" (F06 §5, F07 §7): the Viewer tab on this line's elements. */
+  showIn3dHref?: string;
   modelNames: Map<string, string>;
   systemNames: Map<string, string>;
   onSelect: (key: string) => void;
@@ -65,6 +69,12 @@ export function LineDetailPanel({
     <aside className="flex w-full flex-col gap-5 border-l border-border pl-5 lg:w-[440px] lg:shrink-0" aria-label={t("title")} data-testid="line-detail">
       <div className="flex items-start gap-2">
         <h3 className="text-title flex-1">{detail.data?.description ?? ""}</h3>
+        {showIn3dHref && (
+          <Button variant="outline" render={<Link href={showIn3dHref} />} nativeButton={false} data-testid="show-in-3d">
+            <Box aria-hidden />
+            {t("showIn3d")}
+          </Button>
+        )}
         <Button variant="ghost" aria-label={t("close")} onClick={onClose} data-testid="close-detail">
           <X aria-hidden />
         </Button>

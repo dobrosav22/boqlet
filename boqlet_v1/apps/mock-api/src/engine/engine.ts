@@ -9,7 +9,7 @@
 import { openAsBlob } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import type { BoqResult } from "@ifc-boq/types";
+import type { BoqResult, SceneIndex } from "@ifc-boq/types";
 import { PRODUCT_ROOT } from "../paths.js";
 
 export type PresetFolder = "rules" | "dictionaries" | "classifications" | "federation" | "resolution";
@@ -50,6 +50,10 @@ export interface Engine {
   names(engineModelId: string, dictionaries: unknown[]): Promise<{ names: unknown[] }>;
   /** The verification checks of a parsed model, with their elements (F03 §5). */
   checks(engineModelId: string): Promise<unknown[]>;
+  /** The display geometry of a parsed model (glb, one mesh node per GlobalId, F07 §1). */
+  geometry(engineModelId: string): Promise<Uint8Array>;
+  /** The scene index that links the geometry's nodes to elements (`SceneIndex`, F07 §1). */
+  scene(engineModelId: string): Promise<SceneIndex>;
 }
 
 export class EngineUnavailable extends Error {}
@@ -122,6 +126,22 @@ export class PocEngine implements Engine {
     // contract) leave them out. Noted for EN-001 in the build log.
     const optional = new Set(["layer", "dictionary", "entryId"]);
     return { names: res.names.map((n) => Object.fromEntries(Object.entries(n).filter(([key, value]) => !(optional.has(key) && value === null)))) };
+  }
+
+  async geometry(engineModelId: string) {
+    const route = `/api/models/${encodeURIComponent(engineModelId)}/geometry.glb`;
+    let res: Response;
+    try {
+      res = await fetch(this.baseUrl + route);
+    } catch (e) {
+      throw new EngineUnavailable(`engine not reachable at ${this.baseUrl}: ${(e as Error).message}`);
+    }
+    if (!res.ok) throw new EngineRefused(res.status, res.statusText);
+    return new Uint8Array(await res.arrayBuffer());
+  }
+
+  async scene(engineModelId: string) {
+    return this.call<SceneIndex>("GET", `/api/models/${encodeURIComponent(engineModelId)}/scene`);
   }
 
   /**

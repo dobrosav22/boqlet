@@ -3312,6 +3312,16 @@ export interface components {
                 ruleSetVersionId?: string;
                 classificationVersionIds?: string[];
                 dictionaryVersionIds?: string[];
+                /** @description The model versions the run used, in input order (F07 §2 loads each into the viewer) */
+                models?: {
+                    /** Format: uuid */
+                    modelId: string;
+                    /** Format: uuid */
+                    modelVersionId: string;
+                    discipline: string;
+                    /** @description The id the run's results use for this model: ModelReport.id and the lines' trace.elements[].model */
+                    traceId?: string;
+                }[];
             };
             /** @description Attached code systems, in order (first = default grouping) */
             classifications?: {

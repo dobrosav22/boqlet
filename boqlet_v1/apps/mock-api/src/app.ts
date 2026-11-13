@@ -9,6 +9,7 @@ import { modelHandlers } from "./handlers/models.js";
 import { presetHandlers } from "./handlers/presets.js";
 import { boqHandlers } from "./handlers/boqs.js";
 import { lineHandlers } from "./handlers/lines.js";
+import { viewerHandlers } from "./handlers/viewer.js";
 import { decisionHandlers } from "./handlers/decisions.js";
 import { adjustmentHandlers } from "./handlers/adjustments.js";
 import { sessionHandlers } from "./handlers/sessions.js";
@@ -18,7 +19,7 @@ import { loadSpec } from "@ifc-boq/api/spec";
 import { loadStore, replaceStore } from "./store.js";
 
 /** All handlers, by operationId. Each task adds its file here. */
-export const handlers: Handlers = { ...coreHandlers, ...orgHandlers, ...projectHandlers, ...modelHandlers, ...presetHandlers, ...boqHandlers, ...lineHandlers, ...decisionHandlers, ...adjustmentHandlers, ...sessionHandlers };
+export const handlers: Handlers = { ...coreHandlers, ...orgHandlers, ...projectHandlers, ...modelHandlers, ...presetHandlers, ...boqHandlers, ...lineHandlers, ...viewerHandlers, ...decisionHandlers, ...adjustmentHandlers, ...sessionHandlers };
 
 /** Builds the mock: loads (or seeds) the store and the contract. Used by the server and the tests. */
 export async function createApp(opts: { reseed?: boolean } = {}) {
@@ -39,7 +40,9 @@ export async function createApp(opts: { reseed?: boolean } = {}) {
     try {
       blobPath(key);
       const data = await getBlob(key);
-      return new Response(new Uint8Array(data), { headers: { "Content-Type": "application/octet-stream" } });
+      // Display geometry never changes for a key (F07 §1); its signed URL is stable for a day.
+      const cache: Record<string, string> = key.endsWith(".glb") ? { "Cache-Control": "private, max-age=86400, immutable" } : {};
+      return new Response(new Uint8Array(data), { headers: { "Content-Type": "application/octet-stream", ...cache } });
     } catch {
       return c.json({ code: "not_found", message: "No such object" }, 404);
     }

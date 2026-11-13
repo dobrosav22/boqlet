@@ -2937,6 +2937,17 @@ components:
             ruleSetVersionId: { type: string, format: uuid }
             classificationVersionIds: { type: array, items: { type: string, format: uuid } }
             dictionaryVersionIds: { type: array, items: { type: string, format: uuid } }
+            models:
+              type: array
+              description: The model versions the run used, in input order (F07 §2 loads each into the viewer)
+              items:
+                type: object
+                required: [modelId, modelVersionId, discipline]
+                properties:
+                  modelId: { type: string, format: uuid }
+                  modelVersionId: { type: string, format: uuid }
+                  discipline: { type: string }
+                  traceId: { type: string, description: "The id the run's results use for this model: ModelReport.id and the lines' trace.elements[].model" }
         classifications:
           type: array
           description: Attached code systems, in order (first = default grouping)
