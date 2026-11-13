@@ -105,7 +105,8 @@
       "preset_updated": "Changed a preset's details",
       "preset_archived": "Archived a preset",
       "preset_draft_discarded": "Discarded a preset draft"
-    }
+    },
+    "csv": "Download CSV"
   },
   "settings": {
     "general": "General",

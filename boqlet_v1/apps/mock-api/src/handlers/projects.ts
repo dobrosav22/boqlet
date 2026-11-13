@@ -135,6 +135,18 @@ function memberView(projectId: string, userId: string) {
   return { user: db().users.find((u) => u.id === userId)!, role: m.role, ...(userRef(m.addedBy) ? { addedBy: userRef(m.addedBy) } : {}) };
 }
 
+/** The project's audit events (leads and approvers), filtered by actor, action and entity type, newest first. */
+function projectAuditOf(user: UserRec, projectId: string, query: Record<string, unknown>) {
+  const { project, role } = visibleProject(user, projectId);
+  if (!projectPermissions(project, role).seeAudit) throw new HttpError(403, "forbidden", "Your role does not allow this.", { required: "lead|approver" });
+  return db()
+    .audit.filter((a) => a.projectId === project.id)
+    .filter((a) => !query.actorId || a.actorId === query.actorId)
+    .filter((a) => !query.action || a.action === query.action)
+    .filter((a) => !query.entityType || a.subjectType === query.entityType)
+    .sort((a, b) => b.at.localeCompare(a.at));
+}
+
 export const projectHandlers: Handlers = {
   listProjects({ user, params, query }) {
     const { org } = memberOrg(user!, params.orgId!);
@@ -263,16 +275,9 @@ export const projectHandlers: Handlers = {
   },
 
   listProjectAudit({ user, params, query }) {
-    const { project, role } = visibleProject(user!, params.projectId!);
-    if (!projectPermissions(project, role).seeAudit) throw new HttpError(403, "forbidden", "Your role does not allow this.", { required: "lead|approver" });
+    const items = projectAuditOf(user!, params.projectId!, query);
     const limit = Math.min(Number(query.limit ?? 100), 1000);
     const offset = Number(query.cursor ?? 0) || 0;
-    const items = db()
-      .audit.filter((a) => a.projectId === project.id)
-      .filter((a) => !query.actorId || a.actorId === query.actorId)
-      .filter((a) => !query.action || a.action === query.action)
-      .filter((a) => !query.entityType || a.subjectType === query.entityType)
-      .sort((a, b) => b.at.localeCompare(a.at));
     const page = items.slice(offset, offset + limit).map((a) => ({
       id: a.id,
       ...(a.actorId ? { actor: userRef(a.actorId), actorKind: "user" as const } : { actorKind: "system" as const }),
@@ -284,5 +289,21 @@ export const projectHandlers: Handlers = {
       at: a.at,
     }));
     return json({ items: page, nextCursor: offset + limit < items.length ? String(offset + limit) : null });
+  },
+
+  /** F12 "Audit CSV": the project's audit events with the page's filters, newest first. */
+  exportProjectAuditCsv({ user, params, query }) {
+    const items = projectAuditOf(user!, params.projectId!, query);
+    const project = db().projects.find((p) => p.id === params.projectId)!;
+    const cell = (v: unknown) => {
+      const t = v === null || v === undefined ? "" : typeof v === "string" ? v : JSON.stringify(v);
+      return /[",\r\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+    };
+    const rows: unknown[][] = [["at", "actor", "action", "entityType", "entityId", "data"], ...items.map((a) => [a.at, a.actorId ? (userRef(a.actorId)?.name ?? "") : "system", a.action, a.subjectType, a.subjectId, a.data ?? {}])];
+    const name = (project.code || project.name).replace(/[^\w.-]+/g, "-");
+    return new Response("\ufeff" + rows.map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n", {
+      status: 200,
+      headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="${name}_audit.csv"` },
+    });
   },
 };

@@ -76,3 +76,48 @@ test("F12-AC1, F06-AC3 a Duplex run downloads an xlsx whose totals match the she
   expect(row!.notes).toContain("quantity edited: 123.5 instead of");
   expect(rows.some((r) => r.notes.includes("Out of scope"))).toBe(false);
 });
+
+/** Every text cell of a workbook's first sheet, read with the engine's openpyxl. */
+function firstSheetText(file: string): string {
+  const engine = path.join(ROOT, "engine");
+  const py = existsSync(path.join(engine, ".venv", "Scripts", "python.exe")) ? path.join(engine, ".venv", "Scripts", "python.exe") : path.join(engine, ".venv", "bin", "python");
+  const script = [
+    "import sys",
+    "from openpyxl import load_workbook",
+    "ws = load_workbook(sys.argv[1], read_only=True).worksheets[0]",
+    "for row in ws.iter_rows(values_only=True):",
+    "    for c in row:",
+    "        if isinstance(c, str): print(c)",
+  ].join("\n");
+  return execFileSync(py, ["-c", script, file], { encoding: "utf8" });
+}
+
+test("FE-032 F12-AC3 the Exports tab: a working export says WORKING; the saved version's frozen file doesn't; the audit CSV downloads", async ({ page }, testInfo) => {
+  const { url, projectUrl, olivia } = await generatedDuplexBoq(new Uint8Array(await readFile(DUPLEX)));
+  await signInAs(page, "olivia");
+  await page.goto(`${url}?tab=exports`);
+  const working = page.waitForEvent("download");
+  await page.getByTestId("exports-new").click();
+  const workingFile = testInfo.outputPath("working.xlsx");
+  await (await working).saveAs(workingFile);
+  expect(firstSheetText(workingFile)).toContain("(WORKING)");
+  await expect(page.locator('[data-testid="exports-revision"][data-label="A"] [data-testid="export-row"][data-kind="boq_xlsx"]')).toHaveCount(1);
+
+  const boq = await apiAs<{ currentRevision: { id: string } }>(olivia, "GET", `/boqs/${url.split("/").pop()}`);
+  await apiAs(olivia, "POST", `/revisions/${boq.currentRevision.id}/issue`, { notModelledConfirmed: true, note: "Issued" });
+  const saved = page.locator('[data-testid="exports-revision"][data-label="A"][data-status="issued"]');
+  const frozenRow = saved.locator('[data-testid="export-row"][data-kind="issued_boq_xlsx"]');
+  await expect(frozenRow).toHaveCount(1, { timeout: 30_000 });
+  const frozen = page.waitForEvent("download");
+  await frozenRow.getByTestId("export-download").click();
+  const frozenFile = testInfo.outputPath("saved.xlsx");
+  await (await frozen).saveAs(frozenFile);
+  const frozenText = firstSheetText(frozenFile);
+  expect(frozenText).not.toContain("(WORKING)");
+  expect(frozenText).toContain("revision A: Issued");
+
+  await page.goto(`${projectUrl}/activity`);
+  const csv = page.waitForEvent("download");
+  await page.getByTestId("audit-csv").click();
+  expect((await csv).suggestedFilename()).toMatch(/_audit\.csv$/);
+});

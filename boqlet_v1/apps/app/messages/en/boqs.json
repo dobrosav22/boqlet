@@ -108,7 +108,8 @@
     "versions": "Versions",
     "log": "Log",
     "changes": "Changes",
-    "review": "Review"
+    "review": "Review",
+    "exports": "Exports"
   },
   "sheet": {
     "empty": "Generate the BoQ to see its lines.",
@@ -616,5 +617,26 @@
     "summary": "{questions, plural, =0 {No open questions} one {# open question} other {# open questions}} · {edits, plural, =0 {no line edits} one {# line edit} other {# line edits}} · {manual, plural, =0 {no manual lines} other {# manual lines}} · {warnings, plural, =0 {no warnings} one {# warning} other {# warnings}}",
     "edits": "Line edits and their reasons",
     "noEdits": "No line edits."
+  },
+  "exports": {
+    "working": "Working version {label}",
+    "workingHint": "An Excel of the working version says WORKING in its title. Saved versions keep the file written when they were saved.",
+    "groupBy": "Group by",
+    "excel": "Export Excel",
+    "exporting": "Writing the Excel…",
+    "exported": "{file} is downloaded",
+    "saved": "Saved version {label}",
+    "workingFiles": "Files of version {label}",
+    "none": "No files yet.",
+    "file": "File",
+    "kind": "Kind",
+    "by": "By",
+    "when": "When",
+    "download": "Download",
+    "kinds": {
+      "boq_xlsx": "BoQ (working)",
+      "issued_boq_xlsx": "BoQ (saved)",
+      "changes_xlsx": "Change report"
+    }
   }
 }

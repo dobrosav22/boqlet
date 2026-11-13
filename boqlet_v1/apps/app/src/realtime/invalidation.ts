@@ -23,7 +23,7 @@ const LISTS: Record<string, (projectId?: string) => QueryKey[]> = {
   model: (p) => [p ? keys.models(p) : ["models"], ["modelVersions"]],
   modelVersion: (p) => [p ? keys.models(p) : ["models"], ["modelVersions"], ["model"]],
   boq: (p) => [p ? keys.boqs(p) : ["boqs"], ["revisions"]],
-  revision: () => [["boq"], ["revisions"]],
+  revision: () => [["boq"], ["revisions"], ["revisionExports"]],
   run: () => [["runs"]],
   // Decisions belong to the project: its decisions, and every run's questions (joined with them).
   decision: (p) => [p ? keys.decisions(p) : ["decisions"], ["questions"]],
@@ -52,6 +52,8 @@ export function invalidationsFor({ event, data }: RealtimeEvent): QueryKey[] {
       } else if (subjectId) {
         out.push([str(data.subjectType) ?? "unknown", subjectId]);
       }
+      // A finished export is listed with its version (S12g).
+      if (data.type === "export_xlsx") out.push(["revisionExports"]);
       return out;
     }
     case "entity.changed": {

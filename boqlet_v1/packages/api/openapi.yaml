@@ -464,6 +464,11 @@ paths:
     get:
       tags: [exports]
       operationId: exportProjectAuditCsv
+      description: The project audit as CSV, with the same filters as listProjectAudit (F12 "Audit CSV").
+      parameters:
+        - { name: actorId, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string } }
+        - { name: entityType, in: query, schema: { type: string } }
       responses:
         "200": { description: CSV, content: { text/csv: { schema: { type: string } } } }
 

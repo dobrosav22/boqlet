@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import type { Schemas } from "@ifc-boq/api";
-import { client } from "../support/env";
+import { API_URL, client } from "../support/env";
 import { invitationToken } from "../support/mail";
 import { duplexBytes, uploadVersion, waitForVersion } from "../support/models";
 import { signUp, uniqueEmail, type TestUser } from "../support/users";
@@ -264,5 +264,49 @@ describe("review and approval (F09 §4, approvalRequired on)", () => {
     expect(withdrawn.data).toMatchObject({ status: "draft" });
     expect((await as(approver).POST("/boqs/{boqId}/confirm", { params: { path: { boqId } }, body: { notModelledConfirmed: true } })).error).toMatchObject({ code: "not_saved" });
     await setApproval(false);
+  });
+});
+
+describe("frozen exports and the audit CSV (F12, FE-032)", () => {
+  async function exportOf(runId: string) {
+    const { data: job } = await as(lead).POST("/runs/{runId}/exports", { params: { path: { runId } }, body: { format: "xlsx" } });
+    const deadline = Date.now() + 60_000;
+    for (;;) {
+      const { data } = await as(lead).GET("/jobs/{jobId}", { params: { path: { jobId: job!.id } } });
+      if (data!.status === "succeeded") return (data!.output as { exportId: string }).exportId;
+      if (data!.status === "failed" || Date.now() > deadline) throw new Error(`export ${data!.status}`);
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  }
+
+  it("BR-25: exporting a saved version's run answers the file frozen with it, every time; its download is audited", async () => {
+    const saved = (await as(lead).GET("/boqs/{boqId}/revisions", { params: { path: { boqId } } })).data!.find((r) => r.label === "A")!;
+    const frozen = saved.frozen!.exportIds![0]!;
+    expect(await exportOf(saved.frozen!.runId!)).toBe(frozen);
+    expect(await exportOf(saved.frozen!.runId!)).toBe(frozen);
+    const { response } = await as(lead).GET("/exports/{exportId}/download", { params: { path: { exportId: frozen } }, redirect: "manual" } as never);
+    expect(response.status).toBe(302);
+    const { data: audit } = await as(lead).GET("/projects/{projectId}/audit", { params: { path: { projectId }, query: { action: "export.downloaded" } } });
+    expect(audit!.items.some((a) => a.entityId === frozen)).toBe(true);
+  });
+
+  it("the working version's export is a new WORKING file recorded on the working version", async () => {
+    const revision = await working();
+    const id = await exportOf(revision.currentRun!.id);
+    const { data: meta } = await as(lead).GET("/exports/{exportId}", { params: { path: { exportId: id } } });
+    expect(meta!.kind).toBe("boq_xlsx");
+    const { data: list } = await as(lead).GET("/revisions/{revisionId}/exports", { params: { path: { revisionId: revision.id } } });
+    expect(list!.some((e) => e.id === id)).toBe(true);
+  });
+
+  it("the project audit as CSV, with the page's filters, for leads and approvers", async () => {
+    const res = await fetch(`${API_URL}/projects/${projectId}/audit.csv?action=version.saved`, { headers: { Authorization: `Bearer ${lead.token}` } });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toMatch(/text\/csv/);
+    const lines = (await res.text()).replace(/^﻿/, "").trim().split(/\r\n/);
+    expect(lines[0]).toBe("at,actor,action,entityType,entityId,data");
+    expect(lines.length).toBeGreaterThan(1);
+    expect(lines.slice(1).every((l) => l.split(",")[2] === "version.saved")).toBe(true);
+    expect((await fetch(`${API_URL}/projects/${projectId}/audit.csv`, { headers: { Authorization: `Bearer ${estimator.token}` } })).status).toBe(403);
   });
 });

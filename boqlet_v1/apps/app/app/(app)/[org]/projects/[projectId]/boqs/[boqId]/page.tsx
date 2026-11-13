@@ -11,6 +11,7 @@ import { BoqHeader } from "@/features/boqs/boq-header";
 import { useRevisions } from "@/api/hooks/diffs";
 import { ReviewTab } from "@/features/versions/review-tab";
 import { VersionsTab } from "@/features/versions/versions-tab";
+import { ExportsTab } from "@/features/exports/exports-tab";
 import { SetupTab } from "@/features/boqs/setup-tab";
 import { ChangesTab } from "@/features/changes/changes-tab";
 import { LogTab } from "@/features/boq-sheet/log-tab";
@@ -21,7 +22,7 @@ import { ViewerTab } from "@/features/viewer/viewer-tab";
 import { useProjectScope } from "@/features/projects/project-context";
 import { cn } from "@/lib/utils";
 
-const TABS = ["review", "sheet", "questions", "viewer", "changes", "log", "setup", "versions"] as const;
+const TABS = ["review", "sheet", "questions", "viewer", "changes", "log", "setup", "exports", "versions"] as const;
 /** Tabs that show a saved version opened read-only (`?version=`, F09 §3). */
 const VERSION_TABS: readonly Tab[] = ["sheet", "viewer", "log"];
 type Tab = (typeof TABS)[number];
@@ -90,6 +91,7 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
       {tab === "log" && <LogTab key={current?.id ?? "none"} run={current} />}
       {tab === "questions" && <QuestionsTab boq={boq.data} />}
       {tab === "setup" && <SetupTab boq={boq.data} orgId={org.id} />}
+      {tab === "exports" && <ExportsTab boq={boq.data} />}
       {tab === "versions" && <VersionsTab boq={boq.data} runs={runs.data} base={base} canCompare={tabs.includes("changes")} />}
     </div>
   );

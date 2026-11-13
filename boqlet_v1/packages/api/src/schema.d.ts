@@ -537,6 +537,7 @@ export interface paths {
             };
             cookie?: never;
         };
+        /** @description The project audit as CSV, with the same filters as listProjectAudit (F12 "Audit CSV"). */
         get: operations["exportProjectAuditCsv"];
         put?: never;
         post?: never;
@@ -5100,7 +5101,11 @@ export interface operations {
     };
     exportProjectAuditCsv: {
         parameters: {
-            query?: never;
+            query?: {
+                actorId?: string;
+                action?: string;
+                entityType?: string;
+            };
             header?: never;
             path: {
                 projectId: components["parameters"]["ProjectId"];

@@ -64,8 +64,12 @@ function exportOf(user: UserRec, exportId: string) {
  */
 export function startRunExport(opts: { run: RunRec; user: UserRec; groupBy?: string; issued?: { revision: RevisionRec; label: string; note?: string } }) {
   const { run, user, groupBy, issued } = opts;
-  const revision = issued?.revision ?? db().revisions.find((r) => r.id === run.revisionId)!;
-  const boq = db().boqs.find((b) => b.id === revision.boqId)!;
+  // A run made in one version can be the current run of the next working version (it keeps the saved
+  // version's run until the next generate): an export of it from the working version is the working one's.
+  const own = db().revisions.find((r) => r.id === run.revisionId)!;
+  const boq = db().boqs.find((b) => b.id === own.boqId)!;
+  const workingNow = db().revisions.find((r) => r.id === boq.currentRevisionId && r.status !== "issued" && r.currentRunId === run.id);
+  const revision = issued?.revision ?? workingNow ?? own;
   const project = db().projects.find((p) => p.id === boq.projectId)!;
   const systems = run.classifications ?? [];
   const ordered = groupBy ? [...systems.filter((s) => s.id === groupBy), ...systems.filter((s) => s.id !== groupBy)] : systems;
@@ -120,13 +124,34 @@ export function startRunExport(opts: { run: RunRec; user: UserRec; groupBy?: str
   return job;
 }
 
+/** The saved version a run was frozen in, when that run isn't also the working version's current run. */
+function savedVersionOf(runId: string) {
+  const saved = db().revisions.find((r) => r.status === "issued" && r.frozen?.runId === runId);
+  if (!saved) return undefined;
+  const boq = db().boqs.find((b) => b.id === saved.boqId)!;
+  const working = db().revisions.find((r) => r.id === boq.currentRevisionId && r.status !== "issued");
+  return working?.currentRunId === runId ? undefined : saved;
+}
+
 export const exportHandlers: Handlers = {
   async exportRun({ user, params, body }) {
     const run = runFor(user!, params.runId!);
     if (!run.resultKey) throw new HttpError(409, "run_not_finished", "The run has no result yet.", { status: run.status });
     const b = (body ?? {}) as { format?: string; groupBy?: string };
     if (b.groupBy && !(run.classifications ?? []).some((s) => s.id === b.groupBy)) throw new HttpError(400, "invalid_body", "groupBy is not a classification of this run.", { groupBy: b.groupBy });
-    return json(jobView(startRunExport({ run, user: user!, groupBy: b.groupBy })), 202);
+    // BR-25: a saved version's export is the file frozen when it was saved, always the same one.
+    const saved = savedVersionOf(run.id);
+    const frozen = saved?.frozen?.exportIds[0];
+    if (saved && frozen) {
+      const boq = db().boqs.find((x) => x.id === saved.boqId)!;
+      const project = db().projects.find((p) => p.id === boq.projectId)!;
+      const job = createJob({ type: "export_xlsx", subjectType: "run", subjectId: run.id, projectId: project.id, orgId: project.orgId, createdBy: user!.id });
+      void runJob(job, async () => ({ exportId: frozen, frozen: true }));
+      return json(jobView(job), 202);
+    }
+    const label = saved ? (saved.label ?? String.fromCharCode(64 + saved.number)) : undefined;
+    const issued = saved && label ? { revision: saved, label, ...(saved.issueNote ? { note: saved.issueNote } : {}) } : undefined;
+    return json(jobView(startRunExport({ run, user: user!, groupBy: b.groupBy, ...(issued ? { issued } : {}) })), 202);
   },
 
   getExport({ user, params }) {
@@ -135,6 +160,9 @@ export const exportHandlers: Handlers = {
 
   downloadExport({ user, params }) {
     const e = exportOf(user!, params.exportId!);
+    // F12: downloads of a saved version's file are audited.
+    if (e.kind === "issued_boq_xlsx")
+      audit({ orgId: e.orgId, projectId: e.projectId, actorId: user!.id, action: "export.downloaded", subjectType: "export", subjectId: e.id, data: { fileName: e.fileName } });
     return new Response(null, {
       status: 302,
       headers: { Location: signedUrl(e.storageKey, "GET", 300).url },
