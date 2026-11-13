@@ -22,8 +22,8 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M3 (Versions, exports, sharing, notifications) |
 | Role | Frontend agent |
-| Last task done | FE-029 New model versions (966a5b7) |
-| Next task | FE-030 Change report (F08 §3–7) |
+| Last task done | FE-030 Change report (8444b84) |
+| Next task | FE-031 Versions, confirmation, optional approval (F09) |
 | Waiting for the owner | — (the owner asked this session to stop after FE-037, the end of M3) |
 | In progress (not committed) | — |
 | Notes for the next session | Read the M3 decision entries (newest first), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
@@ -44,6 +44,37 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M3 decisions: FE-030 (frontend agent)
+- **Built:** FE-030, 8444b84. `features/changes/` (tab, model), `api/hooks/diffs.ts`, the viewer's "changes"
+  mode (`links.ts` `CHANGE_COLORS`, `SceneView.loadGhost`), Compare in the run history; mock
+  `handlers/diffs.ts` and the fake `engine/fakes/diff.ts` + `change_report.py`. Checked by
+  `tests/scenarios/changes.test.ts` (8), `apps/mock-api/test/diff.test.ts` (5), `features/changes/model.test.ts`
+  (5), `links.test.ts` (changes mode) and `e2e/changes.spec.ts` (3, F08-AC4's 3 s on `next dev`).
+- **Decisions taken:**
+  - Contract fix: `DiffSummary.byModel` (F08 §4 asks for element counts per model; the summary had totals
+    only). `RunDiff`'s lines and elements stay behind their paged endpoints.
+  - The compare is a `diff` job (subject: the newer run), output `{diffId}`; a pair already compared answers
+    `200` with the `RunDiff`. Diffs are cached per (from, to) pair, so A→B and B→A are two diffs. `400
+    invalid_body` for runs of different projects or no `againstRunId`, `409 run_not_finished`.
+  - `minDeltaPct` hides only changed lines (added and removed always pass). The tab filters in the browser
+    (the report is fetched whole, 1000 per page), with the same rule plus: a line whose text or unit changed
+    always shows.
+  - Element changes only for models whose version differs between the runs (versions are immutable, BR-08):
+    the fake reads both scene indexes (the viewer's), so a compare across versions fetches their scenes from
+    the engine once.
+  - Comparison choice lives in the URL (`?tab=changes&from=&to=`); picking uses `history.replaceState`
+    (a `router.replace` cost a server round trip on `next dev` and broke the 3 s budget).
+  - The tab shows for `seeAudit` (lead, approver) or `editBoqs` (lead, estimator), S12d; an estimator on an
+    archived project loses it with `editBoqs`.
+  - The change report Excel is an `Export` of kind `changes_xlsx` with `subjectType: "diff"` (ExportRec
+    widened), file `…_Rev<label>_<date>_changes.xlsx`, listed with the revision's exports.
+- **Fakes:** "Change report" built (row rewritten in mock-api.md).
+- **For the next agent:** FE-031's saved versions make the default comparison work (`basedOnRevisionId`'s
+  run); `candidates()` in `features/changes/model.ts` already lists saved versions first. Test hooks:
+  `changes-from`, `changes-report[data-diff]`, `summary-<key>[data-value]`, `change-line[data-key][data-change]`,
+  `change-causes`, `changes-filter-*`, `change-element`, `changes-export`, `run-pick`, `compare-runs`;
+  the viewer has `data-mode` and `data-ghosts`.
 
 ### 2026-11-13 — M3 decisions: FE-029 (frontend agent)
 - **Built:** FE-029, 966a5b7. `features/boqs/new-model-versions.tsx` in the header (replaces the M1 line that

@@ -222,6 +222,13 @@ Things the product build doesn't do yet, with the task that deals with each.
   is in review or approved shows the badge without "Use vN" until FE-031 builds the warning that sends it
   back to the working state (BR-23). One notification per BoQ and person: three BoQs on one model give
   three.
+- Change report (FE-030, the "Change report" fake until EN-002): causes are inferred from the two runs, not
+  traced; materials aren't compared; F08-AC1 (a Duplex with one wall deleted and one door changed) is
+  checked on synthetic results in `apps/mock-api/test/diff.test.ts` only, because the v2 fixture is a copy
+  of v1 until EN-008, so the viewer's red ghosts of removed elements aren't exercised end to end. The
+  default comparison is the last saved version's run; saving versions comes with FE-031, so until then the
+  person picks a run. Lines are listed in full (no paging in the table) and the elements table shows 100
+  at a time.
 - Phase-1 interim: the mock reads check details from the PoC engine's cache on the same machine, and
   drops the `null` optional fields the PoC sends in names (the worker should omit them, EN-001).
 
@@ -290,6 +297,7 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-11-13 | 8444b84 | FE-030: the change report (F08 §3–7): the Changes tab (compare with the last saved version's run, an earlier run or another BoQ's; summary with inputs that differ and elements per model, lines grouped like the sheet with change, \|Δ%\| and group filters, causes, elements, the viewer's "changes" colour mode with removed elements as a red ghost, Excel export); Compare from the run history. Mock: compare, diffs, lines, elements, export; the "Change report" fake. Contract: `DiffSummary.byModel`. 8 scenarios, 3 e2e flows, unit tests |
 | 2026-11-13 | 966a5b7 | FE-029: new model versions (F08 §1–2): the header names each model with a newer ready version, "Use vN" (and "Use all") swaps it into the working version as a pending change, a confirmed BoQ offers "Reopen to update" with the reopen dialog; badges in the BoQ list and the project overview. Mock: `boq.new_version_available` to the project's leads and estimators and a refreshed BoQ when a version becomes ready; `POST /boqs/{boqId}/reopen` (F09 §6). 2 scenarios, 4 mock tests, 2 e2e flows |
 | 2026-11-13 | 210e7fa | FE-028: the setup wizard (F16): start, how you measure (checklist, details, the six measuring screens from the rule set's data), item numbers and texts, names, review with Publish all (publish, star, project defaults); progress in `Org.setup` with resume; the dashboard gate for a new org's owner, onboarding into the wizard, Guided setup in the Library, the sheet hint. Mock: `GET/PUT /orgs/{orgId}/setup`, the "Setup markers" fake; previews share the run queue. 1 scenario, 2 e2e flows, step derivation tests |
 | 2026-11-13 | 210e7fa | FE-027 (code list): the item-text box with insert buttons and Reads as (sample from the preview model), the sample text under Codes per line |
