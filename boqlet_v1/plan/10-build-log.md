@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M1 (core loop) |
 | Role | Frontend agent |
-| Last task done | FE-014 Sheet and model together (F07 §9) (4a372cd) |
-| Next task | FE-017 Exports (run Excel) (F12 part) |
+| Last task done | FE-017 Exports (run Excel) (da07e51) |
+| Next task | FE-018 Notifications (F13 part) |
 | Waiting for the owner | — |
 | In progress (not committed) | — |
-| Notes for the next session | Read the FE-014, FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | Read the FE-017, FE-014, FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,25 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M1 decisions: FE-017 (frontend agent)
+- **Built:** FE-017, da07e51. F12-AC1 and F06-AC3's export part in `e2e/exports.spec.ts`: a Duplex BoQ with a
+  quantity edit and an exclusion downloads from the sheet; read back with openpyxl (the engine's venv), it
+  has every line of the BoQ and none excluded, the sheet's totals per unit, and the edit with its reason.
+  The job, record and download in `tests/scenarios/sheet.test.ts`.
+- **Decisions taken:**
+  - The export is the PoC engine's own writer, run by the mock with the engine's Python
+    (`engine/fakes/export-xlsx.ts`, `IFC_BOQ_PYTHON` or `engine/.venv`), over the result the mock keeps
+    (with the line-edit fake applied). No new spreadsheet library in the mock; `engine/` is unchanged.
+  - The app waits for the job by asking `GET /jobs/{id}` every 500 ms (independent of SSE), then fetches
+    the file through the API client (`parseAs: "blob"`) and saves it with the export's file name.
+  - The button sits in the sheet toolbar and exports grouped by the sheet's Group-by system. Every
+    project role may export (permissions.md: exports are visible to all).
+  - Mock store: `exports` (ExportRec, with `storageKey` under `orgs/<org>/exports/<id>/`); audit
+    `export.created`. Error: `400 invalid_body` for a `groupBy` the run doesn't have.
+- **Fakes:** "BoQ export meta" row updated (what the fake writes, what it lacks until EN-006).
+- **For the next agent:** to read an exported xlsx in a test, use the engine's openpyxl
+  (`boqRows` in `e2e/exports.spec.ts`).
 
 ### 2026-11-13 — M1 decisions: FE-014 (frontend agent)
 - **Built:** FE-014, 4a372cd. F07-AC5 in `e2e/sheet-model.spec.ts` (storey + code group narrow the sheet to
