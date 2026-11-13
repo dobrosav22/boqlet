@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M1 (core loop) |
 | Role | Frontend agent |
-| Last task done | FE-015 Not in the models (F06 §12) (bf3c48b) |
-| Next task | FE-016 Viewer (F07), then FE-014 Sheet and model together (FE-014 is built on FE-016's viewer, so the two swap) |
+| Last task done | FE-016 Viewer (F07) (2b39f98) |
+| Next task | FE-014 Sheet and model together (F07 §9), then FE-017 Exports |
 | Waiting for the owner | — |
 | In progress (not committed) | — |
-| Notes for the next session | Read the FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | Read the FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,34 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M1 decisions: FE-016 (frontend agent)
+- **Built:** FE-016, 2b39f98. F07 criteria 1–4 and 7 in `e2e/viewer.spec.ts` (a line highlights exactly its
+  elements' meshes, a roof line its slabs; an element lists every line it feeds with its share; coverage's
+  unmatched count equals the unmatched questions' occurrences, on the "demo-custom" rule set, which
+  leaves 117 Duplex elements unmatched; a two-model run (buildingSMART IFC4 Building-Architecture +
+  Building-Structural) toggles each model; warm-cache opening under 3 s on `next dev`). Viewer data in
+  `tests/scenarios/sheet.test.ts`; links and colour modes in `src/features/viewer/links.test.ts`.
+  Criterion 5 (one filter bar, box selection) is FE-014's, criterion 6 (Changes) F08's.
+- **Decisions taken:**
+  - three 0.169.0 (the PoC's), imported on demand when a viewer opens (`features/viewer/scene-view.ts`,
+    a port of `SceneView.ts` with a group per model, storey filter, hide, isolate, a section box as six
+    global clipping planes, shift-pick). `links.ts` is the PoC's links over run lines, plus
+    `directLinesOf` (an aggregate's parts aren't counted twice; picking a roof slab picks the roof).
+  - The glb comes through the API client (`parseAs: "arrayBuffer"`, the 302 followed), so the bearer
+    token goes with the first request; the mock's signed URL for geometry is stable for a day and
+    served `immutable`, so the browser cache makes reopening fast.
+  - The Viewer is a tab of the BoQ workspace (between Questions and Log). "Show in 3D" links are
+    `?tab=viewer&line=<key>` or `&guids=<a,b,…>` (at most 300); "Open in the sheet" is `?tab=sheet&line=`,
+    which the sheet now selects and scrolls to. The model version page shows a run-less viewer (type
+    colours only) for "View in 3D" and each check's "Show in 3D".
+  - Test hooks on the viewer element: `data-ready`, `data-meshes`, `data-visible`, `data-focus` (meshes
+    highlighted), `data-picked`.
+- **Deviations from the spec:** contract fix: `Run.snapshotVersions.models` (model, version, discipline,
+  `traceId`): F07 §2 loads the run's model versions, and the Run didn't say which they were.
+- **Fakes:** none; mock-api.md "What it implements" gains a Viewer row (coverage semantics).
+- **For the next agent:** FE-014 builds the split view on `ModelViewer` (`features/viewer/model-viewer.tsx`):
+  lift its selection (`picked`, focus) to the workspace so sheet and model share it.
 
 ### 2026-11-13 — M1 decisions: FE-013 (frontend agent)
 - **Built:** FE-013, 04f24c7. F06-AC5 runs on the Duplex (fake) in `tests/scenarios/sheet.test.ts` (every
