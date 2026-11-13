@@ -241,6 +241,7 @@ Things the product build doesn't do yet, with the task that deals with each.
   a watermark) until EN-006; F12-AC1 (opens without repair prompts) and AC2 are checked only through openpyxl;
   importing edits is FE-037. The audit CSV is the project's only (the org audit page and its CSV come with
   FE-033); its data column is the event's JSON.
+- Audit (FE-033): the action filter offers a fixed list (F09's minimum set and the actions the build writes; the API has no list of the actions used); details show the event data's plain values. Retention hides older events in lists and CSVs; nothing is deleted in the mock.
 - Phase-1 interim: the mock reads check details from the PoC engine's cache on the same machine, and
   drops the `null` optional fields the PoC sends in names (the worker should omit them, EN-001).
 
@@ -309,6 +310,7 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-11-13 | 8029dcb | FE-033: activity and audit: S18 (project, leads and approvers) and S25 (org settings › Audit, owners and admins) share one view with filters by who, action, entity and date, paging, details, the project link (org), and CSV with the same filters. Mock: shared filtering with the plan's audit retention, the project audit's date filter, the org audit CSV. Contract: `from`/`to` on the project audit and its CSV, `exportOrgAuditCsv`. 5 scenarios, 1 mock test, 1 e2e flow |
 | 2026-11-13 | 8d49e51 | FE-032: the Exports tab (S12g): the working version's Excel on demand, every file of the BoQ's versions with download (working, saved, change reports); a saved version's export is always its frozen file (BR-25), downloads of it are audited; the project audit as CSV with the page's filters, from the activity page. Decisions CSV was there since FE-010. 3 scenarios, 1 e2e flow (F12-AC3) |
 | 2026-11-13 | f7e9428 | FE-031: versions, confirmation and optional approval (F09): Save version with label, note, open questions and the not-in-the-models tick; the next working version; frozen run, edits and Excel; saved versions read-only (`?version=`), their Excel, compare; Confirm and Reopen; with `approvalRequired`: submit with reviewers, the review strip and Review tab (comments overall or on a line, the change report first), request changes, approve, save the approved version, four-eyes, withdraw; edits during review withdraw it (BR-23). Mock: the version workflow, the plan check on approval. 14 scenarios, 4 e2e flows |
 | 2026-11-13 | 8444b84 | FE-030: the change report (F08 §3–7): the Changes tab (compare with the last saved version's run, an earlier run or another BoQ's; summary with inputs that differ and elements per model, lines grouped like the sheet with change, \|Δ%\| and group filters, causes, elements, the viewer's "changes" colour mode with removed elements as a red ghost, Excel export); Compare from the run history. Mock: compare, diffs, lines, elements, export; the "Change report" fake. Contract: `DiffSummary.byModel`. 8 scenarios, 3 e2e flows, unit tests |

@@ -22,8 +22,8 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M3 (Versions, exports, sharing, notifications) |
 | Role | Frontend agent |
-| Last task done | FE-032 Exports tab and frozen exports (8d49e51) |
-| Next task | FE-033 Activity and audit (F09 audit, S18, S25) |
+| Last task done | FE-033 Activity and audit (8029dcb) |
+| Next task | FE-034 Notifications complete (F13) |
 | Waiting for the owner | — (the owner asked this session to stop after FE-037, the end of M3) |
 | In progress (not committed) | — |
 | Notes for the next session | Read the M3 decision entries (newest first), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
@@ -44,6 +44,15 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M3 decisions: FE-033 (frontend agent)
+- **Built:** FE-033, 8029dcb. `features/audit/audit-view.tsx` (S18 and S25), `api/hooks/audit.ts`, `/{org}/settings/audit`; mock `src/audit.ts` (`filterAudit`, `auditView`, `auditCsv`). Checked by `tests/scenarios/audit.test.ts` (5), `apps/mock-api/test/audit.test.ts` (retention) and `e2e/audit.spec.ts`.
+- **Decisions taken:**
+  - Contract additions: `from`/`to` on `listProjectAudit` and `exportProjectAuditCsv` (F09: filter by date), `GET /orgs/{orgId}/audit.csv` (`exportOrgAuditCsv`, S25 "filter, CSV"). CSV columns: `at, actor, action, entityType, entityId, project, data` (data as JSON).
+  - Retention (`auditLogRetentionDays`) applies to both the project and the org audit and their CSVs, counted from the mock clock.
+  - Dates in the filter are whole days in the browser's time zone, sent as ISO date-times (start of the first day, end of the last).
+  - Action names are translated in `projects.activity.actions` (dots as underscores); unknown ones show their code. Entity names in the new `audit` namespace.
+- **For the next agent:** test hooks `audit-view`, `audit-actor`, `audit-action`, `audit-entity`, `audit-from`, `audit-to`, `audit-csv`, `audit-row[data-action]`, `audit-more`, `settings-audit`.
 
 ### 2026-11-13 — M3 decisions: FE-032 (frontend agent)
 - **Built:** FE-032, 8d49e51. `features/exports/exports-tab.tsx`, the CSV button on S18, mock `exportRun` /
