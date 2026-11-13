@@ -18,7 +18,7 @@ import { visibleProject, writableProject } from "../projects.js";
 import { json, noContent, type Handlers } from "../router.js";
 import { db, persist, type ModelRec, type ModelVersionRec, type UserRec } from "../store.js";
 import { planLimits } from "./orgs.js";
-import { revisionLabel } from "./boqs.js";
+import { announceNewModelVersion, revisionLabel } from "./boqs.js";
 
 const STAGES = ["download", "read", "geometry", "verify", "write"] as const;
 const MESSAGES: Record<string, string> = {
@@ -129,6 +129,7 @@ function markReady(version: ModelVersionRec, model: ModelRec, summary: ModelVers
   const org = db().orgs.find((o) => o.id === project.orgId)!;
   notify(version.uploadedBy, org.id, "model_version.ready", { model: model.name, version: version.number }, `/${org.slug}/projects/${project.id}/models/${model.id}/versions/${version.id}`, { type: "modelVersion", id: version.id });
   changed(project.id, "modelVersion", version.id, "updated");
+  announceNewModelVersion(model.id, version.number, model.name);
 }
 
 function markFailed(version: ModelVersionRec, code: string, retryable: boolean, detail?: string) {

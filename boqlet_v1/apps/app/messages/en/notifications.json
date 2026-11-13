@@ -4,7 +4,8 @@
     "model_version_ready": "{model} v{version} is ready",
     "run_needs_input": "{boq}: {count, plural, one {# question needs} other {# questions need}} an answer",
     "job_failed": "{type, select, run {{boq}: generating failed} export {{boq}: the Excel export failed} other {A job failed}}",
-    "job_succeeded": "{type, select, run {{boq} is generated} export {{file} is ready} other {A job finished}}"
+    "job_succeeded": "{type, select, run {{boq} is generated} export {{file} is ready} other {A job finished}}",
+    "boq_new_version_available": "{boq}: {model} v{version} is available"
   },
   "title": "Notifications",
   "bell": "{count, plural, =0 {Notifications} other {Notifications, # unread}}",

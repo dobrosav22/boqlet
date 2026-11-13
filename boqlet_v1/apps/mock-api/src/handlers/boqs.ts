@@ -17,7 +17,7 @@ import { addTraceSteps } from "../engine/fakes/trace-steps.js";
 import { conflict, HttpError, limitReached, notFound } from "../http.js";
 import { newId } from "../ids.js";
 import { createJob, jobView, projectAudience, runJob } from "../jobs.js";
-import { PROJECT_PERMISSIONS, projectPermissions, visibleProject, writableProject } from "../projects.js";
+import { PROJECT_PERMISSIONS, projectPermissions, projectRoleOf, visibleProject, writableProject } from "../projects.js";
 import { json, type Handlers } from "../router.js";
 import {
   db,
@@ -288,6 +288,29 @@ const changed = (projectId: string, entityType: string, entityId: string, change
 const notify = (userId: string, project: ProjectRec, kind: string, params: Record<string, unknown>, url: string, entity: { type: string; id: string }) =>
   sendNotification({ userId, orgId: project.orgId, kind, params, url, entity });
 
+/**
+ * A model version became ready (F08 §1, FL-3 step 2): every BoQ whose current revision uses an older
+ * version of that model gets "new version available" (its header refreshes), and the project's
+ * leads and estimators get `boq.new_version_available` (F13). Archived BoQs are left alone.
+ */
+export function announceNewModelVersion(modelId: string, versionNumber: number, modelName: string) {
+  for (const boq of db().boqs) {
+    if (boq.archived) continue;
+    const revision = db().revisions.find((r) => r.id === boq.currentRevisionId);
+    const input = revision?.inputs.models.find((m) => m.modelId === modelId);
+    const chosen = input && db().modelVersions.find((v) => v.id === input.modelVersionId);
+    if (!chosen || chosen.number >= versionNumber) continue;
+    const project = db().projects.find((p) => p.id === boq.projectId)!;
+    const org = db().orgs.find((o) => o.id === project.orgId)!;
+    for (const userId of projectAudience(project.id)) {
+      const role = projectRoleOf(project, userId);
+      if (role !== "lead" && role !== "estimator") continue;
+      notify(userId, project, "boq.new_version_available", { boq: boq.name, model: modelName, version: versionNumber }, `/${org.slug}/projects/${project.id}/boqs/${boq.id}`, { type: "boq", id: boq.id });
+    }
+    changed(project.id, "boq", boq.id, "updated");
+  }
+}
+
 // ───────────────────────────── the run job ─────────────────────────────
 
 /** Minutes of processing used this calendar month (BR-62). */
@@ -545,6 +568,40 @@ export const boqHandlers: Handlers = {
       audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "boq.archived", subjectType: "boq", subjectId: boq.id, data: { name: boq.name } });
       changed(project.id, "boq", boq.id, "updated");
     }
+    return json(boqView(boq, user!.id));
+  },
+
+  /**
+   * F09 §6 (lead, reason required, audited): a confirmed BoQ becomes workable again, in a new working
+   * version carried over from the last saved one (`basedOnRevisionId`). Used by F08 §1's "Reopen to update".
+   */
+  reopenBoq({ user, params, body }) {
+    const { boq, project } = boqOf(user!, params.boqId!, "reopen");
+    if (boq.archived) throw conflict("boq_archived", "The BoQ is archived and read-only. Restore it first.");
+    const reason = ((body as { reason?: string } | undefined)?.reason ?? "").trim();
+    if (!reason) throw new HttpError(400, "invalid_body", "Say why the BoQ is reopened.");
+    if (boq.status !== "confirmed") throw conflict("invalid_transition", "Only a confirmed BoQ can be reopened.", { status: boq.status });
+    const revisions = db().revisions.filter((r) => r.boqId === boq.id);
+    const saved = revisions.filter((r) => r.status === "issued").sort((a, b) => b.number - a.number)[0];
+    const from = saved ?? db().revisions.find((r) => r.id === boq.currentRevisionId)!;
+    const revision: RevisionRec = {
+      id: newId(),
+      boqId: boq.id,
+      number: Math.max(...revisions.map((r) => r.number)) + 1,
+      status: "draft",
+      inputs: structuredClone(from.inputs),
+      // The saved version's run stays the working version's current run until the next generate.
+      currentRunId: from.currentRunId,
+      basedOnRevisionId: saved?.id ?? null,
+      createdAt: nowIso(),
+    };
+    db().revisions.push(revision);
+    boq.status = "working";
+    boq.currentRevisionId = revision.id;
+    boq.updatedAt = nowIso();
+    persist();
+    audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "boq.reopened", subjectType: "boq", subjectId: boq.id, data: { name: boq.name, reason, revision: revisionLabel(revision.number) } });
+    changed(project.id, "boq", boq.id, "updated");
     return json(boqView(boq, user!.id));
   },
 

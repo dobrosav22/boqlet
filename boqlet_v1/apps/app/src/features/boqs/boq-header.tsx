@@ -16,6 +16,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useRelativeTime } from "@/i18n/use-relative-time";
 import { cn } from "@/lib/utils";
 import { counts } from "@/features/questions/model";
+import { NewModelVersions } from "./new-model-versions";
 import { headerState, saveBlockedReason } from "./run-state";
 
 export function Tag({ children, filled, className, ...rest }: { children: React.ReactNode; filled?: boolean; className?: string; "data-testid"?: string }) {
@@ -176,14 +177,7 @@ export function BoqHeader({ boq, runs, base, canArchive }: { boq: Boq; runs: Run
             }).join(", ") })}
           </p>
         )}
-        {boq.newModelVersionsAvailable && (
-          <p className="flex items-center gap-3" data-testid="new-model-version">
-            <Tag className="border-[var(--status-attention)]">{t("run.newModelVersion")}</Tag>
-            <Link href={`${base}?tab=setup`} className="text-link hover:underline">
-              {t("run.useIt")}
-            </Link>
-          </p>
-        )}
+        <NewModelVersions boq={boq} base={base} />
         {error ? (
           <p role="alert" className="text-error">
             {message(error)}

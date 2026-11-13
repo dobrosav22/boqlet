@@ -60,6 +60,7 @@ export default function ProjectOverviewPage() {
                   <Link href={`${base}/boqs/${b.id}`} className="flex-1 hover:underline">
                     {b.name}
                   </Link>
+                  {b.newModelVersionsAvailable && <span className="label-caps text-muted-foreground">{tb("newVersion.listBadge")}</span>}
                   <span className="text-muted-foreground">
                     {tb(`status.${b.status === "confirmed" ? "confirmed" : b.currentRevision.status}`)} · {run ? tb(`run.status.${run.status}`) : tb("list.notGenerated")}
                   </span>

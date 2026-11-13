@@ -74,6 +74,11 @@ export default function BoqsPage() {
                       {b.name}
                     </Link>
                     {b.archived && <Tag className="ml-2 border-muted-foreground text-muted-foreground">{t("list.archived")}</Tag>}
+                    {b.newModelVersionsAvailable && !b.archived && (
+                      <Tag className="ml-2 border-[var(--status-attention)]" data-testid="boq-new-version">
+                        {t("newVersion.listBadge")}
+                      </Tag>
+                    )}
                   </TableCell>
                   <TableCell>
                     {b.currentRevision.label} · {t(`status.${b.status === "confirmed" ? "confirmed" : b.currentRevision.status}`)}

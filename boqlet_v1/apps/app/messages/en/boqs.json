@@ -76,8 +76,6 @@
       "decisions": "answers",
       "adjustments": "line edits"
     },
-    "newModelVersion": "A newer model version is available",
-    "useIt": "Review in Setup",
     "errors": {
       "engine_unavailable": "the processing service is not available. Try again in a moment.",
       "run_error": "the engine could not build this BoQ."
@@ -416,5 +414,24 @@
     "cancel": "Cancel",
     "save": "Save line",
     "formulaPlaceholder": "building.gross_volume / 100"
+  },
+  "newVersion": {
+    "badge": "New model version available",
+    "model": "{model}: v{newer} is ready (this version uses v{current})",
+    "modelNoCurrent": "{model}: v{newer} is ready",
+    "use": "Use v{number}",
+    "useAll": "Use all newer versions",
+    "review": "Review in Setup",
+    "reopenToUpdate": "Reopen to update",
+    "confirmedAskLead": "This BoQ is confirmed. A project lead can reopen it to update.",
+    "listBadge": "New model version"
+  },
+  "reopen": {
+    "title": "Reopen {name}",
+    "description": "A new working version is carried over from the last saved one. Saved versions stay as they are.",
+    "forUpdate": "To use the new model versions, the BoQ needs a new working version, carried over from the last saved one. Saved versions stay as they are.",
+    "reason": "Why is it reopened?",
+    "submit": "Reopen",
+    "cancel": "Cancel"
   }
 }

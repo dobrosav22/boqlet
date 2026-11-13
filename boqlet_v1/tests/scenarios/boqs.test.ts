@@ -215,6 +215,25 @@ describe("Run and Job (F04 §3–5)", () => {
     expect(data!.currentRevision.inputs.models[0]!.newerVersionAvailable).toBe(v2.number);
     const { data: version } = await client(owner.token).GET("/model-versions/{versionId}", { params: { path: { versionId: models[0]!.versionId } } });
     expect(version!.usedBy!.some((r) => r.boqId === boq.id && r.label === "A")).toBe(true);
+    // F08 §1 / FL-3 step 2: the project's leads and estimators are told (F13 `boq.new_version_available`).
+    const { data: list } = await client(owner.token).GET("/notifications", { params: { query: { limit: 200 } } });
+    const told = list!.items.find((n) => n.kind === "boq.new_version_available" && n.entityId === boq.id);
+    expect(told).toMatchObject({ entityType: "boq", params: { boq: boq.name, version: v2.number } });
+    expect(told!.url).toContain(`/boqs/${boq.id}`);
+  });
+
+  it("\"Use v2\" swaps the newer version into the working version as a pending change (F08 §1)", async () => {
+    const before = (await client(owner.token).GET("/boqs/{boqId}", { params: { path: { boqId: boq.id } } })).data!;
+    const input = before.currentRevision.inputs.models[0]!;
+    const { data: versions } = await client(owner.token).GET("/models/{modelId}/versions", { params: { path: { modelId: input.modelId } } });
+    const latest = versions!.find((v) => v.number === input.newerVersionAvailable)!;
+    const models = before.currentRevision.inputs.models.map((m) => ({ modelId: m.modelId, modelVersionId: m.modelId === input.modelId ? latest.id : m.modelVersionId, discipline: m.discipline }));
+    const swapped = await client(owner.token).PATCH("/revisions/{revisionId}", { params: { path: { revisionId: before.currentRevision.id } }, body: { inputs: { models } } });
+    expect(swapped.response.status).toBe(200);
+    expect(swapped.data!.pendingChanges).toContain("inputs.models");
+    const { data: after } = await client(owner.token).GET("/boqs/{boqId}", { params: { path: { boqId: boq.id } } });
+    expect(after!.newModelVersionsAvailable).toBe(false);
+    expect(after!.currentRevision.inputs.models[0]!).toMatchObject({ modelVersionId: latest.id, newerVersionAvailable: null });
   });
 });
 
