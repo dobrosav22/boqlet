@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M2 (Library and setup) |
 | Role | Frontend agent |
-| Last task done | FE-020 Duplex end-to-end test (d7ace66); **M1 done** |
-| Next task | FE-021 Library shell (F10 §1, 2, 5, 9, 10, 11) |
-| Waiting for the owner | — (the session stopped at the end of M1 because the owner asked it to; start the next one with the usual prompt) |
+| Last task done | FE-021 Library shell (829d61e) |
+| Next task | FE-022 Rule-set editor port (F10 §3) |
+| Waiting for the owner | — (the owner asked this session to stop at the end of M2) |
 | In progress (not committed) | — |
-| Notes for the next session | Read the M1 entry, then the FE-019, FE-018, FE-017, FE-014, FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | Read the FE-021 entry, then the M1 entry, then the FE-019, FE-018, FE-017, FE-014, FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -46,7 +46,7 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ## Entries
 
 ### 2026-11-13 — M2 decisions: FE-021 (frontend agent)
-- **Built:** FE-021, HASH. S19 `/{org}/library` (a tab per kind, layer filter, archived toggle, New, "Make a copy"
+- **Built:** FE-021, 829d61e. S19 `/{org}/library` (a tab per kind, layer filter, archived toggle, New, "Make a copy"
   on system rows), S16 `/{org}/projects/{p}/library` (the project's own presets), create
   `/{org}/library/{kind}/new` (empty / a copy of a version / changes on a rule set; `?mode=&from=&project=`),
   S20 `/{org}/library/{kind}/{presetId}` (header with details, star, copy, archive; tabs Edit, Versions,
