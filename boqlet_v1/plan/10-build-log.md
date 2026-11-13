@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M2 (Library and setup) |
 | Role | Frontend agent |
-| Last task done | FE-021 Library shell (829d61e) |
-| Next task | FE-022 Rule-set editor port (F10 §3) |
+| Last task done | FE-022…FE-025, most of FE-026 and FE-027 (5551323) |
+| Next task | FE-028 Setup wizard (with FE-026's guided mode and FE-027's code-list item-text box, which reuse it) |
 | Waiting for the owner | — (the owner asked this session to stop at the end of M2) |
 | In progress (not committed) | — |
-| Notes for the next session | Read the FE-021 entry, then the M1 entry, then the FE-019, FE-018, FE-017, FE-014, FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | Read the FE-022…FE-027 entry and the FE-021 entry, then the M1 entry, then the FE-019, FE-018, FE-017, FE-014, FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -46,7 +46,7 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ## Entries
 
 ### 2026-11-13 — M2 decisions: FE-022…FE-027 (frontend agent)
-- **Built:** HASH. The three editors (FE-022 rule sets, FE-023 classifications with code-list import,
+- **Built:** 5551323. The three editors (FE-022 rule sets, FE-023 classifications with code-list import,
   FE-024 dictionaries with Names in a model), publish and preview (FE-025), clone and Excel templates
   (FE-026 without guided mode), item texts in runs, sheet, line detail and Excel (FE-027 without the code
   list's item-text box). Checked by `e2e/library-editors.spec.ts` (6: autosave and the `?question=` deep
