@@ -144,3 +144,10 @@ export function buildRows(lines: SheetLine[], system: string | null, collapsed: 
 export function displayUnit(unit: string): string {
   return unit.replace(/([a-z])2$/, "$1²").replace(/([a-z])3$/, "$1³");
 }
+
+/** Lines in the BoQ by source, for "120 measured · 8 derived · 3 manual · 2 to confirm" (F06 §12). Excluded lines are out of the BoQ. */
+export function countsBySource(lines: readonly { source: Source; excluded?: boolean }[]) {
+  const counts = { measured: 0, derived: 0, manual: 0, flagged: 0 };
+  for (const l of lines) if (!l.excluded) counts[l.source] += 1;
+  return counts;
+}

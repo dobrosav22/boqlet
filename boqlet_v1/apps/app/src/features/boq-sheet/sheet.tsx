@@ -7,6 +7,7 @@ import { ChevronDown, ChevronRight, Columns3, GripVertical, Plus, Undo2 } from "
 import { useLocale, useTranslations } from "next-intl";
 import type { Boq, Run } from "@/api/hooks/boqs";
 import { useEditLines, useManualItems, useOverrides, useRemoveManualItem, useSaveManualItem, type EditBatch, type LineOverrideInput, type ManualItemRecord } from "@/api/hooks/edits";
+import { useMe } from "@/api/hooks/me";
 import { useLines } from "@/api/hooks/sheet";
 import { useErrorMessage } from "@/components/errors/use-error-message";
 import { NativeSelect } from "@/components/native-select";
@@ -22,6 +23,7 @@ import { LineEdits, type LineActions } from "./line-edits";
 import { buildRows, displayUnit, facets, filterLines, type GroupRow, type Row, type SheetFilters, type SourceFilter } from "./model";
 import { SourceTag } from "./source-tag";
 import { useCodeLists } from "./use-code-lists";
+import { NotInModelsNotice } from "./not-in-models";
 import { WarningsBar } from "./warnings-bar";
 
 /** Fixed row height (architecture.md performance budget: virtualised rows, fixed height). */
@@ -86,9 +88,11 @@ type Prompt = { title: string; summary: string; initial?: string; apply: (reason
 export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
   const t = useTranslations("boqs.sheet");
   const te = useTranslations("boqs.edits");
+  const tn = useTranslations("boqs.notInModels");
   const locale = useLocale();
   const message = useErrorMessage();
   const lines = useLines(run.id);
+  const me = useMe();
   const overrides = useOverrides(boq.id);
   const manual = useManualItems(boq.id);
   const lists = useCodeLists(run);
@@ -367,6 +371,7 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
   return (
     <div className="flex flex-col gap-3" data-testid="sheet" data-editable={editable ? "true" : "false"}>
       <WarningsBar runId={run.id} />
+      <NotInModelsNotice key={me.data?.user.id ?? "anonymous"} lines={all} userId={me.data?.user.id} onAddLine={editable ? () => setManualDialog({}) : undefined} />
       <div className="flex flex-wrap items-end gap-3" data-testid="sheet-toolbar">
         <label className="flex flex-col gap-1">
           <span className="label-caps text-muted-foreground">{t("groupBy")}</span>
@@ -506,7 +511,7 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
             lists={lists}
             num={num}
             labels={groupLabels}
-            emptyText={t("noMatches")}
+            emptyText={filtering ? t("noMatches") : tn("text")}
             label={t("tableLabel")}
             checkLabel={te("select")}
             checkAllLabel={te("selectAll")}

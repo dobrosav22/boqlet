@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { SearchPicker } from "@/features/questions/search-picker";
 import type { CodeLists } from "./edits";
 import { displayUnit } from "./model";
+import { NotInModelsText } from "./not-in-models";
 
 /** A reason for a quantity change or an exclusion (F06 §6: required for both). */
 export function ReasonDialog({ title, summary, initial, onConfirm, onClose }: { title: string; summary: string; initial?: string; onConfirm: (reason: string) => void; onClose: () => void }) {
@@ -144,6 +145,7 @@ export function ManualLineDialog({
         <DialogHeader>
           <DialogTitle>{record ? t("editTitle") : t("addTitle")}</DialogTitle>
           <DialogDescription>{t("intro")}</DialogDescription>
+          {!record && <NotInModelsText className="text-muted-foreground" />}
         </DialogHeader>
         <form
           className="flex flex-col gap-4"

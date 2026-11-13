@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RunLine } from "@/api/hooks/sheet";
-import { buildRows, displayUnit, facets, filterLines, UNCLASSIFIED, type GroupRow } from "./model";
+import { buildRows, countsBySource, displayUnit, facets, filterLines, UNCLASSIFIED, type GroupRow } from "./model";
 
 let n = 0;
 function line(path: [string, string][] | null, fields: Partial<RunLine> = {}): RunLine {
@@ -102,5 +102,19 @@ describe("edits in the sheet (F06 §6)", () => {
   it("filters edited and excluded lines", () => {
     expect(filterLines([a, b, c], { source: "excluded" })).toEqual([b]);
     expect(filterLines([a, b, c], { source: "edited" })).toEqual([b]);
+  });
+});
+
+describe("countsBySource (F06 §12)", () => {
+  it("counts the BoQ's lines by source, without excluded lines", () => {
+    const lines = [
+      line(null),
+      line(null),
+      line(null, { source: "derived" }),
+      line(null, { source: "manual" }),
+      line(null, { source: "flagged", quantity: null }),
+      { ...line(null), excluded: true },
+    ];
+    expect(countsBySource(lines)).toEqual({ measured: 2, derived: 1, manual: 1, flagged: 1 });
   });
 });

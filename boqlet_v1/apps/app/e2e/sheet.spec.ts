@@ -185,3 +185,42 @@ test("a viewer sees the same sheet, with no edit actions (F06 §11)", async ({ p
   await page.getByTestId("sheet-line").first().click();
   await expect(page.getByTestId("line-detail")).toBeVisible();
 });
+
+test("F06-AC8 the not-in-the-models notice and the counts by source are on the sheet, and collapsing it is remembered per user", async ({ page }) => {
+  const { url, olivia, run } = await generatedDuplexBoq(new Uint8Array(await readFile(DUPLEX)), ["acme-cost-codes"]);
+  const projectId = url.split("/")[3]!;
+  const victor = await devUser("victor");
+  await apiAs(olivia, "POST", `/projects/${projectId}/members`, { userId: victor.id, role: "viewer" });
+  const lines = await apiAs<{ items: { source: string }[] }>(olivia, "GET", `/runs/${run.id}/lines`);
+  const bySource = (s: string) => String(lines.items.filter((l) => l.source === s).length);
+
+  await signInAs(page, "olivia");
+  await page.goto(url);
+  const notice = page.getByTestId("not-in-models");
+  await expect(notice).toHaveAttribute("data-collapsed", "false");
+  await expect(notice).toContainText("This BoQ contains what the models contain");
+  const counts = notice.getByTestId("source-counts");
+  for (const s of ["measured", "derived", "manual", "flagged"]) await expect(counts).toHaveAttribute(`data-${s}`, bySource(s));
+  await expect(counts).toContainText(`${bySource("measured")} measured`);
+
+  // "Add line" opens the manual line dialog, whose help says the same.
+  await notice.getByTestId("not-in-models-add").click();
+  await expect(page.getByTestId("manual-line-dialog")).toContainText("This BoQ contains what the models contain");
+  await page.keyboard.press("Escape");
+
+  // Collapsed to the counts line, still there after a reload.
+  await notice.getByTestId("not-in-models-toggle").click();
+  await expect(notice).toHaveAttribute("data-collapsed", "true");
+  await expect(notice).not.toContainText("This BoQ contains what the models contain");
+  await expect(counts).toBeVisible();
+  await page.reload();
+  await expect(page.getByTestId("not-in-models")).toHaveAttribute("data-collapsed", "true");
+
+  // Another user in the same browser sees it open, without "Add line" (read-only). The init script of
+  // signInAs only signs in when nobody is, so the stored session is replaced here.
+  const session = { token: victor.token, userId: victor.id, name: victor.name, email: victor.email, sessionless: true };
+  await page.evaluate((value) => window.localStorage.setItem("boqlet-mock-session", value), JSON.stringify(session));
+  await page.goto(url);
+  await expect(page.getByTestId("not-in-models")).toHaveAttribute("data-collapsed", "false");
+  await expect(page.getByTestId("not-in-models-add")).toHaveCount(0);
+});

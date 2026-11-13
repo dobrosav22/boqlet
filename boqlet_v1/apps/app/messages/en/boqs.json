@@ -283,6 +283,14 @@
       "trace_result": "Result"
     }
   },
+  "notInModels": {
+    "title": "Not in the models",
+    "text": "This BoQ contains what the models contain. Work not modelled as objects (for example earthworks, plaster, screed, waterproofing, reinforcement, scaffolding, site setup) is in it only if your rule set derives it or you add it.",
+    "counts": "{measured} measured · {derived} derived · {manual} manual · {flagged} to confirm",
+    "addLine": "Add line",
+    "collapse": "Show less",
+    "expand": "Show more"
+  },
   "warnings": {
     "title": "{count, plural, one {# warning} other {# warnings}}",
     "elements": "{count, plural, one {# element} other {# elements}}"

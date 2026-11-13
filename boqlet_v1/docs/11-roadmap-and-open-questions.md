@@ -113,8 +113,12 @@ Things the product build doesn't do yet, with the task that deals with each.
   the model version page, not yet in the ready notification (FE-018).
 - Sheet (FE-009): no position numbers in the No. column (FE-040); Description shows the rule set's line
   text, not item texts (FE-027, EN-010); the line detail has no "Show in
-  3D" yet (FE-014, FE-016); no "not in the models" notice (FE-015); the app loads up to 20,000 lines at once and doesn't yet switch to the
+  3D" yet (FE-014, FE-016); the app loads up to 20,000 lines at once and doesn't yet switch to the
   server-side grouping above that (the mock serves it; FE-045).
+- Not in the models (FE-015): collapsing the notice is remembered per user in this browser (`localStorage`,
+  keyed by user id), not across devices: there is no user-preference endpoint in the contract. The sheet
+  builds groups only from lines, so a group with no lines never shows; the paragraph is the empty state of a
+  sheet with no lines and the help of the "Add line" dialog. The save-version tick comes with FE-031 (M3).
 - How it is calculated (FE-013): the steps come from the mock's "Trace steps" fake, which reads the PoC
   engine's element notes (approximate wording; a line whose notes it can't read is one "sum of n elements"
   step; a derived line's source lines are found by element GlobalId) until EN-013; runs made before FE-013
