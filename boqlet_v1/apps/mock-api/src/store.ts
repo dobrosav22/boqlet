@@ -165,6 +165,8 @@ export interface RunRec {
   request: { inputs: RevisionInputs; projectDictionaryVersionId: string | null; decisions?: DecisionSnapshot[] };
   /** Ids of the questions the engine asked (the result's open questions), for pending changes. */
   askedQuestionIds?: string[];
+  /** The blocking ones among them (project cards count those still unanswered). */
+  blockingQuestionIds?: string[];
   stats?: Schemas["Run"]["stats"];
   models?: unknown[];
   building?: unknown;

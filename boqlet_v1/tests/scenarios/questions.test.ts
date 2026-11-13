@@ -37,6 +37,7 @@ async function generate(api: Api) {
 }
 
 const questionsOf = async (api: Api, runId: string) => (await api.GET("/runs/{runId}/questions", { params: { path: { runId } } })).data!;
+const cardBlocking = async (api: Api) => (await api.GET("/orgs/{orgId}/projects", { params: { path: { orgId } } })).data!.find((p) => p.id === projectId)!.counts!.blockingQuestions;
 const pendingChanges = async (api: Api) => (await api.GET("/boqs/{boqId}", { params: { path: { boqId: boq.id } } })).data!.currentRevision.pendingChanges;
 
 /** The first term of each category (any term answers a name question). */
@@ -73,6 +74,8 @@ describe("questions of a run (F05 §1)", () => {
     expect(questions.slice(0, blocking.length).every((q) => q.blocking)).toBe(true);
     expect(questions.every((q) => !q.decision && q.answeredAfterRun === false)).toBe(true);
     expect(blocking.every((q) => q.kind === "unknown_name" && q.answer.kind === "term")).toBe(true);
+    // The project card counts them (F02).
+    expect(await cardBlocking(client(owner.token))).toBe(blocking.length);
   });
 });
 
@@ -96,6 +99,7 @@ describe("answering (F05 §2, §3)", () => {
     const answered = after.filter((q) => q.decision);
     expect(answered.map((q) => q.id).sort()).toEqual(ten.map((q) => q.id).sort());
     expect(answered.every((q) => q.answeredAfterRun && q.decision!.answer === terms.get("material"))).toBe(true);
+    expect(await cardBlocking(api)).toBe(first.stats!.blockingQuestions! - 10);
     // Answered rows sort after the open ones.
     expect(after.slice(-10).every((q) => q.decision)).toBe(true);
     // The answers wait for a regenerate; the project dictionary moved too (F05 §5).

@@ -9,6 +9,7 @@ import { activeProjectCount, projectPermissions, projectRoleOf, visibleProject, 
 import { json, noContent, type Handlers } from "../router.js";
 import { seedId } from "../ids.js";
 import { db, persist, type Db, type OrgRec, type ProjectRec, type ProjectRole, type UserRec } from "../store.js";
+import { openBlockingQuestions } from "../decisions.js";
 import { planLimits } from "./orgs.js";
 
 type Body = Record<string, unknown>;
@@ -34,12 +35,12 @@ function lastActivityAt(projectId: string) {
 
 function listItem(project: ProjectRec, userId: string) {
   const last = lastActivityAt(project.id) ?? project.updatedAt;
-  // Questions (FE-010) and reviews (FE-031) are counted when they arrive.
+  // Reviews (FE-031) are counted when they arrive.
   const boqs = db().boqs.filter((b) => b.projectId === project.id && !b.archived);
   const counts = {
     models: db().models.filter((m) => m.projectId === project.id && !m.archived).length,
     boqs: boqs.length,
-    blockingQuestions: 0,
+    blockingQuestions: openBlockingQuestions(project.id),
     revisionsInReview: 0,
     confirmedBoqs: boqs.filter((b) => b.status === "confirmed").length,
   };

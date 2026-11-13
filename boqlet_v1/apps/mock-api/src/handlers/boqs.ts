@@ -338,6 +338,7 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
         const blocking = result.questions.filter((q) => q.blocking).length;
         run.stats = { ...result.stats, questions: result.questions.length, blockingQuestions: blocking, warnings: result.warnings.length };
         run.askedQuestionIds = result.questions.map((q) => q.id);
+        run.blockingQuestionIds = result.questions.filter((q) => q.blocking).map((q) => q.id);
         run.models = result.models;
         if (result.building) run.building = result.building;
         run.classifications = inputs.classificationVersionIds.map((id) => {

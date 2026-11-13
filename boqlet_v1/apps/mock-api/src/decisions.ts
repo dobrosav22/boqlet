@@ -59,6 +59,13 @@ export function latestRuns(projectId: string): RunRec[] {
     });
 }
 
+/** Blocking questions the latest runs asked that nobody has answered since (project cards, F02). */
+export function openBlockingQuestions(projectId: string): number {
+  const answered = currentDecisionMap(projectId);
+  const ids = new Set(latestRuns(projectId).flatMap((r) => r.blockingQuestionIds ?? []));
+  return [...ids].filter((id) => !answered.has(id)).length;
+}
+
 /** Sent with one of the latest runs, with the same answer. */
 export function usedByLatestRuns(decision: DecisionRec, runs = latestRuns(decision.projectId)): boolean {
   return runs.some((run) => (run.request.decisions ?? []).some((d) => d.questionId === decision.questionId && d.answer === decision.answer));
