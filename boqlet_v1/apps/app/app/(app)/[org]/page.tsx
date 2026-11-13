@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useRelativeTime } from "@/i18n/use-relative-time";
 import { useAttention, useProjects } from "@/api/hooks/projects";
@@ -11,8 +13,24 @@ import { useOrg } from "@/features/orgs/org-context";
 import { ProjectCard } from "@/features/projects/project-card";
 import { useCreateSample } from "@/features/projects/create-sample";
 
-/** S05: what needs me, and my projects (F02 §5). */
+/**
+ * S05: what needs me, and my projects (F02 §5). Until the org's setup is finished (F16, P18) the
+ * people who can finish it are sent to the wizard; members see that it isn't finished yet.
+ */
 export default function DashboardPage() {
+  const { org, can } = useOrg();
+  const router = useRouter();
+  const unfinished = org.setup?.status !== "done";
+  const gate = unfinished && can("finishSetup");
+  useEffect(() => {
+    if (gate) router.replace(`/${org.slug}/setup`);
+  }, [gate, org.slug, router]);
+  if (gate) return <div aria-busy="true" className="min-h-40" />;
+  return <Dashboard unfinished={unfinished} />;
+}
+
+function Dashboard({ unfinished }: { unfinished: boolean }) {
+  const ts = useTranslations("setup");
   const t = useTranslations("projects.dashboard");
   const relativeTime = useRelativeTime();
   const message = useErrorMessage();
@@ -23,6 +41,11 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-10">
+      {unfinished && (
+        <p className="rounded-[var(--radius)] border border-border bg-muted px-3 py-2" role="status" data-testid="setup-not-finished">
+          {ts("notFinished")}
+        </p>
+      )}
       <section className="flex flex-col gap-3" data-testid="needs-you">
         <h2 className="label-caps">{t("needsYou")}</h2>
         {attention.data?.length === 0 && <p className="text-muted-foreground">{t("nothingNeedsYou")}</p>}

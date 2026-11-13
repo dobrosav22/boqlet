@@ -26,6 +26,7 @@ import { ManualLineDialog, ReasonDialog } from "./edit-dialogs";
 import { batchFor, effectiveLines, restoreField, withChange, type CodeLists, type EditField, type SheetLine } from "./edits";
 import { LineDetailPanel } from "./line-detail";
 import { LineEdits, type LineActions } from "./line-edits";
+import { SystemRulesHint } from "@/features/setup/system-rules-hint";
 import { buildRows, displayUnit, facets, filterLines, linesInGroup, topGroups, UNCLASSIFIED, type GroupRow, type Row, type SheetFilters, type SourceFilter, shownDescription } from "./model";
 import { SourceTag } from "./source-tag";
 import { useCodeLists } from "./use-code-lists";
@@ -439,6 +440,7 @@ export function Sheet({ run, boq }: { run: Run; boq: Boq }) {
   return (
     <div className="flex flex-col gap-3" data-testid="sheet" data-editable={editable ? "true" : "false"}>
       <WarningsBar runId={run.id} />
+      <SystemRulesHint run={run} userId={me.data?.user.id} />
       <NotInModelsNotice key={me.data?.user.id ?? "anonymous"} lines={all} userId={me.data?.user.id} onAddLine={editable ? () => setManualDialog({}) : undefined} />
       <div className="flex flex-wrap items-end gap-3" data-testid="sheet-toolbar">
         <label className="flex flex-col gap-1">

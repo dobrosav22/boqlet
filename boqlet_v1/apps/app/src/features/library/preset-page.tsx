@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { useArchivePreset, useDiscardDraft, usePreset, useUpdatePreset, type Preset } from "@/api/hooks/library";
+import { useArchivePreset, useDiscardDraft, usePreset, useUpdatePreset, type Preset, type PreviewResult } from "@/api/hooks/library";
 import { useErrorMessage } from "@/components/errors/use-error-message";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Field } from "@/components/field";
@@ -17,8 +17,10 @@ import { useRelativeTime } from "@/i18n/use-relative-time";
 import { cn } from "@/lib/utils";
 import { Tag } from "./kinds";
 import { CloneDialog } from "./clone-dialog";
+import { MeasureStep } from "@/features/setup/measure-step";
 import { PresetEditor } from "./preset-editor";
 import { TemplateTools } from "./template-tools";
+import { PreviewResultContext } from "./preview/preview-context";
 import { PreviewPanel } from "./preview/preview-panel";
 import { PublishDialog } from "./publish-dialog";
 import { useDraft } from "./shared/use-draft";
@@ -239,10 +241,25 @@ function EditTab({ preset: p, editable }: { preset: Preset; editable: boolean })
   const params = useSearchParams();
   const discard = useDiscardDraft(p.id);
   const draft = useDraft<unknown>(p);
+  const [previewResult, setPreviewResult] = useState<PreviewResult | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const { org } = useOrg();
+  const [screen, setScreen] = useState(0);
+  // Guided mode (F10 §2, P24): the setup wizard's step for this kind, one topic at a time.
+  const canGuide = editable && (p.kind === "rule_set" || p.kind === "classification");
+  const guided = canGuide && params.get("mode") === "guided";
+  const setGuided = (on: boolean) => router.replace(on ? `${pathname}?mode=guided` : pathname, { scroll: false });
   return (
-    <div className="flex flex-col gap-4" data-testid="preset-edit">
+    <PreviewResultContext.Provider value={previewResult}>
+      <div className="flex flex-col gap-4" data-testid="preset-edit">
       <div className="flex flex-wrap items-center gap-2">
-        <TemplateTools preset={p} draft={draft} editable={editable} />
+        {canGuide && (
+          <Button variant="outline" onClick={() => setGuided(!guided)} data-testid={guided ? "full-editor" : "guided-mode"}>
+            {t(guided ? "guided.full" : "guided.open")}
+          </Button>
+        )}
+        {!guided && <TemplateTools preset={p} draft={draft} editable={editable} />}
       </div>
       {p.draft ? (
         <div className="flex flex-wrap items-center gap-3">
@@ -267,9 +284,19 @@ function EditTab({ preset: p, editable }: { preset: Preset; editable: boolean })
         <p className="text-muted-foreground">{p.layer === "system" ? t("edit.system") : editable ? t("edit.noDraft", { n: p.latestPublishedVersion?.number ?? 0 }) : t("edit.readOnly")}</p>
       )}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(320px,2fr)]">
-        <PresetEditor preset={p} draft={draft} editable={editable} question={params.get("question")} />
-        {(p.kind === "rule_set" || p.kind === "classification" || p.kind === "dictionary") && <PreviewPanel preset={p} saves={draft.saves} />}
+        {guided && p.kind === "rule_set" ? (
+          <MeasureStep preset={p} draft={draft} orgSlug={org.slug} screenIndex={screen} onScreen={setScreen} onDone={() => setGuided(false)} />
+        ) : guided ? (
+          <div className="flex flex-col gap-3" data-testid="guided-items">
+            <p className="text-muted-foreground">{t("guided.itemsIntro")}</p>
+            <PresetEditor preset={p} draft={draft} editable={editable} />
+          </div>
+        ) : (
+          <PresetEditor preset={p} draft={draft} editable={editable} question={params.get("question")} />
+        )}
+        {(p.kind === "rule_set" || p.kind === "classification" || p.kind === "dictionary") && <PreviewPanel preset={p} saves={draft.saves} onResult={setPreviewResult} />}
       </div>
-    </div>
+      </div>
+    </PreviewResultContext.Provider>
   );
 }

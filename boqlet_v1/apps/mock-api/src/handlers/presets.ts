@@ -20,7 +20,7 @@ import { projectRoleOf, visibleProject, writableProject } from "../projects.js";
 import { json, noContent, type Handlers } from "../router.js";
 import { db, persist, type BoqRec, type PresetRec, type PresetVersionRec, type ProjectRec, type RevisionInputs, type RevisionRec, type UserRec } from "../store.js";
 import { planLimits } from "./orgs.js";
-import { minutesUsed, revisionLabel } from "./boqs.js";
+import { minutesUsed, presetsSettled, revisionLabel } from "./boqs.js";
 import { projectDictionaryVersionIds } from "./models.js";
 
 const userRef = (id?: string) => {
@@ -160,6 +160,21 @@ async function check(preset: PresetRec, version: PresetVersionRec) {
     if (e instanceof EngineUnavailable) throw engineDown();
     throw e;
   }
+}
+
+/**
+ * A rule-set version flattened by the engine, with the setup markers (fake). Cached by version and
+ * revision: a published version never changes, a draft changes with each save, and the engine (busy with
+ * runs) is asked once. A patch's flattening also depends on its parent, which is a published version.
+ */
+const flatCache = new Map<string, unknown>();
+async function flattenedOf(version: PresetVersionRec): Promise<unknown> {
+  const key = `${version.id}:${version.rev ?? 0}:${version.extendsVersionId ?? ""}`;
+  if (flatCache.has(key)) return flatCache.get(key);
+  const flat = withSetupMarkers((await checkDoc("rule_set", version.doc, version.extendsVersionId)).flattened ?? undefined);
+  if (flatCache.size > 500) flatCache.clear();
+  flatCache.set(key, flat);
+  return flat;
 }
 
 /** What the template fake needs for a preset's document (F10 §14). */
@@ -336,7 +351,7 @@ export const presetHandlers: Handlers = {
     if (preset.kind === "rule_set" && doc) {
       try {
         // The "Setup markers" fake adds F16's wizard markers to rule sets built on As modelled.
-        flattened = withSetupMarkers((await checkDoc("rule_set", doc, version.extendsVersionId)).flattened ?? undefined);
+        flattened = await flattenedOf(version);
       } catch (e) {
         if (e instanceof EngineUnavailable) throw engineDown();
         flattened = undefined;
@@ -460,7 +475,10 @@ export const presetHandlers: Handlers = {
     if (!source) throw conflict("no_draft", "The preset has no draft and no version to preview.");
     const shown = source;
     const published = latestPublished(preset.id);
-    const compareWith = (b.compareWithPublished ?? true) && published && published.id !== shown.id ? published : null;
+    // Compared with the latest published version; a patch with none yet is compared with the version it
+    // is based on (the setup wizard's preview shows what the answers change against "As modelled", F16).
+    const parentVersion = !published && preset.kind === "rule_set" && shown.extendsVersionId ? db().presetVersions.find((v) => v.id === shown.extendsVersionId) : undefined;
+    const compareWith = (b.compareWithPublished ?? true) ? (published && published.id !== shown.id ? published : (parentVersion ?? null)) : null;
 
     const defaults = { ...project.defaults, ...(b.otherInputs ?? {}) } as RevisionInputs;
     const pick = (id: string | null | undefined) => (id ? versionRec(id) : undefined);
@@ -473,15 +491,20 @@ export const presetHandlers: Handlers = {
       dictionaries: [...(defaults.dictionaryVersionIds ?? []), ...projectDictionaryVersionIds(project.projectDictionaryId)].map(pick).filter((v): v is PresetVersionRec => !!v),
     };
     const job = createJob({ type: "preview", subjectType: "preset", subjectId: preset.id, projectId: project.id, orgId: org.id, createdBy: user!.id });
-    void runJob(job, async (ctx) => {
+    void runJob(
+      job,
+      async (ctx) => {
       const started = Date.now();
       try {
+        // A run's presets may still be on their way out of the engine's folder (FE-012).
+        await presetsSettled();
         ctx.progress("rules", 10);
         const after = await previewRun(job.id, "draft", inputs, { preset, doc: shown.doc, extendsVersionId: shown.extendsVersionId });
         if (ctx.cancelled()) return;
         ctx.progress("compare", 60);
         const before = compareWith ? await previewRun(job.id, "published", inputs, { preset, doc: compareWith.doc, extendsVersionId: compareWith.extendsVersionId }) : null;
-        const result = previewResult(after, before, compareWith);
+        const compareName = compareWith && compareWith.presetId !== preset.id ? db().presets.find((p) => p.id === compareWith.presetId)?.name : undefined;
+        const result = previewResult(after, before, compareWith, compareName);
         const key = `orgs/${org.id}/previews/${job.id}/preview.json`;
         await putBlob(key, new TextEncoder().encode(JSON.stringify(result)));
         ctx.progress("done", 100);
@@ -493,7 +516,10 @@ export const presetHandlers: Handlers = {
         db().usage.push({ orgId: org.id, projectId: project.id, kind: "preview", ms: Date.now() - started, at: nowIso() });
         persist();
       }
-    });
+      },
+      undefined,
+      "run",
+    );
     return json(jobView(job), 202);
   },
 

@@ -43,7 +43,8 @@ export default function OnboardingPage() {
     onSuccess: async (org) => {
       rememberOrg(org.slug);
       await client.invalidateQueries({ queryKey: keys.me() });
-      router.push(`/${org.slug}`);
+      // F16, P18: a new org's owner goes straight into the setup wizard.
+      router.push(`/${org.slug}/setup`);
     },
     onError: () => {},
   });

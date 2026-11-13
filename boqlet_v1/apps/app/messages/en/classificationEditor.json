@@ -132,6 +132,20 @@
     "next": "Next →",
     "pageOf": "Codes {from}–{to} of {total}"
   },
+  "itemText": {
+    "label": "Item text of {code}",
+    "placeholder": "Item text: what this item is, as written in the BoQ. Insert a line's values below.",
+    "insert": "Insert",
+    "insertValue": "+ {what}",
+    "readsAs": "Reads as",
+    "sample": "With a line of {item} from the preview:",
+    "lineSample": "{filled, select, yes {Item text, with this item's first line in the preview:} other {Item text:}}",
+    "quoted": "“<q></q>”",
+    "names": {
+      "unit": "Unit",
+      "quantity": "Quantity"
+    }
+  },
   "about": {
     "title": "About this list",
     "summaryLevels": "levels: {levels}",

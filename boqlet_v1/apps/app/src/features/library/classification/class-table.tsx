@@ -15,6 +15,8 @@ import { Select, Text, inputClass, linkButton } from "../shared/fields";
 import { cap } from "../shared/story";
 import { aimed, byPriority, covered, emptyRow, outcomeFor, readTable, SPLIT_KINDS, suggest, viaAdvanced, writeRow, type LineKind, type RowConfig, type SplitKind, type Target } from "./model";
 import { OutcomeWords, useClassWords } from "./class-story";
+import { LineSample } from "./item-text-box";
+import type { PreviewLine } from "./item-text";
 import { NavLink, useCodes } from "./nav";
 
 export interface Term {
@@ -37,7 +39,14 @@ export function CodePicker({ value, onChange, ...rest }: { value: string | undef
   );
 }
 
-function TargetPicker({ value, onChange, derived, label }: { value: Target; onChange: (t: Target) => void; derived: boolean; label: string }) {
+function TargetPicker({ value, onChange, derived, label, line }: {
+  value: Target;
+  onChange: (t: Target) => void;
+  derived: boolean;
+  label: string;
+  /** The preview's first line of this BoQ item, for the code's item text as a sample. */
+  line?: PreviewLine;
+}) {
   const t = useTranslations("classificationEditor.table");
   const fromSource = !!value && typeof value === "object";
   return (
@@ -52,6 +61,7 @@ function TargetPicker({ value, onChange, derived, label }: { value: Target; onCh
         />
       )}
       {!fromSource && <CodePicker value={typeof value === "string" ? value : undefined} onChange={(v) => onChange(v ?? null)} aria-label={label} />}
+      {typeof value === "string" && <LineSample code={value} line={line} />}
     </div>
   );
 }
@@ -65,7 +75,7 @@ export interface RuleSetOption {
 
 const GROUPS = ["item", "derived", "manual"] as const;
 
-export function ClassTable({ codeList, map, onChange, ruleSets, rsId, setRsId, kinds: loaded, rsError, terms, onOpenRule }: {
+export function ClassTable({ codeList, map, onChange, ruleSets, rsId, setRsId, kinds: loaded, rsError, terms, onOpenRule, previewLines }: {
   codeList: CodeList;
   map: ClassificationMap;
   onChange: (m: ClassificationMap) => void;
@@ -79,6 +89,8 @@ export function ClassTable({ codeList, map, onChange, ruleSets, rsId, setRsId, k
   terms: Term[];
   /** Show a map rule in Advanced (by its index in map.rules). */
   onOpenRule: (index: number) => void;
+  /** The latest preview's first line of each BoQ item (by id); null without a preview. */
+  previewLines?: Map<string, PreviewLine> | null;
 }) {
   const t = useTranslations("classificationEditor.table");
   const w = useClassWords();
@@ -140,6 +152,7 @@ export function ClassTable({ codeList, map, onChange, ruleSets, rsId, setRsId, k
         onAccept={() => setRow(k.id, { ...cfgOf(k.id), code: suggested[k.id]! })}
         outcome={outcome && <OutcomeWords outcome={outcome} titles={titles} kind={k} kinds={kinds} map={map} table={used} onOpenRule={onOpenRule} />}
         covered={outcome ? covered(outcome) : false}
+        line={previewLines?.get(k.id)}
       />
     );
   };
@@ -237,7 +250,7 @@ function RowHead() {
   );
 }
 
-function Row({ kind, sub, cfg, onChange, termOptions, termLabel, via, suggestion, onAccept, outcome, covered }: {
+function Row({ kind, sub, cfg, onChange, termOptions, termLabel, via, suggestion, onAccept, outcome, covered, line }: {
   kind: LineKind;
   sub: string;
   /** Some rule (table or other) can give these lines a code. */
@@ -251,6 +264,8 @@ function Row({ kind, sub, cfg, onChange, termOptions, termLabel, via, suggestion
   via: [string, string | null][];
   suggestion?: string;
   onAccept?: () => void;
+  /** The preview's first line of this BoQ item. */
+  line?: PreviewLine;
 }) {
   const t = useTranslations("classificationEditor.table");
   const { titles } = useCodes();
@@ -291,7 +306,7 @@ function Row({ kind, sub, cfg, onChange, termOptions, termLabel, via, suggestion
                   </button>
                 )}
               </span>
-              <TargetPicker value={v.code} derived={derived} label={t("codeFor", { what: valueLabel(v.value) })} onChange={(x) => onChange({ ...cfg, values: cfg.values.map((y, j) => (j === i ? { ...y, code: x } : y)) })} />
+              <TargetPicker value={v.code} derived={derived} line={line} label={t("codeFor", { what: valueLabel(v.value) })} onChange={(x) => onChange({ ...cfg, values: cfg.values.map((y, j) => (j === i ? { ...y, code: x } : y)) })} />
             </div>
           ))}
         {(cfg.split === "material" || cfg.split === "element_type") && opts.length > 0 && (
@@ -306,7 +321,7 @@ function Row({ kind, sub, cfg, onChange, termOptions, termLabel, via, suggestion
         )}
         <div className={cn(cfg.split !== "none" && "grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)] items-start gap-2")}>
           {cfg.split !== "none" && <span className="pt-1.5 text-muted-foreground">{cfg.split === "external" ? t("notKnown") : t("everythingElse")}</span>}
-          <TargetPicker value={cfg.code} derived={derived} label={t("codeFor", { what: kind.label })} onChange={(x) => onChange({ ...cfg, code: x })} />
+          <TargetPicker value={cfg.code} derived={derived} line={line} label={t("codeFor", { what: kind.label })} onChange={(x) => onChange({ ...cfg, code: x })} />
         </div>
         {suggestion && empty && (
           <span data-testid="class-suggestion">

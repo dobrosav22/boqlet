@@ -36,6 +36,7 @@ export function useLibraryPresets(orgId: string, projectId: string | undefined, 
 export function usePreset(presetId: string) {
   return useQuery({
     queryKey: keys.preset(presetId),
+    enabled: !!presetId,
     queryFn: async () => (await api.GET("/presets/{presetId}", { params: { path: { presetId } } })).data!,
   });
 }
@@ -157,10 +158,10 @@ const PREVIEW_TIMEOUT_MS = 180_000;
  * F10 §6: starts a `preview` job, waits for it (asking `GET /jobs/{id}`, independent of SSE), then
  * reads the result through its signed URL.
  */
-export function usePreview(presetId: string) {
+export function usePreview(presetId: string, onResult?: (result: PreviewResult | null) => void) {
   return useMutation({
-    mutationFn: async (body: { modelVersionIds: string[]; presetVersionId?: string }): Promise<PreviewOutput> => {
-      const job = (await api.POST("/presets/{presetId}/preview", { params: { path: { presetId } }, body: { ...body, compareWithPublished: true } })).data!;
+    mutationFn: async (body: { modelVersionIds: string[]; presetVersionId?: string; otherInputs?: Record<string, unknown> }): Promise<PreviewOutput> => {
+      const job = (await api.POST("/presets/{presetId}/preview", { params: { path: { presetId } }, body: { ...body, compareWithPublished: true } as never })).data!;
       const deadline = Date.now() + PREVIEW_TIMEOUT_MS;
       let current = job;
       while (current.status === "queued" || current.status === "running") {
@@ -174,6 +175,7 @@ export function usePreview(presetId: string) {
       if (!res.ok) throw new Error(`preview result answered ${res.status}`);
       return { result: (await res.json()) as PreviewResult, presetVersionId: output.presetVersionId, jobId: job.id };
     },
+    onSuccess: (out) => onResult?.(out.result),
     onError: () => {},
   });
 }

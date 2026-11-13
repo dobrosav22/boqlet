@@ -18,11 +18,19 @@ const PICK_KEY = "boqlet-preview-model";
  * version, and what changed against the published version. It runs again after each save of the
  * draft when "Follow my changes" is on. No run is stored; previews count as processing (BR-62).
  */
-export function PreviewPanel({ preset, saves }: { preset: Preset; saves: number }) {
+export function PreviewPanel({ preset, saves, onResult, fixed, otherInputs }: {
+  preset: Preset;
+  saves: number;
+  onResult?: (result: PreviewResult | null) => void;
+  /** A model chosen elsewhere (the setup wizard's): no picker then. */
+  fixed?: PickedModelVersion | null;
+  /** The other presets to run with (the wizard's drafts); else the model's project defaults. */
+  otherInputs?: Record<string, unknown>;
+}) {
   const t = useTranslations("library.preview");
   const message = useErrorMessage();
   const format = useFormatter();
-  const [picked, setPicked] = useState<PickedModelVersion | null>(() => {
+  const [chosen, setPicked] = useState<PickedModelVersion | null>(() => {
     try {
       const raw = window.localStorage.getItem(PICK_KEY);
       const v = raw ? (JSON.parse(raw) as PickedModelVersion) : null;
@@ -31,18 +39,28 @@ export function PreviewPanel({ preset, saves }: { preset: Preset; saves: number 
       return null;
     }
   });
+  // A model given by the caller (the setup wizard's) wins over the one picked here.
+  const picked = fixed !== undefined ? fixed : chosen;
   const [follow, setFollow] = useState(true);
   const [onlyChanged, setOnlyChanged] = useState(false);
-  const preview = usePreview(preset.id);
-  const run = (v: PickedModelVersion | null = picked) => v && preview.mutate({ modelVersionIds: [v.versionId] });
+  const preview = usePreview(preset.id, onResult);
+  const run = (v: PickedModelVersion | null = picked) => v && preview.mutate({ modelVersionIds: [v.versionId], ...(otherInputs ? { otherInputs } : {}) });
+
+  // A model given by the caller runs at once (and again when it changes).
+  const lastFixed = useRef<string | null>(null);
+  useEffect(() => {
+    if (!fixed || fixed.versionId === lastFixed.current) return;
+    lastFixed.current = fixed.versionId;
+    preview.mutate({ modelVersionIds: [fixed.versionId], ...(otherInputs ? { otherInputs } : {}) });
+  }, [fixed, preview, otherInputs]);
 
   // Re-run after each save while following (one at a time: a save during a run waits for the next).
   const lastSaves = useRef(saves);
   useEffect(() => {
     if (saves === lastSaves.current) return;
     lastSaves.current = saves;
-    if (follow && picked && !preview.isPending) preview.mutate({ modelVersionIds: [picked.versionId] });
-  }, [saves, follow, picked, preview]);
+    if (follow && picked && !preview.isPending) preview.mutate({ modelVersionIds: [picked.versionId], ...(otherInputs ? { otherInputs } : {}) });
+  }, [saves, follow, picked, preview, otherInputs]);
 
   const choose = (v: PickedModelVersion | null) => {
     setPicked(v);
@@ -71,7 +89,7 @@ export function PreviewPanel({ preset, saves }: { preset: Preset; saves: number 
           {preview.isPending ? t("running") : t("run")}
         </Button>
       </div>
-      <ModelVersionPicker projectId={preset.projectId} value={picked} onChange={choose} />
+      {fixed === undefined && <ModelVersionPicker projectId={preset.projectId} value={picked} onChange={choose} />}
       <label className="flex items-center gap-2">
         <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} data-testid="preview-follow" />
         {t("follow")}
@@ -87,7 +105,9 @@ export function PreviewPanel({ preset, saves }: { preset: Preset; saves: number 
           <p data-testid="preview-summary">
             {t("summary", { lines: data.lines.length, questions: data.questions })}{" "}
             {data.compare
-              ? t("changed", { added: data.compare.added, removed: data.compare.removed, changed: data.compare.changed, n: data.compare.versionNumber })
+              ? data.compare.presetName
+                ? t("changedAgainst", { added: data.compare.added, removed: data.compare.removed, changed: data.compare.changed, name: data.compare.presetName })
+                : t("changed", { added: data.compare.added, removed: data.compare.removed, changed: data.compare.changed, n: data.compare.versionNumber })
               : t("noCompare")}
           </p>
           {data.changes.length > 0 && (

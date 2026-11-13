@@ -42,9 +42,12 @@ export function createJob(fields: Pick<JobRec, "type" | "subjectType" | "subject
   return job;
 }
 
-/** Runs `work` after the jobs of the same type queued before it. */
-export function runJob(job: JobRec, work: (ctx: JobContext) => Promise<Record<string, unknown> | void>, onEnd?: (job: JobRec) => void) {
-  const previous = queues.get(job.type) ?? Promise.resolve();
+/**
+ * Runs `work` after the jobs of the same queue (by default its type) queued before it. Previews share
+ * the runs' queue: both load the engine's user preset folder, which their temporary presets come and go in.
+ */
+export function runJob(job: JobRec, work: (ctx: JobContext) => Promise<Record<string, unknown> | void>, onEnd?: (job: JobRec) => void, queue: string = job.type) {
+  const previous = queues.get(queue) ?? Promise.resolve();
   const next = previous.then(async () => {
     if (cancelRequests.has(job.id) || job.status === "cancelled") return finish(job, "cancelled", undefined, undefined, onEnd);
     job.status = "running";
@@ -73,7 +76,7 @@ export function runJob(job: JobRec, work: (ctx: JobContext) => Promise<Record<st
       finish(job, "failed", undefined, { code: err.code ?? "internal", message: err.message ?? "The job failed.", retryable: err.retryable ?? false }, onEnd);
     }
   });
-  queues.set(job.type, next.catch(() => {}));
+  queues.set(queue, next.catch(() => {}));
   return next;
 }
 

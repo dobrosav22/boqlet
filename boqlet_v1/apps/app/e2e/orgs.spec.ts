@@ -14,8 +14,10 @@ test("F01-AC1 a new user signs up, creates an org and lands on its dashboard in 
   const name = `Firm ${unique("x")}`;
   await page.getByTestId("org-name").fill(name);
   await page.getByTestId("create-org").click();
-  await expect(page).toHaveURL(/\/firm-x-[a-z0-9]+$/);
+  // F16, P18: a new org's owner lands in the setup wizard.
+  await expect(page).toHaveURL(/\/firm-x-[a-z0-9]+\/setup$/);
   await expect(page.getByTestId("org-switcher")).toContainText(name);
+  await expect(page.getByTestId("setup-start")).toBeVisible();
   expect(Date.now() - started).toBeLessThan(60_000);
 });
 

@@ -45,6 +45,77 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 
 ## Entries
 
+### 2026-11-13 — M2 Library and setup (frontend agent)
+- **Built:** FE-021…FE-028, 829d61e..HASH (plus the record commits).
+- **Exit criteria:**
+  - *FL-6 (encode the office standard):* step 1 (New → changes on As modelled) and 2 (Settings, autosave)
+    in `e2e/library.spec.ts` and `e2e/library-editors.spec.ts` (FE-022 test); 3 (preview on a project model
+    beside the editor) and 5 (publish v1 with a note) in the criterion-7 test; 4 (add a company item, edit a
+    formula in its readable form) only through the editor's unit tests (`rule-set-editor.test.tsx` renders
+    every item of As modelled and its forms), not end to end; 6 (import the office code list) through the
+    API in `tests/scenarios/codelists.test.ts` (F10-AC4, 3 levels and a duplicate) and the import panel's
+    unit tests, not end to end in the UI; 7 (starred presets prefill new projects) in
+    `apps/mock-api/test/presets.test.ts` and the wizard's "Publish all".
+  - *The setup wizard works:* `e2e/setup.spec.ts`: the dashboard waits for it (P18), the 14-switch checklist,
+    "Use the suggested answers", resume after a reload, Publish all on a free org without `402`, then the
+    Duplex: the preview follows each answer against As modelled, reinforcement estimates can't be left at
+    0 kg/m³, walls in m³ show in the preview. F16 step derivation in `src/features/setup/steps.test.ts`
+    (14 switches, six measuring screens, a new switch appears with no frontend change).
+  - *v1 criterion 7 on the mock:* `e2e/library-editors.spec.ts` "F10-AC1 / v1 criterion 7": a patch on As
+    modelled, three settings changed, previewed on the Duplex with changed lines beside the editor,
+    published; a new BoQ on version 2 has its windows in m², one on version 1 doesn't. "BoQ versions saved
+    earlier are unchanged": saved versions come with FE-031; BR-07 (a BoQ pinned to version 1 keeps it after
+    version 2) in `tests/scenarios/library-publish.test.ts`. (fake: preview)
+  - *v1 criterion 12 on the mock:* the flow is automated (above); the "person new to the app, under 15
+    minutes" part is **not checked**: it needs a person (M).
+  - F10 criteria: AC1 (above, fake), AC2 (`library-editors.spec.ts`, `library-publish.test.ts`), AC3 (BR-07
+    part only, FE-031 for saved versions), AC4 (`codelists.test.ts`), AC5 (item texts: import labels the
+    column, the box with Reads as, lines and Excel carry the filled text: `item-texts.test.ts`,
+    `library-editors.spec.ts`; the Reads-as sample with a preview model's value is unit-tested; fake),
+    AC6 (`library.spec.ts`, `library.test.ts`), AC7 (`library-publish.test.ts` "F10-AC7 clone": "Based on it"
+    stores only changes and follows the original's version 2 from its next save, an independent copy doesn't;
+    checked with an org original, since a system preset can't get a version 2 in the mock), AC8
+    (`templates.test.ts`, fake).
+- **Decisions taken:** in the FE-021 and FE-022…FE-027 entries and below.
+- **Deviations from the spec:** the editor ports landed together (FE-022…FE-027 entry); the wizard's items and
+  names steps are the full editors (docs/11 "Setup wizard"); contract additions `PreviewResult` (with
+  `ruleId`, `keys`, `compare.presetName`), types `LineCode.text` and the setup markers.
+- **Fakes:** Preview, Item texts filled, Preset Excel templates, Setup markers built (mock-api.md).
+- **Known issues and debt:** docs/11 (Library, Library drafts, Library preview, Item texts, Excel templates,
+  Setup wizard, Component tests).
+- **For the next agent:** M3 starts with FE-029. Orgs created through `createOrg` in e2e finish setup by
+  default (`{ setupDone: false }` to test the wizard); a new org's owner lands in `/{org}/setup`.
+
+### 2026-11-13 — M2 decisions: FE-026…FE-028 (frontend agent)
+- **Built:** HASH. FE-026's guided mode (`?mode=guided` on the preset page; new rule sets and classifications
+  open in it) and the "bring your own licence" notice; FE-027's item-text box in the code list (insert
+  buttons, Reads as with a preview line's values) and the sample text under Codes per line; FE-028 the setup
+  wizard (S30), the dashboard gate, onboarding into the wizard, the Library's Guided setup button, the sheet
+  hint on system rules.
+- **Decisions taken:**
+  - The wizard's step 1 is derived in `src/features/setup/steps.ts` from the flattened rule set: the mock now
+    serves `flattened` for every rule-set version (not only patches), so As modelled's markers reach a
+    patch's parent. Answers go into the draft through the rule-set editor's `answerParams` (a patch stores
+    only differences) and its `Answer` control; the screen index is kept in the page, the step in `Org.setup`.
+  - Start: a kind the org already has is continued in a new draft of that preset (its first org preset of
+    the kind), so a free org never hits `libraryOrgPresets`; otherwise the wizard creates "{Org} rules"
+    (a patch on the chosen start), "{Org} items" and "{Org} names" (empty). Publish all publishes what has
+    content (a classification with codes, a dictionary with names or terms), stars it, optionally sets the
+    preview model's project defaults, then `PUT setup {status: done}`.
+  - The preview panel takes a `fixed` model (runs at once) and `otherInputs` (the wizard previews the item
+    list and names with its own rule-set draft); the latest result is shared through
+    `PreviewResultContext` for item-text samples.
+  - Fixed after the full e2e run: previews deleted their temporary presets from the engine's user folder
+    while a run (the other queue) was loading it, so runs failed with `FileNotFoundError`; preview jobs now
+    share the runs' queue (`runJob(…, queue)`) and wait for the runs' cleanup. Serving `flattened` for every
+    rule-set version asked the (busy) engine on every page; it is cached per version and draft revision
+    (`flattenedOf` in `handlers/presets.ts`).
+  - The dashboard gate: owners, admins and library editors of an org whose setup isn't `done` are sent to
+    `/{org}/setup`; members see "Your firm's setup isn't finished yet". Other pages stay open.
+- **For the next agent:** wizard test hooks: `setup-wizard[data-step]`, `measure-step[data-screen]`
+  (`checklist`, `detail:<slot>`, `measure:<step>`), `setup-switch`, `setup-question`, `setup-next`,
+  `setup-suggested`, `setup-skip`, `setup-publish-all`.
+
 ### 2026-11-13 — M2 decisions: FE-022…FE-027 (frontend agent)
 - **Built:** 5551323. The three editors (FE-022 rule sets, FE-023 classifications with code-list import,
   FE-024 dictionaries with Names in a model), publish and preview (FE-025), clone and Excel templates

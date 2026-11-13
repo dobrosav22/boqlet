@@ -49,14 +49,17 @@ export async function createUser(name: string, email: string): Promise<DevUser> 
 }
 
 /** An org owned by `user`, created through the API. */
-export async function createOrg(user: DevUser, name: string, slug: string): Promise<{ id: string; slug: string }> {
+export async function createOrg(user: DevUser, name: string, slug: string, opts: { setupDone?: boolean } = {}): Promise<{ id: string; slug: string }> {
   const res = await fetch(`${MOCK_URL}/api/v1/orgs`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${user.token}` },
     body: JSON.stringify({ name, slug }),
   });
   if (res.status !== 201) throw new Error(`createOrg answered ${res.status}`);
-  return (await res.json()) as { id: string; slug: string };
+  const org = (await res.json()) as { id: string; slug: string };
+  // Orgs made for other flows skip the setup wizard (F16), which would otherwise hold their dashboard.
+  if (opts.setupDone !== false) await apiAs(user, "PUT", `/orgs/${org.id}/setup`, { status: "done", step: "review" });
+  return org;
 }
 
 /** Links in the newest emails to `email` (the mock's outbox). */

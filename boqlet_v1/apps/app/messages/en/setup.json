@@ -1,0 +1,87 @@
+{
+  "title": "Set up your firm's BoQs",
+  "intro": "Three things your BoQs need, done once: how you measure, your item numbers and texts, and what the names in your models mean. Everything here can be changed later in the Library.",
+  "notAllowed": "Owners, admins and library editors set up the firm. Until they do, BoQs use the neutral system rules.",
+  "doneAlready": "Your firm's setup is finished. Running it again starts new drafts of your presets; published versions stay as they are.",
+  "runAgain": "Run it again",
+  "toLibrary": "Open the Library",
+  "steps": "Steps",
+  "stepNames": {
+    "start": "Start",
+    "measure": "How you measure",
+    "items": "Item numbers and texts",
+    "names": "Names",
+    "review": "Review and publish"
+  },
+  "noModel": "Pick a model at the start to see the BoQ lines change as you answer.",
+  "start": {
+    "title": "Set up your firm's BoQs",
+    "intro": "About fifteen minutes. Every question comes with a suggested answer; \"Use the suggested answers\" finishes a step at once.",
+    "model": "Model to try it on",
+    "modelHint": "Optional. The preview shows its BoQ lines under your answers.",
+    "startFrom": "Start from",
+    "basedOn": "Based on: {text}",
+    "names": {
+      "rules": "Name of your rules",
+      "items": "Name of your item list",
+      "dict": "Name of your names dictionary"
+    },
+    "defaultRules": "{org} rules",
+    "defaultItems": "{org} items",
+    "defaultNames": "{org} names",
+    "continue": "Continues in a new draft of {name}.",
+    "go": "Start",
+    "starting": "Starting…"
+  },
+  "measure": {
+    "progress": "Screen {n} of {of}",
+    "checklistTitle": "What your BoQ includes",
+    "checklistIntro": "Tick what your BoQs should contain. The suggested answers are ticked already.",
+    "detailTitle": "{what}: details",
+    "detailIntro": "How {what} is worked out.",
+    "measureIntro": "How these items are measured.",
+    "example": "Example: {text}",
+    "required": "Give an answer: 0 is never what is meant here.",
+    "back": "Back",
+    "next": "Next",
+    "toItems": "On to item numbers",
+    "suggested": "Use the suggested answers",
+    "allSettings": "All settings…"
+  },
+  "items": {
+    "title": "Item numbers and texts",
+    "intro": "Import your item list from Excel or CSV (Code list › Import), or skip: lines stay grouped as \"All lines\" until a classification exists. Then choose which item each kind of line gets (Codes per line).",
+    "next": "Next",
+    "skip": "Skip for now"
+  },
+  "names": {
+    "title": "Names in your models",
+    "intro": "The names the engine didn't understand: say what each one means. They go into your company dictionary.",
+    "noModel": "Without a model there are no names to explain; the first BoQ will ask about them instead.",
+    "next": "Next",
+    "skip": "Skip: ask on the first BoQ"
+  },
+  "review": {
+    "title": "Review and publish",
+    "intro": "What your setup holds. Publishing makes these the presets new projects start with.",
+    "change": "Change",
+    "rulesSummary": "{n, plural, =0 {The suggested answers, unchanged.} one {# answer differs from the rule set it starts from.} other {# answers differ from the rule set they start from.}}",
+    "itemsSummary": "{codes, plural, one {# item} other {# items}}, {rules, plural, =0 {no line has an item yet} one {# rule gives lines their item} other {# rules give lines their item}}.",
+    "itemsNone": "No item list yet: lines stay grouped as \"All lines\".",
+    "namesSummary": "{n, plural, one {# name taught} other {# names taught}}.",
+    "namesNone": "No names taught yet: the first BoQ will ask.",
+    "staysDraft": "Nothing to publish: it stays a draft.",
+    "fixFirst": "Fix the problems first.",
+    "notInModels": "A BoQ contains only what the models contain. Work that isn't modelled as objects (site setup, scaffolding, finishes not drawn) is added as manual lines in the sheet.",
+    "applyTo": "Use them as the defaults of {project}",
+    "publishAll": "Publish all",
+    "publishing": "Publishing…",
+    "changeNote": "Initial setup",
+    "blocked": "Fix the problems above before publishing."
+  },
+  "notFinished": "Your firm's setup isn't finished yet. BoQs use the neutral system rules until it is.",
+  "openWizard": "Finish the setup",
+  "guided": "Guided setup",
+  "hint": "These numbers use the neutral \"As modelled\" rules. Set up your firm's rules →",
+  "hintDismiss": "Dismiss"
+}

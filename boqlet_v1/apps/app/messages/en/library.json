@@ -399,7 +399,10 @@
     "copyName": "{name} (copy)",
     "submit": "Create",
     "cancel": "Cancel",
-    "notAllowed": "You can view and pick presets here, but creating them is for library editors (and, in a project, its leads and estimators)."
+    "notAllowed": "You can view and pick presets here, but creating them is for library editors (and, in a project, its leads and estimators).",
+    "licenceTitle": "Bring your own licence",
+    "licence": "Rules built on a measurement standard are yours: write them from a copy of the standard you are licensed to use. boqlet ships no standard's rules or texts, and never says a BoQ complies with one.",
+    "licenceOk": "Understood"
   },
   "edit": {
     "draftSaved": "Draft, saved {when}.",
@@ -757,7 +760,8 @@
     "quantity": "Quantity",
     "unit": "Unit",
     "toConfirm": "to confirm",
-    "added": "new"
+    "added": "new",
+    "changedAgainst": "Against {name}: {added} added, {removed} removed, {changed} changed."
   },
   "publish": {
     "open": "Publish version {n}",
@@ -803,5 +807,10 @@
     "where": "{hasRow, select, yes {Sheet {sheet}, row {row}, column {column}: } other {Sheet {sheet}: }}",
     "cancel": "Cancel",
     "apply": "Apply to the draft"
+  },
+  "guided": {
+    "open": "Guided mode",
+    "full": "Open in the full editor",
+    "itemsIntro": "Import your item list (Code list › Import), then choose the item each kind of line gets (Codes per line). Everything else is under Advanced."
   }
 }

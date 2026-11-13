@@ -99,6 +99,32 @@ describe("F10 §4 publish", () => {
   });
 });
 
+describe("F10-AC7 clone", () => {
+  it("'Based on it' stores only changes and follows the original's next version; an independent copy doesn't", async () => {
+    const parent = await newPatch(`Original ${slug("o")}`);
+    await saveParams(parent.id, { window_measure: { value: "area" } });
+    const p1 = (await publish(ivana, parent.id, "First")).data!;
+    const create = (mode: "patch" | "copy") => api(ivana).POST("/orgs/{orgId}/presets", { params: { path: { orgId: studioId } }, body: { kind: "rule_set", name: `Clone ${mode} ${slug("c")}`, start: { mode, fromVersionId: p1.id } } });
+    const based = (await create("patch")).data!;
+    const copy = (await create("copy")).data!;
+    const basedDraft = (await api(ivana).GET("/preset-versions/{presetVersionId}", { params: { path: { presetVersionId: based.draft!.id } } })).data!;
+    expect((basedDraft.doc as { params: Record<string, unknown> }).params).toEqual({});
+    expect(basedDraft.extendsVersionId).toBe(p1.id);
+    const copyDraft = (await api(ivana).GET("/preset-versions/{presetVersionId}", { params: { path: { presetVersionId: copy.draft!.id } } })).data!;
+    expect((copyDraft.doc as { params: Record<string, unknown> }).params).toMatchObject({ window_measure: { value: "area" } });
+
+    // The original publishes version 2: the clone based on it follows from its next save.
+    await saveParams(parent.id, { window_measure: { value: "area" }, lines_by_storey: { value: true } });
+    const p2 = (await publish(ivana, parent.id, "Second")).data!;
+    const saved = await api(ivana).PUT("/presets/{presetId}/draft", { params: { path: { presetId: based.id } }, body: { doc: basedDraft.doc } });
+    expect(saved.data!.extendsVersionId).toBe(p2.id);
+    expect(((saved.data!.flattened ?? (await api(ivana).GET("/preset-versions/{presetVersionId}", { params: { path: { presetVersionId: saved.data!.id } } })).data!.flattened) as { params: Record<string, { value: unknown }> }).params.lines_by_storey!.value).toBe(true);
+    // The independent copy doesn't change.
+    const copyAgain = (await api(ivana).GET("/preset-versions/{presetVersionId}", { params: { path: { presetVersionId: copy.draft!.id } } })).data!;
+    expect((copyAgain.flattened as { params: Record<string, { value: unknown }> }).params.lines_by_storey!.value).toBe(false);
+  });
+});
+
 describe("F10 §6 preview (fake until EN-005)", () => {
   let versionId: string;
   beforeAll(async () => {
@@ -147,10 +173,10 @@ describe("F10 §6 preview (fake until EN-005)", () => {
     expect(JSON.stringify(usage)).toContain("preview");
   }, 240_000);
 
-  it("previews a preset with nothing published without a comparison, and refuses models it can't see", async () => {
+  it("previews a patch with nothing published against the version it is based on, and refuses models it can't see", async () => {
     const preset = await newPatch(`Unpublished ${slug("u")}`);
     const { result } = await preview(preset.id);
-    expect(result.compare).toBeNull();
+    expect(result.compare).toMatchObject({ versionId: asModelled, presetName: "As modelled (master template)", added: 0, removed: 0, changed: 0 });
     expect(result.changes).toEqual([]);
     // Ivana edits the Library but isn't on this project.
     const outsider = await api(ivana).POST("/presets/{presetId}/preview", { params: { path: { presetId: preset.id } }, body: { modelVersionIds: [versionId] } });

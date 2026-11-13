@@ -176,25 +176,36 @@ Things the product build doesn't do yet, with the task that deals with each.
 - Phase-1 interim (FE-008): federation and resolution settings are stored with the inputs but not sent
   to the engine (the PoC API takes neither; EN-001). A rule-set patch on an org or project version is run
   and checked with its parents saved or passed under `mock-<versionId>` (FE-021).
-- Library (FE-021…FE-027): the three editors are the PoC's, ported (FE-022 rule sets, FE-023
-  classifications, FE-024 dictionaries); federation and resolution settings are edited as JSON. Not yet:
-  the Guided setup button and the setup wizard (FE-028), guided mode (FE-026, reusing the wizard's
-  steps), the one-time "bring your own licence" notice on the first rule set (F10 §12, with guided
-  mode), the code list's "Item text" box with insert buttons and "Reads as" and the sample text under
-  each Codes per line row (FE-027, F10 §13), "rebase on latest" for a patch whose parent is archived,
-  renaming an item id across classification maps (the PoC's `onItemRenamed`), and the import's "keep other
-  columns" (`CodeListBuildRequest` has no `extra`). Comparing two versions is a line diff of the JSON
-  with sorted keys (F10 §5: a structured diff later). Archive can't be undone (the contract has no
-  unarchive). Draft saves aren't audited (autosave); creating, renaming, starring, archiving,
-  discarding and publishing are. The version list names who published a version, not who last saved
-  a draft.
+- Library (FE-021…FE-028): the three editors are the PoC's, ported (FE-022 rule sets, FE-023
+  classifications, FE-024 dictionaries); federation and resolution settings are edited as JSON. Guided
+  mode (FE-026) is the wizard's "How you measure" step for a rule set; for a classification it is the
+  full classification editor with a short intro. Not yet: "rebase on latest" for a patch whose parent is
+  archived, renaming an item id across classification maps (the PoC's `onItemRenamed`), and the import's
+  "keep other columns" (`CodeListBuildRequest` has no `extra`). The "bring your own licence" notice is
+  remembered per browser. An item text's "Reads as" sample needs a preview run in the panel beside the
+  editor, and codes that only some lines of an item get (split by a condition) show no sample (conditions
+  are never evaluated in the browser). Comparing two versions is a line diff of the JSON with sorted keys
+  (F10 §5: a structured diff later). Archive can't be undone (the contract has no unarchive). Draft saves
+  aren't audited (autosave); creating, renaming, starring, archiving, discarding and publishing are. The
+  version list names who published a version, not who last saved a draft.
+- Setup wizard (FE-028): steps 0, 1 (1a checklist, 1b details, 1c the six measuring screens, from the
+  rule set's data and the "Setup markers" fake), 2, 3 and 4 work, with resume, the dashboard gate (P18),
+  the Library's Guided setup button, the members' "not finished yet" notice and the sheet hint. Simpler
+  than F16 for now: step 2 is the full classification editor (import, Codes per line with all the rule
+  set's items, not only those switched on, no "Suggest codes" by name), step 3 the full dictionary editor
+  (its Names tab, not filtered to "worth asking"); the review summarises in counts, not the editors' story
+  sentences; the sample Duplex isn't offered as a model (the sample project is still created empty);
+  "Setup in progress by {name}" for a second admin and "Start separately" aren't built (both work on the
+  same drafts); a wall line measured in m³ shows in the preview as a new line and the m² one as removed
+  (the unit is part of a line's key). v1 criterion 12 and F16-AC1 (a person new to the app, under 15
+  minutes) are not checked by a person; the flows are automated in `e2e/setup.spec.ts`.
 - Library drafts: a patch's draft follows its parent's latest published version when saved (F10 §2
   "Based on it"); a published version keeps the exact parent it was made on (data-model.md). Read-only
   users (members, and everyone on a system preset) see the editors inside a disabled fieldset: tabs,
   list rows and links work, but the filter boxes and pickers used only for looking (the dictionary's
   model-version picker, the classification's rule-set picker and code filter) are disabled too.
 - Library preview (FE-025, the "Preview" fake until EN-005): two runs per preview (draft and published),
-  serialised with other previews; one project's model versions at a time; no BoQ data changes, and the
+  queued with runs (they share the engine's user preset folder), so a preview waits for runs in progress; one project's model versions at a time; no BoQ data changes, and the
   time counts as processing. Runs of org classifications now rename the map's `codeList` with the code
   list (fixed: a copied classification failed in runs before).
 - Item texts (FE-027, the "Item texts filled" fake until EN-010): plain `{name}` blanks only; an item

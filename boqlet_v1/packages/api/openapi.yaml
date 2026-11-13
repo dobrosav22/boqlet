@@ -3198,6 +3198,7 @@ components:
           properties:
             versionId: { type: string, format: uuid }
             versionNumber: { type: integer }
+            presetName: { type: string, description: "Set when the comparison is another preset's version: the one a patch with nothing published is based on" }
             added: { type: integer }
             removed: { type: integer }
             changed: { type: integer }

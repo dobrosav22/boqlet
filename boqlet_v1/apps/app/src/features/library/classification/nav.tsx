@@ -67,10 +67,12 @@ export function Tabs<T extends string>({ value, onChange, tabs, small }: { value
   );
 }
 
-/** The code list's codes and titles, and the one <datalist> of codes every code picker uses. */
+/** The code list's codes, titles and item texts, and the one <datalist> of codes every code picker uses. */
 export interface CodesInfo {
   titles: Map<string, string>;
+  /** Item texts (`Code.description`) by code, for codes that have one. */
+  texts: Map<string, string>;
   listId: string;
 }
-export const CodesContext = createContext<CodesInfo>({ titles: new Map(), listId: "" });
+export const CodesContext = createContext<CodesInfo>({ titles: new Map(), texts: new Map(), listId: "" });
 export const useCodes = () => useContext(CodesContext);

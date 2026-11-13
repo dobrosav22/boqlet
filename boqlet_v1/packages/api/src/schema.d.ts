@@ -3541,6 +3541,8 @@ export interface components {
                 /** Format: uuid */
                 versionId: string;
                 versionNumber: number;
+                /** @description Set when the comparison is another preset's version: the one a patch with nothing published is based on */
+                presetName?: string;
                 added: number;
                 removed: number;
                 changed: number;

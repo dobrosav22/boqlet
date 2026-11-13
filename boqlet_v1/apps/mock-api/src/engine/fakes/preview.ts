@@ -43,7 +43,7 @@ export interface PreviewResult {
   questions: number;
   blockingQuestions: number;
   warnings: number;
-  compare: null | { versionId: string; versionNumber: number; added: number; removed: number; changed: number };
+  compare: null | { versionId: string; versionNumber: number; presetName?: string; added: number; removed: number; changed: number };
   changes: PreviewChange[];
 }
 
@@ -110,7 +110,7 @@ const lineOf = (l: BoqResult["lines"][number]): PreviewLine => ({
 const sameLine = (a: PreviewLine, b: PreviewLine) => a.quantity === b.quantity && a.unit === b.unit && a.description === b.description;
 
 /** The preview's result: the lines of `after`, and what changed against `before` (by line key). */
-export function previewResult(after: BoqResult, before: BoqResult | null, compareWith: PresetVersionRec | null): PreviewResult {
+export function previewResult(after: BoqResult, before: BoqResult | null, compareWith: PresetVersionRec | null, presetName?: string): PreviewResult {
   const lines = after.lines.map(lineOf);
   const changes: PreviewChange[] = [];
   if (before) {
@@ -129,7 +129,7 @@ export function previewResult(after: BoqResult, before: BoqResult | null, compar
     questions: after.questions.length,
     blockingQuestions: after.questions.filter((q) => q.blocking).length,
     warnings: after.warnings.length,
-    compare: before && compareWith ? { versionId: compareWith.id, versionNumber: compareWith.number ?? 0, added: count("added"), removed: count("removed"), changed: count("changed") } : null,
+    compare: before && compareWith ? { versionId: compareWith.id, versionNumber: compareWith.number ?? 0, ...(presetName ? { presetName } : {}), added: count("added"), removed: count("removed"), changed: count("changed") } : null,
     changes,
   };
 }

@@ -79,10 +79,12 @@ export function CreatePreset({ kind }: { kind: PresetKind }) {
             ...(projectId ? { projectId } : {}),
             start: { mode, ...(mode === "empty" ? {} : { fromVersionId: version }) },
           },
-          { onSuccess: (preset) => router.push(presetHref(org.slug, preset)) },
+          // New rule sets and classifications open in guided mode (F10 §2, P24).
+          { onSuccess: (preset) => router.push(`${presetHref(org.slug, preset)}${preset.kind === "rule_set" || preset.kind === "classification" ? "?mode=guided" : ""}`) },
         );
       }}
     >
+      {kind === "rule_set" && <LicenceNotice />}
       <div className="flex flex-col gap-1">
         <h1 className="text-title">{t(`create.title.${kind}`)}</h1>
         {project.data && <p className="text-muted-foreground">{t("create.forProject", { project: project.data.name })}</p>}
@@ -152,5 +154,42 @@ export function CreatePreset({ kind }: { kind: PresetKind }) {
         )}
       </div>
     </form>
+  );
+}
+
+const LICENCE_KEY = "boqlet-licence-notice";
+
+/** F10 §12 (BR-53, D30–D31): once, before the first rule set, what "bring your own licence" means. */
+function LicenceNotice() {
+  const t = useTranslations("library.create");
+  const [seen, setSeen] = useState(() => {
+    try {
+      return window.localStorage.getItem(LICENCE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  if (seen) return null;
+  return (
+    <div className="flex flex-col gap-2 rounded-[var(--radius)] border border-border bg-muted p-3" role="note" data-testid="licence-notice">
+      <p className="label-caps">{t("licenceTitle")}</p>
+      <p>{t("licence")}</p>
+      <Button
+        type="button"
+        variant="outline"
+        className="self-start"
+        onClick={() => {
+          setSeen(true);
+          try {
+            window.localStorage.setItem(LICENCE_KEY, "1");
+          } catch {
+            /* storage blocked */
+          }
+        }}
+        data-testid="licence-ok"
+      >
+        {t("licenceOk")}
+      </Button>
+    </div>
   );
 }

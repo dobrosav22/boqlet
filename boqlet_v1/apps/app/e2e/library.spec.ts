@@ -56,6 +56,9 @@ test("a library editor lists presets by kind and layer and creates a patch on As
   await expect(page.getByTestId("preset-layer")).toHaveText("Company");
   await expect(page.getByTestId("preset-latest")).toHaveText("Not published yet");
   await expect(page.getByTestId("preset-draft")).toHaveText("no problems");
+  // A new rule set opens in guided mode (FE-026); the full editor is one click away.
+  await expect(page.getByTestId("measure-step")).toBeVisible();
+  await page.getByTestId("full-editor").click();
   await page.getByTestId("rule-tab-advanced").click();
   await expect(page.getByTestId("extends")).toContainText("as-modelled");
   await page.getByTestId("preset-tab-versions").click();

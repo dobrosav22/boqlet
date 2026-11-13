@@ -23,10 +23,12 @@ import { useOrg } from "@/features/orgs/org-context";
 import type { EditorProps } from "../preset-editor";
 import type { ClassificationDoc } from "../shared/doc";
 import { JsonTab } from "../shared/json-tab";
+import { usePreviewResult } from "../preview/preview-context";
 import { Options } from "../shared/fields";
 import { ClassStory, type JumpTarget } from "./class-story";
 import { ClassTable, type Term } from "./class-table";
 import { CodesTab } from "./code-list";
+import { firstLineByItem, sampleLines } from "./item-text";
 import { MapSettings } from "./map-settings";
 import { MapTab } from "./map-rules";
 import { codeUsage, lineKinds, readTable } from "./model";
@@ -65,8 +67,9 @@ export function ClassificationEditor({ preset, doc, onChange }: EditorProps<Clas
   const titles = useMemo(() => new Map(codeList.codes.map((c) => [c.code, c.title])), [codeList]);
   const usage = useMemo(() => codeUsage(map), [map]);
   const { used: table } = useMemo(() => readTable(map), [map]);
+  const texts = useMemo(() => new Map(codeList.codes.flatMap((c) => (c.description ? [[c.code, c.description] as const] : []))), [codeList]);
   const listId = useId();
-  const codes = useMemo(() => ({ titles, listId }), [titles, listId]);
+  const codes = useMemo(() => ({ titles, texts, listId }), [titles, texts, listId]);
 
   // the BoQ items whose lines get codes: the table's rows, and names for rules aimed at items
   const projectId = preset.projectId ?? undefined;
@@ -90,6 +93,12 @@ export function ClassificationEditor({ preset, doc, onChange }: EditorProps<Clas
           : null;
   const itemLabel = (id: string) => kinds?.find((k) => k.id === id)?.label ?? id;
   const terms = useLibraryTerms(org.id, projectId);
+
+  // item texts read back with a line of the latest preview (F10 §13), when one has run
+  const preview = usePreviewResult();
+  const previewLines = preview?.lines;
+  const samples = useMemo(() => (previewLines ? sampleLines(map, previewLines, kinds ?? []) : null), [map, previewLines, kinds]);
+  const byItem = useMemo(() => (previewLines ? firstLineByItem(previewLines) : null), [previewLines]);
 
   const openRule = (i: number) => {
     setFocus(i);
@@ -130,10 +139,17 @@ export function ClassificationEditor({ preset, doc, onChange }: EditorProps<Clas
               rsError={rsError}
               terms={(terms.data ?? []) as Term[]}
               onOpenRule={openRule}
+              previewLines={byItem}
             />
           )}
           {tab === "codes" && (
-            <CodesTab list={codeList} onChange={(cl) => onChange({ ...doc, codeList: cl })} usage={usage} onRenameId={(v) => onChange({ codeList: { ...codeList, id: v }, map: { ...map, codeList: v } })} />
+            <CodesTab
+              list={codeList}
+              onChange={(cl) => onChange({ ...doc, codeList: cl })}
+              usage={usage}
+              samples={samples}
+              itemLabel={itemLabel}
+              onRenameId={(v) => onChange({ codeList: { ...codeList, id: v }, map: { ...map, codeList: v } })} />
           )}
           {tab === "advanced" && (
             <div className="flex flex-col gap-4">

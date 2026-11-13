@@ -3,9 +3,10 @@
 /**
  * The Code list tab (the PoC's `CodesTab` and `AboutList`): the codes as a tree, edited in place,
  * with "About this list" and the spreadsheet import. Big lists (Uniclass has thousands of codes)
- * are filtered and shown a page at a time, so only one page of rows is ever in the DOM.
+ * are filtered and shown a page at a time, so only one page of rows is ever in the DOM. Under each
+ * code, its item text (F10 §13, item-text-box.tsx); the insert buttons show for one box at a time.
  */
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { CodeList } from "@ifc-boq/types";
 import { Button } from "@/components/ui/button";
@@ -13,16 +14,29 @@ import { cn } from "@/lib/utils";
 import { put, removeAt, replaceAt } from "../shared/doc";
 import { Check, Field, LazyText, Section, Select, StringList, Text, inputClass, linkButton, matches } from "../shared/fields";
 import { CodeImport } from "./code-import";
+import { ItemTextBox } from "./item-text-box";
+import type { PreviewLine } from "./item-text";
 import { newCode, pageOf, PAGE_SIZE, renameCode, treeOrder } from "./model";
 import { NavLink } from "./nav";
 
-export function CodesTab({ list, onChange, usage, onRenameId }: { list: CodeList; onChange: (cl: CodeList) => void; usage: Record<string, string[]>; onRenameId: (id: string) => void }) {
+export function CodesTab({ list, onChange, usage, onRenameId, samples, itemLabel }: {
+  list: CodeList;
+  onChange: (cl: CodeList) => void;
+  usage: Record<string, string[]>;
+  onRenameId: (id: string) => void;
+  /** The first line of the latest preview that gets each code; null without a preview. */
+  samples?: Map<string, PreviewLine> | null;
+  /** A BoQ item's label, by its id. */
+  itemLabel: (id: string) => string;
+}) {
   const t = useTranslations("classificationEditor.codes");
   const [q, setQ] = useState("");
   const [page, setPage] = useState(0);
   const codes = list.codes;
   const sep = list.separator;
   const [importing, setImporting] = useState(codes.length === 0);
+  /** The code (index) whose item text box shows its insert buttons. */
+  const [active, setActive] = useState<number | null>(null);
   const setCodes = (c: CodeList["codes"]) => onChange({ ...list, codes: c });
 
   const ordered = useMemo(() => treeOrder(codes, sep), [codes, sep]);
@@ -88,27 +102,46 @@ export function CodesTab({ list, onChange, usage, onRenameId }: { list: CodeList
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ c, i, depth }) => (
-              <tr key={i} className={cn("border-b border-border align-top", depth === 0 && "font-semibold")} data-testid="code-row" data-code={c.code}>
-                <td className="py-1 pr-2">
-                  <div style={{ paddingLeft: depth * 18 }}>
-                    <LazyText mono value={c.code} aria-label={t("codeLabel")} onCommit={(v) => v.trim() && setCodes(renameCode(codes, i, v.trim()))} />
-                  </div>
-                </td>
-                <td className="py-1 pr-2">
-                  <LazyText value={c.title} aria-label={t("titleLabel", { code: c.code })} onCommit={(v) => setCodes(replaceAt(codes, i, { ...c, title: v }))} />
-                </td>
-                <td className="py-1.5 pr-2 font-normal break-words">{usage[c.code]?.join(t("comma")) ?? <span className="text-muted-foreground">—</span>}</td>
-                <td className="py-1.5 font-normal whitespace-nowrap">
-                  <button type="button" className={linkButton} onClick={() => add(c.code)}>
-                    {t("addChild")}
-                  </button>
-                  <button type="button" className="ml-3 text-muted-foreground hover:text-foreground" aria-label={t("delete", { code: c.code })} onClick={() => setCodes(removeAt(codes, i))}>
-                    ×
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {rows.map(({ c, i, depth }) => {
+              const line = samples?.get(c.code);
+              return (
+                <Fragment key={i}>
+                  <tr className={cn("align-top", depth === 0 && "font-semibold")} data-testid="code-row" data-code={c.code}>
+                    <td className="py-1 pr-2">
+                      <div style={{ paddingLeft: depth * 18 }}>
+                        <LazyText mono value={c.code} aria-label={t("codeLabel")} onCommit={(v) => v.trim() && setCodes(renameCode(codes, i, v.trim()))} />
+                      </div>
+                    </td>
+                    <td className="py-1 pr-2">
+                      <LazyText value={c.title} aria-label={t("titleLabel", { code: c.code })} onCommit={(v) => setCodes(replaceAt(codes, i, { ...c, title: v }))} />
+                    </td>
+                    <td className="py-1.5 pr-2 font-normal break-words">{usage[c.code]?.join(t("comma")) ?? <span className="text-muted-foreground">—</span>}</td>
+                    <td className="py-1.5 font-normal whitespace-nowrap">
+                      <button type="button" className={linkButton} onClick={() => add(c.code)}>
+                        {t("addChild")}
+                      </button>
+                      <button type="button" className="ml-3 text-muted-foreground hover:text-foreground" aria-label={t("delete", { code: c.code })} onClick={() => setCodes(removeAt(codes, i))}>
+                        ×
+                      </button>
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td colSpan={4} className="pt-0.5 pb-2">
+                      <div style={{ paddingLeft: depth * 18 }}>
+                        <ItemTextBox
+                          code={c.code}
+                          value={c.description}
+                          onCommit={(v) => setCodes(replaceAt(codes, i, put(c, "description", v)))}
+                          active={active === i}
+                          onActivate={() => setActive(i)}
+                          sample={line && { line, item: itemLabel(line.ruleId) }}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
         {shown.length === 0 && <p className="py-2 text-muted-foreground">{codes.length ? t("noMatch") : t("empty")}</p>}

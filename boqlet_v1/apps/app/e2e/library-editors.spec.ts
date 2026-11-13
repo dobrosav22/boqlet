@@ -71,7 +71,7 @@ test("FE-022: Settings answers on a patch autosave, the deep link opens a questi
 });
 
 test("F10-AC1 / v1 criterion 7: three settings changed, previewed on the Duplex next to the editor, published", async ({ page }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(420_000);
   const { user, orgId } = await studio("olivia");
   const project = await apiAs<{ id: string; name: string }>(user, "POST", `/orgs/${orgId}/projects`, { name: `Preview ${unique("p")}` });
   await modelWithVersion(user, project.id, "Architecture", new Uint8Array(await readFile(DUPLEX)), "Duplex_A.ifc");
@@ -84,7 +84,8 @@ test("F10-AC1 / v1 criterion 7: three settings changed, previewed on the Duplex 
   await panel.getByTestId("preview-model").selectOption({ label: "Architecture" });
   await panel.getByTestId("preview-version").selectOption({ index: 1 });
   await expect(panel).toHaveAttribute("data-state", "done", { timeout: 90_000 });
-  await expect(panel.getByTestId("preview-summary")).toContainText("Nothing published yet");
+  // Nothing published yet: compared with As modelled, which it is based on.
+  await expect(panel.getByTestId("preview-summary")).toContainText("Against As modelled");
 
   // Publish the new patch (As modelled unchanged) as version 1, then change three settings.
   await page.getByTestId("publish-open").click();
@@ -114,6 +115,21 @@ test("F10-AC1 / v1 criterion 7: three settings changed, previewed on the Duplex 
   await expect(page.getByTestId("preset-latest")).toHaveText("Version 2");
   await page.getByTestId("preset-tab-versions").click();
   await expect(page.getByTestId("version-row")).toHaveCount(2);
+
+  // v1 criterion 7: a new BoQ using version 2 shows the changed numbers (windows by area, not counted).
+  const versions = await apiAs<{ id: string; number: number }[]>(user, "GET", `/presets/${preset.id}/versions`);
+  const v2 = versions.find((v) => v.number === 2)!;
+  const v1 = versions.find((v) => v.number === 1)!;
+  type Line = { ruleId: string; unit: string };
+  const linesOf = async (versionId: string) => {
+    const { run } = await generatedDuplexBoq(new Uint8Array(await readFile(DUPLEX)), [], { ruleSetVersionId: versionId });
+    return (await apiAs<{ items: Line[] }>(user, "GET", `/runs/${run.id}/lines`)).items;
+  };
+  const before = await linesOf(v1.id);
+  const after = await linesOf(v2.id);
+  const windowUnits = (lines: Line[]) => [...new Set(lines.filter((l) => l.ruleId.includes("window")).map((l) => l.unit))];
+  expect(windowUnits(before)).not.toContain("m2");
+  expect(windowUnits(after)).toEqual(["m2"]);
 });
 
 test("F10-AC2: a draft with problems can't be published", async ({ page }) => {
@@ -184,4 +200,38 @@ test("FE-027: the sheet's Description shows the code's item text, the detail wha
   await cell.click();
   await expect(page.getByTestId("detail-item-text").first()).toContainText("Supply and fix");
   await expect(page.getByTestId("detail-measured-as")).toContainText("Measured as");
+});
+
+test("FE-026: a new rule set opens in guided mode after the licence notice; the full editor is one click away", async ({ page }) => {
+  await signInAs(page, "ivana");
+  await page.addInitScript(() => window.localStorage.removeItem("boqlet-licence-notice"));
+  await page.goto("/studio-demo/library/rule_set/new");
+  await expect(page.getByTestId("licence-notice")).toBeVisible();
+  await page.getByTestId("licence-ok").click();
+  await expect(page.getByTestId("licence-notice")).toHaveCount(0);
+  await page.getByTestId("preset-name-input").fill(`Guided ${unique("g")}`);
+  await page.getByTestId("start-patch").check();
+  await page.getByTestId("create-preset-submit").click();
+  await expect(page).toHaveURL(/mode=guided/);
+  await expect(page.getByTestId("measure-step")).toHaveAttribute("data-screen", "checklist");
+  await page.getByTestId("full-editor").click();
+  await expect(page.getByTestId("rule-tab-settings")).toBeVisible();
+  await page.getByTestId("guided-mode").click();
+  await expect(page.getByTestId("measure-step")).toBeVisible();
+});
+
+test("FE-027: a code's item text box inserts blanks and reads them in words", async ({ page }) => {
+  const { user, orgId } = await studio();
+  const trades = (await apiAs<Preset[]>(user, "GET", `/orgs/${orgId}/presets?kind=classification&layer=system`)).find((p) => p.slug === "demo-trades")!;
+  const copy = await apiAs<Preset>(user, "POST", `/orgs/${orgId}/presets`, { kind: "classification", name: `Item texts ${unique("i")}`, start: { mode: "copy", fromVersionId: trades.latestPublishedVersion!.id } });
+  await signInAs(page, "ivana");
+  await page.goto(`/studio-demo/library/classification/${copy.id}`);
+  await page.getByTestId("class-tab-codes").click();
+  const box = page.getByTestId("item-text").first();
+  await box.click();
+  await box.fill("External walls ");
+  await page.locator('[data-testid="item-text-insert"][data-name="type_name"]').first().click();
+  await expect(box).toHaveValue(/External walls \{type_name\}/);
+  await expect(page.getByTestId("item-text-reads").first()).toContainText("Type name");
+  await expect(page.getByTestId("preset-editor")).toHaveAttribute("data-status", "saved", { timeout: 15_000 });
 });
