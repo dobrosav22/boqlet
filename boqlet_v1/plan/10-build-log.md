@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M1 (core loop) |
 | Role | Frontend agent |
-| Last task done | FE-018 Notifications (F13 part) (94026ce) |
-| Next task | FE-019 Entitlement UX (F14 part) |
+| Last task done | FE-019 Entitlement UX (F14 part) (b27d039) |
+| Next task | FE-020 Duplex end-to-end test (v1 criterion 1), then the M1 milestone entry |
 | Waiting for the owner | — |
 | In progress (not committed) | — |
-| Notes for the next session | Read the FE-018, FE-017, FE-014, FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | Read the FE-019, FE-018, FE-017, FE-014, FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,23 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M1 decisions: FE-019 (frontend agent)
+- **Built:** FE-019, b27d039. `e2e/billing.spec.ts`: the Small Firm seed shows the limit dialog on New project
+  with "Upgrade" (the seed is left at its limit); on a fresh free org, Upgrade → plan card →
+  `/_dev/checkout` → back with the new plan, and the project now fits; members see neither billing nor
+  usage. `tests/scenarios/billing.test.ts`: entitlements with usage, the 402 details, checkout (mock
+  only), portal, who may see what.
+- **Decisions taken:**
+  - The limit dialog finds the org from the page's first path segment and the user's role from
+    `GET /me`: an owner gets "Upgrade" (a link to `/{org}/settings/billing`), others "Ask your owner".
+  - Billing and Usage are tabs of the org settings, shown by role (`manageBilling`, `seeUsage`).
+    Checkout and portal only fetch the provider's URL and go there (F14); the return URL is the page.
+  - A plan change arrives as `entity.changed` on the org, which now also refreshes entitlements and
+    billing.
+  - Mock: usage rows carry `projectId`; parses are recorded too (05-plans-and-limits.md).
+- **For the next agent:** don't run checkout on the seeded Small Firm in tests: other tests need it at
+  its limit; use `createOrg` for a fresh free org.
 
 ### 2026-11-13 — M1 decisions: FE-018 (frontend agent)
 - **Built:** FE-018, 94026ce. F13-AC1 in `e2e/notifications.spec.ts` (two tabs: the run the other tab starts
