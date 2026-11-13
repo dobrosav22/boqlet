@@ -22,8 +22,8 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M1 (core loop) |
 | Role | Frontend agent |
-| Last task done | FE-013 How it is calculated (F06 §5) (04f24c7) |
-| Next task | FE-015 Not in the models (F06 §12), then FE-016 Viewer, then FE-014 Sheet and model together (FE-014 is built on FE-016's viewer, so the two swap) |
+| Last task done | FE-015 Not in the models (F06 §12) (bf3c48b) |
+| Next task | FE-016 Viewer (F07), then FE-014 Sheet and model together (FE-014 is built on FE-016's viewer, so the two swap) |
 | Waiting for the owner | — |
 | In progress (not committed) | — |
 | Notes for the next session | Read the FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
@@ -70,6 +70,12 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 - **Fakes:** "Trace steps" built (`engine/fakes/trace-steps.ts`), its row in mock-api.md updated.
 - **For the next agent:** steps are written into the stored result at run time; runs made before this
   change have none (the detail says to generate again).
+- **FE-015 (bf3c48b), decided:** collapsing the "not in the models" notice is kept in `localStorage`
+  per user id (the contract has no user preferences besides notifications); the counts leave excluded
+  lines out. The second half of FE-015's acceptance (no saved version without the tick) is FE-031's.
+  e2e: `signInAs` signs in only when nobody is; to switch users in one page, overwrite
+  `boqlet-mock-session` in `localStorage` (as `F06-AC8` in `e2e/sheet.spec.ts` does).
+- **Order:** FE-016 (viewer) goes before FE-014 (sheet and model together), which needs it.
 
 ### 2026-11-13 — M1 decisions: FE-012 (frontend agent)
 - **Built:** FE-012, 924857e. F01-AC5 / v1 criterion 16 in `e2e/sessions.spec.ts`; the Session state
