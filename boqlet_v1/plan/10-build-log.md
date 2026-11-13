@@ -20,13 +20,13 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 
 | | |
 |---|---|
-| Phase | 1 (frontend on the mock), milestone M2 (Library and setup) |
+| Phase | 1 (frontend on the mock), milestone M3 (Versions, exports, sharing, notifications) |
 | Role | Frontend agent |
-| Last task done | FE-028 Setup wizard (210e7fa); **M2 done** |
-| Next task | FE-029 New model versions (F08 §1–2), M3 |
-| Waiting for the owner | — (the session stopped at the end of M2 because the owner asked it to; start the next one with the usual prompt) |
+| Last task done | FE-029 New model versions (966a5b7) |
+| Next task | FE-030 Change report (F08 §3–7) |
+| Waiting for the owner | — (the owner asked this session to stop after FE-037, the end of M3) |
 | In progress (not committed) | — |
-| Notes for the next session | Read the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry, then the FE-019, FE-018, FE-017, FE-014, FE-016, FE-013, FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | Read the M3 decision entries (newest first), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,26 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M3 decisions: FE-029 (frontend agent)
+- **Built:** FE-029, 966a5b7. `features/boqs/new-model-versions.tsx` in the header (replaces the M1 line that
+  only linked to Setup), `reopen-boq-dialog.tsx` (F09 §6, for FE-031 to reuse), badges in the BoQ list and
+  the overview. Checked by `tests/scenarios/boqs.test.ts` (2), `apps/mock-api/test/new-versions.test.ts`
+  (4) and `e2e/new-versions.spec.ts` (2).
+- **Decisions taken:**
+  - The mock announces from `markReady` (`announceNewModelVersion` in `handlers/boqs.ts`), so a re-upload
+    of identical content (dedupe, no parse) announces too. Every non-archived BoQ whose current revision
+    uses an older version is told, confirmed ones included (they show "Reopen to update"). Recipients: the
+    project's leads and estimators by effective role (org owners and admins are leads everywhere).
+  - `reopenBoq` is in the mock now (FE-031 needs it too): `reopen` permission, `400 invalid_body` without a
+    reason, `409 invalid_transition` unless confirmed, `409 boq_archived`; the new draft copies the last
+    saved version's inputs and keeps its run as current (so the sheet stays until the next generate), with
+    `basedOnRevisionId` = that version. Audit `boq.reopened` with the reason.
+  - "Use vN" sends the whole `models` input (PATCH replaces the list) through `useUpdateInputs`, so the
+    swap is optimistic like the Setup tab's.
+- **For the next agent:** FE-031 builds Confirm; add "Reopen to update" to its e2e flow
+  (`reopen-to-update`, `reopen-reason`, `reopen-submit`). Test hooks: `new-model-version[data-confirmed]`,
+  `newer-<model>`, `use-newer-version-<model>`, `use-all-newer`, `boq-new-version` (list).
 
 ### 2026-11-13 — M2 Library and setup (frontend agent)
 - **Built:** FE-021…FE-028, 829d61e..210e7fa (plus the record commits).

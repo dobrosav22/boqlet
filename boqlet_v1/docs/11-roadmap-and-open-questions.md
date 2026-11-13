@@ -217,6 +217,11 @@ Things the product build doesn't do yet, with the task that deals with each.
 - Component tests: Testing Library and next-intl resolve the workspace root's React 18 while the app
   uses React 19, so render tests need the in-file workaround in
   `src/features/library/rule-set/rule-set-editor.test.tsx` (FE-046 removes the PoC and its React 18).
+- New model versions (FE-029): "Reopen to update" is checked in the mock's unit tests only; a confirmed
+  BoQ can't be reached in the UI until Confirm lands (FE-031), which adds it to the e2e flow. A BoQ that
+  is in review or approved shows the badge without "Use vN" until FE-031 builds the warning that sends it
+  back to the working state (BR-23). One notification per BoQ and person: three BoQs on one model give
+  three.
 - Phase-1 interim: the mock reads check details from the PoC engine's cache on the same machine, and
   drops the `null` optional fields the PoC sends in names (the worker should omit them, EN-001).
 
@@ -285,6 +290,7 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-11-13 | 966a5b7 | FE-029: new model versions (F08 §1–2): the header names each model with a newer ready version, "Use vN" (and "Use all") swaps it into the working version as a pending change, a confirmed BoQ offers "Reopen to update" with the reopen dialog; badges in the BoQ list and the project overview. Mock: `boq.new_version_available` to the project's leads and estimators and a refreshed BoQ when a version becomes ready; `POST /boqs/{boqId}/reopen` (F09 §6). 2 scenarios, 4 mock tests, 2 e2e flows |
 | 2026-11-13 | 210e7fa | FE-028: the setup wizard (F16): start, how you measure (checklist, details, the six measuring screens from the rule set's data), item numbers and texts, names, review with Publish all (publish, star, project defaults); progress in `Org.setup` with resume; the dashboard gate for a new org's owner, onboarding into the wizard, Guided setup in the Library, the sheet hint. Mock: `GET/PUT /orgs/{orgId}/setup`, the "Setup markers" fake; previews share the run queue. 1 scenario, 2 e2e flows, step derivation tests |
 | 2026-11-13 | 210e7fa | FE-027 (code list): the item-text box with insert buttons and Reads as (sample from the preview model), the sample text under Codes per line |
 | 2026-11-13 | 210e7fa | FE-026 (guided mode): new rule sets and classifications open in guided mode; reopen on any draft; the one-time "bring your own licence" notice |
