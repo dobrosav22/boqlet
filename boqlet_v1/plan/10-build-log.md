@@ -68,8 +68,12 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 - **Deviations from the spec:** none.
 - **Fixes in earlier work:** the mock left every preset it saved for a run in the engine's user folder
   (`presets/user`, read on every run); after many e2e runs ~100 project dictionaries slowed runs past the
-  e2e's 10 s budget. They are deleted after each run now (`startRun` in `handlers/boqs.ts`). A
-  `checkPreset` that saves a parent while a run is deleting the same id could fail; rare, retry works.
+  e2e's 10 s budget. They are deleted after each run now (`startRun` in `handlers/boqs.ts`), without
+  holding the run's job (awaiting the deletions made the job finish after its run, which CI caught in
+  `scenarios/boqs.test.ts`); the next run and `POST /presets/check` wait for the deletions first
+  (`presetsSettled`), so a late deletion never removes a preset just saved again under the same id.
+  Of six local scenario passes after this fix, one stalled in `boqs.test.ts` (F04 run tests) without an
+  error to go on; if CI shows it again, look at the engine calls in `startRun` first.
 - **For the next agent:** the suites still don't exercise the app's session; with a seeded user, sign in
   through `signInAs` (session-less) unless the test is about sessions.
 

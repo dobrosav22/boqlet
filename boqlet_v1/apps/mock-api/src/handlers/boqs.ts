@@ -306,6 +306,13 @@ export function engineIdOf(version: PresetVersionRec): string {
   return preset.layer === "system" && version.number === 1 ? preset.slug : `mock-${version.id}`;
 }
 
+/**
+ * The removal of the presets the last run saved (see `startRun`). Whatever saves presets waits for it
+ * first, so a late removal never takes a preset that was just saved again under the same id.
+ */
+let cleanup: Promise<void> = Promise.resolve();
+export const presetsSettled = () => cleanup;
+
 /** Saves the version through the PoC API when it isn't a shipped one; returns its engine id. */
 export async function enginePresetId(version: PresetVersionRec): Promise<string> {
   const preset = db().presets.find((p) => p.id === version.presetId)!;
@@ -352,6 +359,7 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
       // (read on every run) doesn't grow with every project dictionary version (FE-012).
       const saved: [PresetFolder, string][] = [];
       try {
+        await cleanup;
         const version = (id: string) => db().presetVersions.find((v) => v.id === id)!;
         const keep = (folder: PresetFolder) => (id: string) => {
           if (id.startsWith("mock-")) saved.push([folder, id]);
@@ -415,8 +423,12 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
         throw Object.assign(new Error(RUN_MESSAGES[code]), { code, retryable: true });
       } finally {
         clearInterval(ticker);
-        // The manual-lines patch first: it extends the rule set.
-        for (const [folder, id] of saved.reverse()) await engine().deletePreset(folder, id).catch(() => {});
+        // Not awaited: the run and its job are finished already. The manual-lines patch goes first (it extends the rule set).
+        const previous = cleanup;
+        cleanup = (async () => {
+          await previous;
+          for (const [folder, id] of saved.reverse()) await engine().deletePreset(folder, id).catch(() => {});
+        })();
       }
     },
     (finished) => {

@@ -15,7 +15,7 @@ import { projectAudience } from "../jobs.js";
 import { visibleProject, writableProject } from "../projects.js";
 import { json, noContent, type Handlers } from "../router.js";
 import { db, persist, type BoqRec, type ManualItemRec, type OverrideRec, type ProjectRec, type UserRec } from "../store.js";
-import { enginePresetId, writeBlock } from "./boqs.js";
+import { enginePresetId, presetsSettled, writeBlock } from "./boqs.js";
 
 type OverrideInput = Omit<OverrideRec, "id" | "boqId" | "createdBy" | "createdAt">;
 type ManualInput = { item: ManualItemRec["item"]; codes?: Record<string, string>; sortHint?: string };
@@ -228,6 +228,7 @@ export const adjustmentHandlers: Handlers = {
         if (!v) throw new HttpError(400, "invalid_body", "A parent version doesn't exist.", { versionId: id });
         return v;
       });
+      await presetsSettled();
       // The nearest parent is the one the document extends, under the engine's id for it.
       if (parents.length) doc.extends = await enginePresetId(parents[parents.length - 1]!);
       return json(await engine().checkPreset(folder, doc));
