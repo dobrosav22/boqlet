@@ -6,13 +6,72 @@ on the mock. Order: BE-000 → the engine tasks (`tasks-engine.md`, milestone ME
 `boqlet_v1/` (P44); FE-000 already moved the engine there. The contract and scenario suites written in phase 1 are the specification:
 make them pass against Java without changing them; a suite that looks wrong goes to the owner.
 
-Start with **BE-000**. Every task is done when the contract suite passes for its endpoints
+Start with **BE-000**. In it the backend owner (P47) reviews this whole plan: the tasks below
+are the default, and BE-000 may change them. After BE-000 the backend owner's answers in
+`07-backend/decisions.md` win over this file. Every task is done when the contract suite passes for its endpoints
 (08-delivery/testing.md), and when its Policy and state-machine unit tests cover every row of
 `03-domain/permissions.md` and `state-machines.md` that it touches.
 
-### BE-000 Decisions (stop and ask)
-Present `07-backend/decisions-to-make.md` D1–D9 to the owner and record the answers (README
-decisions table, docs/02). **No code before this.**
+### BE-000 Backend review and decisions (the backend owner's entry point, P47)
+The backend is owned by whoever runs this phase: the backend owner. BE-000 hands it over. The
+agent analyses the backend plan and puts **every** backend decision to the backend owner,
+including the ones the plan has already made. The backend owner decides. **No backend code
+before this task is done.**
+1. **Read:**
+   - the build log (the phase-1 summary and every entry: what the mock does, what was faked,
+     what was learnt);
+   - `04-architecture/`, `05-api/conventions.md` and `07-backend/`;
+   - `03-domain/`, this file and `tasks-engine.md`;
+   - `testing.md`, `06-frontend/mock-api.md`;
+   - the shared suites, and the contracts by tag.
+2. **Ask the backend owner first** how they want to go through it:
+   - every item in depth;
+   - or the open items in depth, and the already-made ones one by one with a short summary.
+
+   Either way, every item gets their answer; none is assumed.
+3. **Write the analysis** in `07-backend/review.md`. For each item in `decisions-to-make.md`
+   (open D1–D9, already made B1–B16) give:
+   - what the plan says and why;
+   - what phase 1 showed;
+   - the alternatives, with risks, costs and effort;
+   - a recommendation;
+   - which tasks and documents change with each answer.
+
+   Add the items the analysis finds: gaps, contradictions, risks (for example data volumes from
+   nfr.md, GDPR, costs). Each becomes a D-item if open, a B-item if the plan already decided it.
+4. **Put the items to the backend owner**, one area at a time:
+   - accounts and money first: D1 auth, D8 hosting, D6 email, D7 billing;
+   - then the shape: B1–B5, B16;
+   - then the rest.
+
+   For each item the answer is "confirm", "change to …" or "defer until <task>, because …".
+   Deferring is allowed only when no task before that point depends on the item.
+5. **Keep the boundary.** A choice that needs a change to the contracts, the shared suites, a
+   product P-decision or a BR rule goes to the product owner, with its cost to the frontend
+   (`decisions-to-make.md`, "Fixed for BE-000").
+6. **Record:**
+   - every answer in `07-backend/decisions.md`;
+   - platform-level ones also as P-numbers in `plan/README.md` and in `docs/02-decisions.md`.
+7. **Apply** the answers to the plan before any code:
+   - `07-backend/architecture.md`, `db-schema.md` and the `04-architecture/` files they touch;
+   - this file and `tasks-engine.md` (tasks may be rewritten, split, merged, reordered or
+     added; keep the ids of tasks that stay, and give new ones new ids);
+   - `milestones.md`, if the order changed;
+   - FE-043, if D1 changes what the auth adapter must do;
+   - `sessions.md` "Tooling", if the stack changed.
+
+   Then check the cross-references (task ids, P, D and B numbers) and lint the contracts.
+8. **Write the BE-000 entry** in the build log: the decisions in short, and what changed in the
+   plan. Then set Current position to the first task of the (possibly new) order.
+
+- **Accept:**
+  - `07-backend/review.md` exists;
+  - every D- and B-item, including the added ones, has a recorded answer from the backend owner
+    in `07-backend/decisions.md`;
+  - the backend plan and task lists agree with the answers;
+  - the contracts and the shared suites are unchanged, unless the product owner approved a
+    change and it is listed;
+  - no backend code was written before this.
 
 ### BE-001 Service skeleton
 Spring Boot (or the chosen framework) project in `services/api`; OpenAPI generator

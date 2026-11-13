@@ -11,7 +11,7 @@ to the product root `boqlet_v1/` (P44).
 
 ```text
 Phase 1 (frontend agent)     M0 ─► M1 ─► M2 ─► M3 ─► M4 ─► (MP1)        consolidate, app + mock API, engine features faked
-Phase 2 (backend agent)      BE-000 ─► ME ─► M5 ─► M6 ─► M7 ─► (MP2)     decisions, real engine, Java backend, staging
+Phase 2 (backend agent)      BE-000 ─► ME ─► M5 ─► M6 ─► M7 ─► (MP2)     backend owner's review, real engine, Java, staging
 Phase 3 (frontend agent)     M8a ─► M8                                   wire to Java, drop fakes, harden, new root, release
 ```
 
@@ -43,7 +43,7 @@ that replaces it. The frontend agent does not change `engine/`.
 
 | # | Milestone | Contents | Exit criteria |
 |---|---|---|---|
-| **BE-000** | Platform decisions | `07-backend/decisions-to-make.md` D1–D9, asked of the owner and recorded | Answers in `plan/README.md` (P-numbers) and `docs/02-decisions.md`. **No backend code before this** |
+| **BE-000** | Backend review and decisions (P47) | The agent analyses the backend plan (`07-backend/review.md`) and puts every backend decision to the backend owner: the open ones (D1–D9) and the ones the plan already made (B1–B16, `07-backend/decisions-to-make.md`); the plan is updated to the answers | Every item answered by the backend owner and recorded (`07-backend/decisions.md`; platform-level ones as P-numbers and in `docs/02`); backend plan and tasks updated; contracts and shared suites unchanged unless the product owner approved. **No backend code before this** |
 | **ME** | Real engine | EN-001…EN-008, EN-010…EN-013 (EN-009 in M6, EN-P1 with MP2) | Every engine task's acceptance; `npm run test:engine` green incl. the Duplex test; the mock switched from the PoC API and its fakes to the worker (each fake deleted as its task lands) |
 | **M5** | Backend core (Java) | BE-001…BE-012, BE-027, BE-031 | Contract and scenario suites green for the core tags against Java |
 | **M6** | Queue workers and realtime | EN-009, BE-013…BE-015 | Jobs flow through Postgres; heartbeat re-queue tested; SSE across two API instances |

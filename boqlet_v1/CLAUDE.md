@@ -19,7 +19,7 @@ getBoq(models, rules, classifications, dictionaries, decisions) -> BoqResult
 The proof of concept (a React dev app plus a local Python engine) is the seed of the product
 monorepo specified in `plan/`: a Next.js app, a mock API (phase 1), a **Java** backend (phase 2,
 owns users, projects, storage, jobs) and the Python engine as its worker. Java backend code starts
-only in phase 2, after BE-000 (the owner's platform decisions).
+only in phase 2, after BE-000 (the backend owner's review and decisions, P47).
 `api.py`, `store.py` and the request shapes in `api.ts` are a **temporary demo backend**: keep them
 thin CRUD. Anything that decides something belongs in the engine as plain functions over the
 contract types (see `docs/03-architecture.md`, code boundaries).
@@ -139,7 +139,7 @@ DURAARK, the Auckland OpenIFC repository, Schependomlaan): no engine errors, out
 against the contract; quantities checked only for the Duplex and the buildingSMART samples.
 What was run and what is still uncovered: `docs/12-ifc-corpus-catalogue.md`.
 
-The product built on top of this is specified in `plan/` (decisions P01–P46, phases,
+The product built on top of this is specified in `plan/` (decisions P01–P47, phases,
 milestones, tasks). Every build session starts with the prompt in `plan/08-delivery/sessions.md`
 and works by that file. **Where the build stands** (phase, role, next task, what agents decided
 along the way) is in `plan/10-build-log.md`. The build happens on the branch `v_1` (P46); `main`

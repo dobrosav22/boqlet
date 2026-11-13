@@ -78,6 +78,11 @@ to `boqlet_v1/CLAUDE.md`; after FE-046 it is `plan/` at the repository root agai
 | The order of steps inside a task | Anything needing an account, a secret or money (auth provider, hosting, email, billing) |
 | Fixing a bug found in earlier work (with a test, noted in docs/11) | Deleting or rewriting something outside the task's scope |
 
+**In phase 2, backend matters belong to the backend owner** (P47), the person who ran BE-000.
+Their answers are in `07-backend/decisions.md`. Ask them, not the product owner, about anything
+in the right-hand column that only concerns the backend (accounts and money included). Product
+behaviour, the contracts and the shared suites stay with the product owner.
+
 When a question blocks a task: add it to `09-open-questions.md` (with "Blocks: <task>"), ask the
 owner in the session, and **go on with the next task that doesn't depend on it**. Note the
 skipped task under "Waiting for the owner" in Current position and come back when it's answered.
@@ -86,6 +91,7 @@ skipped task under "Waiting for the owner" in Current position and come back whe
 
 Stop and wait for the owner only when:
 1. an owner decision is needed and no other task of the phase can go ahead (for example BE-000,
+   which always waits for the backend owner's answers,
    FE-043 before D1, BE-032 and FE-047 without hosting accounts);
 2. the phase is done;
 3. the baseline is red for a reason outside your role and you can't fix it within it;

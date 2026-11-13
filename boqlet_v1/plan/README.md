@@ -17,14 +17,15 @@ product to build. When they disagree about the *product*, `plan/` wins. When the
 that file: it says how to start, what to decide yourself and what to ask, when to stop and how
 to hand over.
 
-1. Read this README (decisions P01–P46 are settled; don't reopen them),
+1. Read this README (decisions P01–P47 are settled; don't reopen them),
    `08-delivery/sessions.md`, and `10-build-log.md` "Current position" (where the build
    stands, the next task, and your role).
 2. `08-delivery/milestones.md`: phases, milestones, exit criteria.
    - **Phase 1**, frontend role, starts with **FE-000**: it moves the repository into the
      product root `boqlet_v1/` (P44).
-   - **Phase 2**, backend role, starts with **BE-000**: ask the owner D1–D9 before any backend
-     code.
+   - **Phase 2**, backend role, starts with **BE-000** (P47): the agent analyses the backend
+     plan and puts every backend decision, open or already made, to the backend owner (whoever
+     runs the session). No backend code before it.
    - **Phase 3**, frontend role, ends with **FE-046** (the product root becomes the repository
      root, the proof of concept is removed) and **FE-047** (production release).
 3. Take the next task of your phase in order from `08-delivery/tasks-frontend.md`,
@@ -133,6 +134,7 @@ decisions D01–D68 are in `docs/02-decisions.md` and still hold unless changed 
 | P44 | **One product root: `boqlet_v1/`.** All product code is built there, as one npm workspace. The first task (FE-000) moves the proof of concept (engine, contract types, presets, fixtures, scripts, PoC UI, docs, this plan) into it, so nothing ever refers across two roots; the PoC demo deployment stays pointed into it. The last structural task (FE-046) removes the PoC leftovers and makes `boqlet_v1/` the repository root. Paths in `plan/` are relative to the product root. |
 | P45 | **Agents work on their own from task to task and milestone to milestone**, by `08-delivery/sessions.md`. They stop only for an owner decision that blocks every remaining task, at the end of a phase, or before an irreversible step. Implementation decisions and deviations are written in `10-build-log.md`, which, with its "Current position", is the handover between sessions and agents. |
 | P46 | **The build happens on the branch `v_1`**, made from `main`. `main` keeps the proof of concept and its live demo untouched until the release: FE-047 tags `main` as `poc-final` and merges `v_1` into it. CI runs on both branches; staging deploys from `v_1` until the release, production from `main` after it. |
+| P47 | **The backend belongs to its backend owner**: the person who runs phase 2 (the product owner or a backend developer they choose). BE-000 is their entry point: the agent analyses the backend plan and asks them about every backend decision, the open ones and the ones the plan already made (`07-backend/decisions-to-make.md`). The plan's backend choices are defaults. Their answers win over the backend plan, which BE-000 rewrites to match. Fixed for them: the HTTP contracts and the shared suites, the product decisions and business rules, and the engine rules; changes there go to the product owner. |
 
 ## Where the code lives (P44)
 

@@ -1,9 +1,37 @@
-# Decisions the backend agent must ask about first
+# Backend decisions for the backend owner (BE-000)
 
-**Stop and ask the owner before writing backend code.** Present each decision below with the
-options and the recommendation. Record the answers in `plan/README.md` (decisions table,
-P-numbers from P14 on) and in `docs/02-decisions.md`. Only D1 changes frontend code (the auth
-adapter). The others are backend-internal.
+The backend belongs to its **backend owner**: the person who runs the phase-2 session, either the
+product owner or a backend developer they bring in (P47). Everything in this file is put to
+them in BE-000 (`08-delivery/tasks-backend.md`), **including the decisions the plan has
+already made**. The plan's choices are defaults and recommendations, not constraints. The
+backend agent analyses each item first (`review.md`), then asks. **No backend code before the
+answers are recorded.**
+
+There are two lists:
+- **Open (D1–D9):** decisions nobody has taken yet.
+- **Already in the plan (B1–B16):** to confirm or change.
+
+The analysis may add items to either list.
+
+**Fixed for BE-000.** These are not the backend owner's alone, because the frontend is
+already built on them:
+- the HTTP contracts (`packages/api/openapi.yaml`, `packages/pricing-api/openapi-pricing.yaml`)
+  and the shared suites (`tests/contract`, `tests/scenarios`);
+- the product decisions and business rules (`plan/README.md` P-decisions about the product,
+  `03-domain/business-rules.md`);
+- the engine's rules of the road (`CLAUDE.md`).
+
+If a backend choice needs a change there, it goes to the product owner, with its cost to the
+frontend and the mock. If they agree: contract first, then the mock and the suites, then the
+backend. When the backend owner is the product owner, both are decided in the same session,
+but each is recorded where it belongs.
+
+**Recording.** Every answer goes into `07-backend/decisions.md`: id, question, answer
+(confirmed, changed to …, or deferred until …, with the reason), who decided, date.
+Platform-level answers (auth provider, language and framework, database, hosting) also get a
+P-number in `plan/README.md` and a row in `docs/02-decisions.md`. Only D1 changes frontend code
+(the auth adapter, FE-043); a changed B-item may change backend tasks, which BE-000 then
+rewrites.
 
 ## D1. Authentication provider (required, P10)
 
@@ -80,3 +108,34 @@ containers in one EU region. **Ask, don't assume.**
 The plan puts all spreadsheet I/O in the Python worker (engine-worker.md: core workbooks and the pricing module's `pricing.*` jobs,
 import_offer, export_comparison) so there is one implementation for the mock and Java
 phases. The alternative is Apache POI in Java. Confirm the worker approach.
+
+---
+
+## Already in the plan: confirm or change (B1–B16)
+
+Each was decided while writing the plan, without the backend owner. For each, the analysis
+(`review.md`) states:
+- what the plan says, and why;
+- what phase 1 showed (build log, the mock's implementation);
+- the alternatives, and the risks and costs;
+- which tasks change if it changes.
+
+| # | Decision in the plan | Where | Typical alternatives |
+|---|---|---|---|
+| B1 | **Java** for the backend (P12, docs/02 D62) | README, 07-backend/architecture.md | Kotlin on the JVM; another language (the contract and suites are language-neutral, but every BE task's wording changes) |
+| B2 | **Modular monolith**: one deployable, modules own their tables, talk through interfaces | 07-backend/architecture.md | Separate services; fewer, coarser modules |
+| B3 | **Postgres** as the only database; schema, keys (UUID v7 from the application), constraints | 07-backend/db-schema.md | Other key strategy; partitioning plan for the large run tables |
+| B4 | **Run results ingested into tables** (`run_lines`, `run_line_elements`, …) for paging, grouping and filters | 07-backend/architecture.md, db-schema.md | Keep `result.json.gz` in storage and query it in memory or with JSONB; hybrid |
+| B5 | **The engine stays a Python worker** with the JSON job contract; no engine logic in the worker (D61) | 04-architecture/engine-worker.md | Engine behind an internal HTTP service only; parts ported to Java later |
+| B6 | **Two engine transports**: HTTP (mock, small deployments) and a Postgres queue table; separate `engine-rpc` service for quick calls | engine-worker.md, deployment.md | Queue only; rpc through the queue; a broker (ties to D4) |
+| B7 | **S3-compatible object storage**, the key layout, signed URLs (5 min), direct browser uploads | 04-architecture/storage-jobs-realtime.md, security.md | Uploads through the API; other expiry |
+| B8 | **SSE** for live updates (ring buffer, `Last-Event-ID`; a hint to refetch, never the source of truth) | storage-jobs-realtime.md | WebSockets; polling |
+| B9 | **Live co-editing per line**, the later edit wins, the other person is told (P31) — the backend part: version per line, conflict events | 03-domain, F06 §13–14 | Optimistic locking with ETags only; row locks (behaviour is fixed by P31, the mechanism is open) |
+| B10 | **Tenant isolation in the application**: every repository query filtered by `org_id` through one helper; cross-tenant answers `404` | security.md | Postgres row-level security as well, or instead |
+| B11 | **Single active session** (BR-54) as a `sessions` table checked by a request filter | tasks-backend.md BE-027, security.md | Bound to the auth provider's sessions (ties to D1) |
+| B12 | **API code generated from the contract**: OpenAPI generator, server interfaces + DTOs | tasks-backend.md BE-001 | Hand-written controllers checked by the contract suite |
+| B13 | **The pricing module as a separate build module** with its own schema `pricing` and extension interfaces (P36) | 04-architecture/modules.md, BE-031, BE-P* | Package-level separation inside one module (the removability rule P36 itself is fixed) |
+| B14 | **Deployment shape**: containers `web`, `api`, `engine-worker` pools, `engine-rpc`; scheduler inside `api` with leader election; Flyway on deploy | 04-architecture/deployment.md | Fewer services; scheduler as its own process; another migration tool |
+| B15 | **Observability**: structured logs, OpenTelemetry, the metrics and alerts listed | deployment.md, BE-025 | A specific vendor stack |
+| B16 | **The order and split of the backend work**: BE-000 → engine (ME) → M5 → M6 → M7 → MP2, the task list as written | 08-delivery/milestones.md, tasks-backend.md, tasks-engine.md | Java first, engine alongside; other task cuts (the phase-2 exit criteria stay: the same suites green against Java) |
+
