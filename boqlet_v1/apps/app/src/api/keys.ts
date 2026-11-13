@@ -39,5 +39,8 @@ export const keys = {
   job: (jobId: string) => ["job", jobId] as const,
   jobProgress: (jobId: string) => ["jobProgress", jobId] as const,
   notifications: () => ["notifications"] as const,
+  entitlements: (orgId: string) => ["entitlements", orgId] as const,
+  usage: (orgId: string, month: string) => ["usage", orgId, month] as const,
+  billing: (orgId: string) => ["billing", orgId] as const,
   notificationPreferences: () => ["notificationPreferences"] as const,
 };

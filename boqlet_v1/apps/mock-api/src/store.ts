@@ -268,6 +268,8 @@ export interface SessionRec {
 /** Processing time used (BR-62), counted against `processingMinutesPerMonth`. */
 export interface UsageRec {
   orgId: string;
+  /** The project the job was for (the usage page's "by project", F14). */
+  projectId?: string;
   kind: "parse" | "run" | "preview";
   ms: number;
   at: string;

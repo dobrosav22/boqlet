@@ -5,7 +5,9 @@
   "limit": {
     "title": "Your plan's limit is reached",
     "body": "This action needs more than your current plan allows.",
-    "detail": "{limit}: {current} of {max} in use."
+    "detail": "{limit}: {current} of {max} in use.",
+    "upgrade": "Upgrade",
+    "askOwner": "Ask your organisation's owner to change the plan."
   },
   "codes": {
     "revision_locked": "This BoQ is locked: it was saved or confirmed. Reopen it or work on the current version.",

@@ -2,7 +2,9 @@
   "title": "Settings",
   "nav": {
     "general": "General",
-    "members": "Members"
+    "members": "Members",
+    "billing": "Billing",
+    "usage": "Usage"
   },
   "general": {
     "readOnly": "Only owners and admins can change these settings.",
@@ -74,6 +76,62 @@
       "accepted": "Accepted",
       "revoked": "Withdrawn",
       "expired": "Expired"
+    }
+  },
+  "billing": {
+    "ownerOnly": "Only the organisation's owner manages billing.",
+    "plan": "{name} plan",
+    "status": {
+      "active": "Active",
+      "trialing": "Trial",
+      "past_due": "Payment due",
+      "cancelled": "Cancelled"
+    },
+    "renews": "Renews on {date}",
+    "manage": "Manage billing",
+    "limits": "Limits",
+    "limitNames": {
+      "seats": "Seats",
+      "activeProjects": "Active projects",
+      "maxModelVersionMb": "Model file size",
+      "maxModelsPerBoq": "Models per BoQ",
+      "processingMinutesPerMonth": "Processing per month",
+      "approvalWorkflow": "Review and approval",
+      "exportWatermark": "Watermark on exports"
+    },
+    "usedOf": "{used} of {max}",
+    "usedUnlimited": "{used}, no limit",
+    "change": "Change plan",
+    "choose": "Choose",
+    "current": "Current plan",
+    "unlimited": "No limit",
+    "yes": "Yes",
+    "no": "No",
+    "units": {
+      "seats": "{n}",
+      "activeProjects": "{n}",
+      "maxModelVersionMb": "{n} MB",
+      "maxModelsPerBoq": "{n}",
+      "processingMinutesPerMonth": "{n} min",
+      "approvalWorkflow": "{n}",
+      "exportWatermark": "{n}"
+    }
+  },
+  "usage": {
+    "notAllowed": "Only owners and admins see the usage.",
+    "processing": "Processing in {month}",
+    "minutes": "{n} min",
+    "seats": "Seats in use",
+    "activeProjects": "Active projects",
+    "byProject": "By project",
+    "byKind": "By kind",
+    "project": "Project",
+    "time": "Processing",
+    "none": "No processing this month.",
+    "kinds": {
+      "parse": "Reading models",
+      "run": "Generating BoQs",
+      "preview": "Previews"
     }
   }
 }

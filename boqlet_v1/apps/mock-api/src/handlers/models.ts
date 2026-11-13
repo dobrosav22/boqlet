@@ -160,8 +160,11 @@ function startParse(version: ModelVersionRec, model: ModelRec, user: UserRec) {
         stage = Math.min(stage + 1, STAGES.length - 2);
         ctx.progress(STAGES[stage]!, Math.min(10 + stage * 20, 85));
       }, 700);
+      const started = Date.now();
       try {
         const parsed = await engine().parseModel({ path: blobPath(version.blobKey), name: version.fileName });
+        // Usage from day one, every parse too (05-plans-and-limits.md, BR-62).
+        db().usage.push({ orgId: project.orgId, projectId: project.id, kind: "parse", ms: Date.now() - started, at: nowIso() });
         ctx.progress("write", 95);
         const checkDetails = await engine().checks(parsed.modelId);
         const summary = {

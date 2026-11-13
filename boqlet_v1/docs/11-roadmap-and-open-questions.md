@@ -115,6 +115,10 @@ Things the product build doesn't do yet, with the task that deals with each.
   text, not item texts (FE-027, EN-010); "Show in 3D" opens the Viewer tab; on
   screens 1280 px and wider the sheet shows the model beside it (FE-014); the app loads up to 20,000 lines at once and doesn't yet switch to the
   server-side grouping above that (the mock serves it; FE-045).
+- Entitlements (FE-019): the mock bills through the `manual` adapter only (no provider, no webhooks,
+  no subscription status other than active; overrides per org come with the backend); the portal just
+  returns. The free-plan banner about export watermarks waits for the real export (EN-006, F12). Usage
+  before FE-019 has no project and isn't in "by project".
 - Notifications (FE-018): the kinds the mock sends so far are a model version ready, a run that needs
   input, and job results for runs and exports; the others arrive with their features (versions,
   reviews, membership, limits, the pricing module's). `model_version.ready` is never emailed (F13: only

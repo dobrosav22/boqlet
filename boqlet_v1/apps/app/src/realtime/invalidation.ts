@@ -15,7 +15,8 @@ const str = (v: unknown) => (typeof v === "string" && v ? v : undefined);
 
 /** Lists an entity appears in, by entity type (its parent's key, or every list of that kind). */
 const LISTS: Record<string, (projectId?: string) => QueryKey[]> = {
-  org: () => [keys.me(), keys.orgs()],
+  // A plan change (checkout, F14) arrives as a changed org.
+  org: () => [keys.me(), keys.orgs(), ["entitlements"], ["billing"]],
   membership: () => [keys.me(), ["members"]],
   user: () => [keys.me(), ["members"]],
   project: () => [["projects"]],

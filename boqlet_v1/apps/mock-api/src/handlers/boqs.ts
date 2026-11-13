@@ -409,7 +409,7 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
         // The newest finished run becomes current (F04 edge cases); ids are time-ordered.
         const current = revision.currentRunId ? db().runs.find((r) => r.id === revision.currentRunId) : undefined;
         if (!current || current.createdAt <= run.createdAt) revision.currentRunId = run.id;
-        db().usage.push({ orgId: org.id, kind: "run", ms: Date.now() - started, at: nowIso() });
+        db().usage.push({ orgId: org.id, projectId: project.id, kind: "run", ms: Date.now() - started, at: nowIso() });
         ctx.progress("index", 100);
         audit({ orgId: org.id, projectId: project.id, actorId: user.id, action: "run.finished", subjectType: "run", subjectId: run.id, data: { boq: boq.name, status: run.status, lines: run.stats.lines } });
         if (run.status === "needs_input")
@@ -422,7 +422,7 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
         const detail = e instanceof EngineRefused || e instanceof EngineUnavailable ? e.message : (e as Error).message;
         run.status = "failed";
         run.error = { code, message: RUN_MESSAGES[code]!, ...(detail ? { details: { detail } } : {}) } as RunRec["error"];
-        db().usage.push({ orgId: org.id, kind: "run", ms: Date.now() - started, at: nowIso() });
+        db().usage.push({ orgId: org.id, projectId: project.id, kind: "run", ms: Date.now() - started, at: nowIso() });
         audit({ orgId: org.id, projectId: project.id, actorId: user.id, action: "run.failed", subjectType: "run", subjectId: run.id, data: { boq: boq.name, code } });
         notify(user.id, project, "job.failed", { boq: boq.name, type: "run", jobId: job.id }, `/${org.slug}/projects/${project.id}/boqs/${boq.id}`, { type: "run", id: run.id });
         finishRun();
