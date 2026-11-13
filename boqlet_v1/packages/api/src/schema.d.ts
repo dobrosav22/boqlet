@@ -3345,11 +3345,21 @@ export interface components {
             sortIndex: number;
             /** @description Position number in its section, e.g. 5.3 (P30); frozen in saved versions */
             positionNo?: string;
+            /** @description The line's edits as the run applied them (F06 §6, EN-003 extended): which fields were edited, with the engine's values, so the sheet can mark them and show what the engine said. */
             overridden?: {
+                fields: ("quantity" | "description" | "unit" | "codes" | "excluded" | "order")[];
                 engineQuantity?: number | null;
                 quantity?: number | null;
+                engineDescription?: string;
+                engineUnit?: string;
+                /** @description classification id → the engine's code (null: none) */
+                engineCodes?: {
+                    [key: string]: string | null;
+                };
                 reason?: string;
             };
+            /** @description Excluded by a line edit: out of totals and the exports' BoQ sheet, still listed (BR-03, BR-09) */
+            excluded?: boolean;
         };
         LineGroup: {
             /** @description code path joined by '/' */

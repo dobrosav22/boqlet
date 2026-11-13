@@ -6,4 +6,4 @@ and is deleted when that task lands (FE-042 checks the folder holds only this RE
 
 Fakes never measure (BR-01): they only rearrange, relabel or apply values a person entered.
 
-None yet: the first ones arrive with the tasks that need them (FE-011 line edits, FE-021 preview, …).
+- `line-edits.ts`: "Line edits applied" (EN-003) and "Manual items with codes" (EN-007), FE-011.

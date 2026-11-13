@@ -2977,10 +2977,19 @@ components:
         positionNo: { type: string, description: "Position number in its section, e.g. 5.3 (P30); frozen in saved versions" }
         overridden:
           type: object
+          description: >-
+            The line's edits as the run applied them (F06 §6, EN-003 extended): which fields were edited,
+            with the engine's values, so the sheet can mark them and show what the engine said.
+          required: [fields]
           properties:
+            fields: { type: array, items: { type: string, enum: [quantity, description, unit, codes, excluded, order] } }
             engineQuantity: { type: [number, "null"] }
             quantity: { type: [number, "null"] }
+            engineDescription: { type: string }
+            engineUnit: { type: string }
+            engineCodes: { type: object, additionalProperties: { type: [string, "null"] }, description: "classification id → the engine's code (null: none)" }
             reason: { type: string }
+        excluded: { type: boolean, description: "Excluded by a line edit: out of totals and the exports' BoQ sheet, still listed (BR-03, BR-09)" }
     LineGroup:
       type: object
       required: [path, title, lineCount]

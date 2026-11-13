@@ -162,7 +162,13 @@ export interface RunRec {
    * What the run was asked for: the inputs as they were, the project dictionary appended, and the
    * project's decisions as they were sent (with the question each answers, F05 §1).
    */
-  request: { inputs: RevisionInputs; projectDictionaryVersionId: string | null; decisions?: DecisionSnapshot[] };
+  request: {
+    inputs: RevisionInputs;
+    projectDictionaryVersionId: string | null;
+    decisions?: DecisionSnapshot[];
+    /** The BoQ's line edits and manual lines as they were sent (F06 §6–7). */
+    adjustments?: { overrides: OverrideRec[]; manualItems: ManualItemRec[] };
+  };
   /** Ids of the questions the engine asked (the result's open questions), for pending changes. */
   askedQuestionIds?: string[];
   /** The blocking ones among them (project cards count those still unanswered). */
@@ -205,6 +211,31 @@ export interface DecisionRec {
   decidedAt: string;
   promotedToPresetVersionId: string | null;
   supersededAt?: string;
+}
+/** A line edit (data-model.md "LineOverride"): all edits of one line in one row, per BoQ. */
+export interface OverrideRec {
+  id: string;
+  boqId: string;
+  lineKey: string;
+  quantity?: number | null;
+  description?: string;
+  unit?: string;
+  codes?: Record<string, string>;
+  sortAfter?: string | null;
+  excluded?: boolean;
+  reason?: string;
+  createdBy: string;
+  createdAt: string;
+}
+/** A manual line (data-model.md "ManualItem"): an engine manual item with its codes. */
+export interface ManualItemRec {
+  id: string;
+  boqId: string;
+  item: Record<string, unknown> & { id: string; kind: string; description: unknown; unit: string };
+  codes?: Record<string, string>;
+  sortHint?: string;
+  createdBy: string;
+  createdAt: string;
 }
 /** Processing time used (BR-62), counted against `processingMinutesPerMonth`. */
 export interface UsageRec {
@@ -256,6 +287,8 @@ export interface Db {
   revisions: RevisionRec[];
   runs: RunRec[];
   decisions: DecisionRec[];
+  overrides: OverrideRec[];
+  manualItems: ManualItemRec[];
   usage: UsageRec[];
   notifications: NotificationRec[];
   audit: AuditRec[];
@@ -288,6 +321,8 @@ export function loadStore(): boolean {
   state.revisions ??= [];
   state.runs ??= [];
   state.decisions ??= [];
+  state.overrides ??= [];
+  state.manualItems ??= [];
   state.usage ??= [];
   state.notifications ??= [];
   state.deletedOrgIds ??= [];

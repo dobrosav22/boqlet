@@ -9,7 +9,9 @@ import { putBlob, signedUrl } from "../blobs.js";
 import { nowIso } from "../clock.js";
 import { EngineRefused, EngineUnavailable, engine, type PresetFolder } from "../engine/engine.js";
 import { emit } from "../events.js";
+import { codeListsOf } from "../codes.js";
 import { decisionsSnapshot, unappliedQuestionIds } from "../decisions.js";
+import { applyManualCodes, applyOverrides } from "../engine/fakes/line-edits.js";
 import { conflict, HttpError, limitReached, notFound } from "../http.js";
 import { newId } from "../ids.js";
 import { createJob, jobView, projectAudience, runJob } from "../jobs.js";
@@ -145,7 +147,27 @@ export function pendingChanges(revision: RevisionRec, project: ProjectRec): stri
   if ((was.federationVersionId ?? null) !== (is.federationVersionId ?? null)) out.push("inputs.federation");
   if ((was.resolutionVersionId ?? null) !== (is.resolutionVersionId ?? null)) out.push("inputs.resolution");
   if (unappliedQuestionIds(run).length) out.push("decisions");
+  const boq = db().boqs.find((b) => b.id === revision.boqId)!;
+  if (adjustmentsKey(run.request.adjustments ?? adjustmentsOf(boq.id, true)) !== adjustmentsKey(adjustmentsOf(boq.id))) out.push("adjustments");
   return out;
+}
+
+/** The BoQ's line edits and manual lines, as a run is sent them (`empty`: none, for runs from before FE-011). */
+export function adjustmentsOf(boqId: string, empty = false) {
+  if (empty) return { overrides: [], manualItems: [] };
+  return {
+    overrides: structuredClone(db().overrides.filter((o) => o.boqId === boqId)),
+    manualItems: structuredClone(db().manualItems.filter((m) => m.boqId === boqId)),
+  };
+}
+
+/** What of the edits changes a run's result: their content, not who made them or when. */
+function adjustmentsKey(a: ReturnType<typeof adjustmentsOf>) {
+  const overrides = a.overrides
+    .map(({ lineKey, quantity, description, unit, codes, sortAfter, excluded }) => ({ lineKey, quantity, description, unit, codes, sortAfter, excluded }))
+    .sort((x, y) => x.lineKey.localeCompare(y.lineKey));
+  const manual = a.manualItems.map(({ item, codes, sortHint }) => ({ item, codes, sortHint })).sort((x, y) => x.item.id.localeCompare(y.item.id));
+  return JSON.stringify({ overrides, manual });
 }
 
 // ───────────────────────────── views ─────────────────────────────
@@ -174,7 +196,7 @@ export function runView(run: RunRec) {
 }
 
 /** Writes on a BoQ stop when it's archived or confirmed, and on a revision that isn't the working one. */
-function writeBlock(boq: BoqRec, revision?: RevisionRec): HttpError | null {
+export function writeBlock(boq: BoqRec, revision?: RevisionRec): HttpError | null {
   if (boq.archived) return conflict("boq_archived", "The BoQ is archived and read-only. Restore it first.");
   if (boq.status === "confirmed") return conflict("boq_confirmed", "The BoQ is confirmed and read-only. Reopen it first.");
   if (revision && revision.status !== "draft") return conflict("revision_locked", "This version is saved and can't be changed.");
@@ -276,12 +298,19 @@ const FOLDER: Record<string, PresetFolder> = { rule_set: "rules", classification
 
 /**
  * The engine's id for a preset version (mock-api.md "Interim engine path"): shipped system presets
- * by their slug, everything else saved through the PoC API as `mock-<versionId>`.
+ * by their slug, everything else `mock-<versionId>`. For a classification it is also the system id
+ * the lines' `codes` are keyed by.
  */
-async function enginePresetId(version: PresetVersionRec): Promise<string> {
+export function engineIdOf(version: PresetVersionRec): string {
   const preset = db().presets.find((p) => p.id === version.presetId)!;
-  if (preset.layer === "system" && version.number === 1) return preset.slug;
-  const id = `mock-${version.id}`;
+  return preset.layer === "system" && version.number === 1 ? preset.slug : `mock-${version.id}`;
+}
+
+/** Saves the version through the PoC API when it isn't a shipped one; returns its engine id. */
+export async function enginePresetId(version: PresetVersionRec): Promise<string> {
+  const preset = db().presets.find((p) => p.id === version.presetId)!;
+  const id = engineIdOf(version);
+  if (id === preset.slug) return id;
   const doc = structuredClone(version.doc) as Record<string, unknown>;
   if (preset.kind === "classification") (doc.codeList as Record<string, unknown>).id = id;
   else doc.id = id;
@@ -321,7 +350,14 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
       }, 400);
       try {
         const version = (id: string) => db().presetVersions.find((v) => v.id === id)!;
-        const ruleSet = await enginePresetId(version(inputs.ruleSetVersionId));
+        const adjustments = run.request.adjustments ?? adjustmentsOf(boq.id, true);
+        let ruleSet = await enginePresetId(version(inputs.ruleSetVersionId));
+        // Manual lines go to the engine as a patch that appends them to the rule set (data-model.md "ManualItem").
+        if (adjustments.manualItems.length) {
+          const patchId = `mock-run-${run.id}`;
+          await engine().savePreset("rules", patchId, { schemaVersion: "1.0", id: patchId, name: `${boq.name}: manual lines`, version: "1", extends: ruleSet, manual: adjustments.manualItems.map((m) => m.item) });
+          ruleSet = patchId;
+        }
         const dictionaryIds = [...inputs.dictionaryVersionIds, ...(run.request.projectDictionaryVersionId ? [run.request.projectDictionaryVersionId] : [])];
         const dictionaries = await Promise.all(dictionaryIds.map((id) => enginePresetId(version(id))));
         const classifications = await Promise.all(inputs.classificationVersionIds.map((id) => enginePresetId(version(id))));
@@ -331,7 +367,11 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
         });
         const decisions = (run.request.decisions ?? []).map((d) => ({ questionId: d.questionId, scope: "project", answer: d.answer }));
         const { result } = await engine().run({ models, ruleSet, dictionaries, classifications, decisions });
+        if (ruleSet.startsWith("mock-run-")) await engine().deletePreset("rules", ruleSet).catch(() => {});
         if (ctx.cancelled()) return;
+        const codeLists = codeListsOf(inputs);
+        applyManualCodes(result, adjustments.manualItems, codeLists);
+        applyOverrides(result, adjustments.overrides, adjustments.manualItems, codeLists);
         ctx.progress("index", 95);
         run.resultKey = `orgs/${org.id}/runs/${run.id}/result.json.gz`;
         await putBlob(run.resultKey, gzipSync(JSON.stringify(result)));
@@ -343,7 +383,7 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
         if (result.building) run.building = result.building;
         run.classifications = inputs.classificationVersionIds.map((id) => {
           const preset = db().presets.find((p) => p.id === version(id).presetId)!;
-          return { id: preset.slug, name: preset.name };
+          return { id: engineIdOf(version(id)), name: preset.name };
         });
         run.engineVersion = engine().name;
         run.status = blocking > 0 || result.status === "needs_input" ? "needs_input" : "complete";
@@ -529,7 +569,7 @@ export const boqHandlers: Handlers = {
       revisionId: revision.id,
       jobId: "",
       status: "queued",
-      request: { inputs: structuredClone(inputs), projectDictionaryVersionId: projectDictionaryVersionId(project), decisions: decisionsSnapshot(project.id) },
+      request: { inputs: structuredClone(inputs), projectDictionaryVersionId: projectDictionaryVersionId(project), decisions: decisionsSnapshot(project.id), adjustments: adjustmentsOf(boq.id) },
       createdBy: user!.id,
       createdAt: nowIso(),
     };
