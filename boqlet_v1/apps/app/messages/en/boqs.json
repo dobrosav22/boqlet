@@ -81,7 +81,8 @@
     "errors": {
       "engine_unavailable": "the processing service is not available. Try again in a moment.",
       "run_error": "the engine could not build this BoQ."
-    }
+    },
+    "answersPending": "{count, plural, one {# answer} other {# answers}} not applied yet –"
   },
   "actions": {
     "generate": "Generate",
@@ -154,10 +155,6 @@
     "toConfirm": "To confirm",
     "tableLabel": "Bill of quantities",
     "showingRun": "Showing the run of {when}."
-  },
-  "questions": {
-    "none": "No questions in the current run.",
-    "count": "{count, plural, one {# question} other {# questions}}, {blocking} blocking."
   },
   "setup": {
     "readOnly": "These inputs can't be changed: only a lead or estimator edits the working version of an active BoQ.",

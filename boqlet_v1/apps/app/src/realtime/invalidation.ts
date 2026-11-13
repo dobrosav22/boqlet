@@ -24,6 +24,9 @@ const LISTS: Record<string, (projectId?: string) => QueryKey[]> = {
   boq: (p) => [p ? keys.boqs(p) : ["boqs"]],
   revision: () => [["boq"]],
   run: () => [["runs"]],
+  // Decisions belong to the project: its decisions, and every run's questions (joined with them).
+  decision: (p) => [p ? keys.decisions(p) : ["decisions"], ["questions"]],
+  preset: () => [["presets"], ["terms"]],
   notification: () => [keys.notifications()],
 };
 

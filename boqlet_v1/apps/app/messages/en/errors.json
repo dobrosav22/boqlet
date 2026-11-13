@@ -34,6 +34,9 @@
     "no_rule_set": "Choose a rule set for this BoQ.",
     "invalid_inputs": "One of the chosen inputs can't be used in this project.",
     "preset_unavailable": "This preset can't be used yet: its code list has to be downloaded first.",
-    "not_implemented": "This isn't available yet."
+    "not_implemented": "This isn't available yet.",
+    "invalid_answer": "That answer doesn't fit the question. Check it and try again.",
+    "not_promotable": "Only an answer to a name question can go to a company dictionary.",
+    "invalid_preset": "Choose one of your organisation's dictionaries."
   }
 }

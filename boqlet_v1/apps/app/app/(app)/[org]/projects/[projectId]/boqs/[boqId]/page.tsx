@@ -13,6 +13,7 @@ import { SetupTab } from "@/features/boqs/setup-tab";
 import { LogTab } from "@/features/boq-sheet/log-tab";
 import { Sheet } from "@/features/boq-sheet/sheet";
 import { useOrg } from "@/features/orgs/org-context";
+import { QuestionsTab } from "@/features/questions/questions-tab";
 import { useProjectScope } from "@/features/projects/project-context";
 import { cn } from "@/lib/utils";
 
@@ -20,8 +21,8 @@ const TABS = ["sheet", "questions", "log", "setup", "versions"] as const;
 type Tab = (typeof TABS)[number];
 
 /**
- * S12: the BoQ workspace: header, Sheet (FE-009), Log, Setup and the run history (FE-008); the
- * questions tab shows the current run's counts until FE-010.
+ * S12: the BoQ workspace: header, Sheet (FE-009), Questions (FE-010), Log, Setup and the run
+ * history (FE-008).
  */
 export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: string }> }) {
   const { boqId } = use(params);
@@ -57,7 +58,7 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
       </nav>
       {tab === "sheet" && (current ? <Sheet key={current.id} run={current} /> : <RunFigures run={current} />)}
       {tab === "log" && <LogTab key={current?.id ?? "none"} run={current} />}
-      {tab === "questions" && <QuestionCounts run={current} />}
+      {tab === "questions" && <QuestionsTab boq={boq.data} />}
       {tab === "setup" && <SetupTab boq={boq.data} orgId={org.id} />}
       {tab === "versions" && <RunHistory runs={runs.data} currentRunId={current?.id} />}
     </div>
@@ -97,10 +98,4 @@ function RunFigures({ run }: { run: Run | undefined }) {
       ))}
     </dl>
   );
-}
-
-function QuestionCounts({ run }: { run: Run | undefined }) {
-  const t = useTranslations("boqs.questions");
-  const s = run?.stats;
-  return <p className={cn(!s?.questions && "text-muted-foreground")}>{s?.questions ? t("count", { count: s.questions, blocking: s.blockingQuestions ?? 0 }) : t("none")}</p>;
 }

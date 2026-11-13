@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/api/client";
 import { keys } from "@/api/keys";
 import { useGenerate, type Boq, type Run } from "@/api/hooks/boqs";
+import { useQuestions } from "@/api/hooks/decisions";
 import { useJobProgress } from "@/api/hooks/models";
 import { DimensionRule } from "@/components/dimension-rule";
 import { useErrorMessage } from "@/components/errors/use-error-message";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useRelativeTime } from "@/i18n/use-relative-time";
 import { cn } from "@/lib/utils";
+import { counts } from "@/features/questions/model";
 import { headerState, saveBlockedReason } from "./run-state";
 
 export function Tag({ children, filled, className, ...rest }: { children: React.ReactNode; filled?: boolean; className?: string; "data-testid"?: string }) {
@@ -27,7 +29,7 @@ export function Tag({ children, filled, className, ...rest }: { children: React.
 /**
  * The BoQ workspace header (S12, F04 "States shown in the BoQ workspace header"): name and state,
  * the run's progress or result, Generate / Cancel / Retry, Save version (blocked while inputs are
- * pending, BR-22), and archive / restore for the lead.
+ * pending, BR-22), "N answers not applied yet" (F05 §3), and archive / restore for the lead.
  */
 export function BoqHeader({ boq, runs, base, canArchive }: { boq: Boq; runs: Run[] | undefined; base: string; canArchive: boolean }) {
   const t = useTranslations("boqs");
@@ -63,6 +65,11 @@ export function BoqHeader({ boq, runs, base, canArchive }: { boq: Boq; runs: Run
   const blocked = saveBlockedReason(boq);
   const error = generate.error ?? cancel.error ?? archive.error ?? save.error;
   const stage = progress.data?.stage;
+  // F05 §3: answers wait for a regenerate; the count comes from the current run's questions.
+  const answersPending = revision.pendingChanges.includes("decisions");
+  const questions = useQuestions(answersPending ? revision.currentRun?.id : undefined);
+  const notApplied = answersPending ? counts(questions.data ?? []).notApplied : 0;
+  const otherPending = revision.pendingChanges.filter((k) => k !== "decisions" || notApplied === 0);
 
   return (
     <div className="flex flex-col gap-4" data-testid="boq-header" data-state={state.kind}>
@@ -150,9 +157,19 @@ export function BoqHeader({ boq, runs, base, canArchive }: { boq: Boq; runs: Run
         {(state.kind === "complete" || state.kind === "needs_input" || ((state.kind === "active" || state.kind === "failed") && state.current)) && (
           <CurrentRunSummary run={state.kind === "complete" || state.kind === "needs_input" ? state.current : state.current!} base={base} relative={relative} />
         )}
-        {revision.pendingChanges.length > 0 && revision.currentRun && (
+        {notApplied > 0 && revision.currentRun && (
+          <p className="flex flex-wrap items-center gap-x-3 border-l-2 border-[var(--status-attention)] pl-3" role="status" data-testid="answers-pending">
+            <span>{t("run.answersPending", { count: notApplied })}</span>
+            {can("editBoqs") && state.kind !== "active" && (
+              <button type="button" className="text-link hover:underline" onClick={() => generate.mutate()} disabled={generate.isPending} data-testid="answers-regenerate">
+                {t("actions.regenerate")}
+              </button>
+            )}
+          </p>
+        )}
+        {otherPending.length > 0 && revision.currentRun && (
           <p className="border-l-2 border-[var(--status-attention)] pl-3" role="status" data-testid="pending-changes">
-            {t("run.pending", { what: revision.pendingChanges.map((k) => {
+            {t("run.pending", { what: otherPending.map((k) => {
               // Catalogue keys can't contain dots ("inputs.ruleSet" → "inputs_ruleSet").
               const key = `run.pendingItems.${k.replaceAll(".", "_")}`;
               return t.has(key) ? t(key) : k;

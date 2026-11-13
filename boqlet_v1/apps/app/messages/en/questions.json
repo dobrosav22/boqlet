@@ -1,0 +1,103 @@
+{
+  "noRun": "Generate the BoQ to see its questions.",
+  "none": "No questions in the current run.",
+  "summary": "Questions ({unanswered, plural, =0 {all answered} one {# unanswered} other {# unanswered}} · {blocking} blocking)",
+  "nothingShown": "No questions match these filters.",
+  "regenerate": "Regenerate ({count, plural, one {# new answer} other {# new answers}})",
+  "toProjectDictionary": "Also add name answers to the project dictionary",
+  "selectAllLike": "Select all like these",
+  "select": "Select: {question}",
+  "blocking": "Blocking",
+  "info": "Info",
+  "elements": "{count, plural, one {# element} other {# elements}}",
+  "answeredWith": "Answer: {answer}",
+  "changedAfterRun": "Answered after this run",
+  "clearedAfterRun": "Answer cleared after this run",
+  "suggested": "Suggested",
+  "suggestion": "Suggested: {value}",
+  "answerFor": "Answer: {question}",
+  "dismiss": "Leave it",
+  "clear": "Clear",
+  "promoteAction": "Promote…",
+  "promoteAgain": "Promote again…",
+  "filters": {
+    "kind": "Kind",
+    "allKinds": "All kinds",
+    "show": "Show",
+    "unanswered": "Unanswered",
+    "answered": "Answered",
+    "all": "All"
+  },
+  "kinds": {
+    "unknown_name": "Unknown name",
+    "missing_data": "Missing value",
+    "unmatched": "Not measured",
+    "double_claim": "Measured twice",
+    "unclassified": "No code",
+    "classification_conflict": "Code conflict",
+    "contradiction": "Contradiction",
+    "overlap": "Overlap",
+    "orphan_override": "Edit without a line"
+  },
+  "special": {
+    "dismissed": "left as it is",
+    "flag": "flag the line",
+    "exclude": "exclude"
+  },
+  "answer": {
+    "pickTerm": "Search terms",
+    "noTerms": "No term matches.",
+    "pickRule": "Choose a rule",
+    "pickCode": "Choose a code",
+    "nothingFound": "Nothing matches.",
+    "exclude": "Exclude from the BoQ",
+    "use": "Use",
+    "flag": "Flag the line",
+    "recommended": "Recommended"
+  },
+  "bulk": {
+    "label": "Answer the selected questions",
+    "selected": "{count, plural, one {# selected} other {# selected}}",
+    "answer": "Same answer for all selected",
+    "apply": "Apply same answer",
+    "promote": "Promote…",
+    "clearSelection": "Clear selection"
+  },
+  "reopen": {
+    "title": "This changes approved work",
+    "body": "{count, plural, one {This version goes} other {These versions go}} back to draft and must be submitted again:",
+    "revision": "{boq}, version {label} ({status, select, in_review {in review} approved {approved} other {draft}})",
+    "cancel": "Cancel",
+    "confirm": "Save and move to draft"
+  },
+  "promote": {
+    "title": "Promote {count, plural, one {this answer} other {# answers}} to a company dictionary",
+    "body": "A new version of the dictionary is published with the answer. Projects that use its latest version resolve the name without asking. The project decision stays.",
+    "none": "Your organisation has no company dictionary yet. Create one in the Library first.",
+    "dictionary": "Dictionary",
+    "cancel": "Cancel",
+    "confirm": "Promote"
+  },
+  "decisions": {
+    "title": "Decisions",
+    "intro": "Answers given in this project. They apply to every run of every BoQ here, and to new model versions with the same names.",
+    "empty": "No decisions yet. Answer questions in a BoQ's Questions tab.",
+    "export": "Export CSV",
+    "kind": "Kind",
+    "question": "Question",
+    "answer": "Answer",
+    "decided": "Decided",
+    "note": "Note",
+    "used": "Used by latest runs",
+    "actions": "Actions",
+    "termGone": "Term no longer exists",
+    "promoted": "Promoted",
+    "decidedBy": "{name}, {when}",
+    "yes": "Yes",
+    "no": "Not yet",
+    "edit": "Edit",
+    "editTitle": "Change the answer",
+    "cancel": "Cancel",
+    "save": "Save"
+  }
+}
