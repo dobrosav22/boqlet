@@ -157,7 +157,9 @@ export interface AuthAdapter {
 }
 ```
 - `mock` adapter: a sign-in page listing seeded users. The token is `mock:<userId>`, kept in
-  `sessionStorage`.
+  `localStorage` (the tabs of one browser share one sign-in and one session, F01 §10). After sign-in
+  the auth gate opens the app's session (`POST /sessions`) and binds it to the sign-in
+  (`AuthAdapter.bindAppSession`): the mock's token becomes `mock:<userId>:<sessionId>` (FE-012).
 - The real adapter is written after the auth decision (07-backend/decisions-to-make.md). No
   component imports a provider SDK directly.
 

@@ -87,8 +87,6 @@ add a row here before you finish, even if nobody asked: this page is how nothing
 Things the product build doesn't do yet, with the task that deals with each.
 
 - The limit dialog (402) says which limit was reached but offers no upgrade path yet (FE-019, FE-035).
-- One active session per account (F01 §10, F01-AC5) is not built: signing in elsewhere doesn't ask
-  to take over (FE-012).
 - Deleting an org hides it at once; the 30-day removal of its data (BR-52) is not simulated by the
   mock.
 - Sign-up in phase 1 is the mock's: any name and email, no verification (the real provider comes
@@ -118,6 +116,10 @@ Things the product build doesn't do yet, with the task that deals with each.
   shares, codes and the log, but not yet the plain-words "How it is calculated" steps (FE-013) or "Show in
   3D" (FE-014, FE-016); no "not in the models" notice (FE-015); the app loads up to 20,000 lines at once and doesn't yet switch to the
   server-side grouping above that (the mock serves it; FE-045).
+- Sessions (FE-012): the mock knows no place for a session (no IP lookup), so the takeover question
+  names the device and the last activity only; a platform admin can't end a session yet (F19, FE-038);
+  tokens without a session id (the shared suites, e2e helpers, dev tools) skip the one-session check in
+  the mock: Java needs its own test-token strategy (`tests/support/users.ts`, BE-000).
 - Line edits and manual lines (FE-011): edits aren't in an Excel export yet, so F06-AC3's export part is
   checked with FE-017; a derived line doesn't follow an edited quantity and an edit whose line is gone
   raises no question (the mock's "Line edits applied" fake, EN-003); map rules don't see a manual line's
@@ -206,6 +208,7 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-11-13 | 924857e | FE-012: one active session per account (F01 §10, BR-54) on the mock and in the app: sessions opened after sign-in, `409 session_active` with the other device, takeover (audited `session.replaced`, `session.revoked` over SSE), `401 session_replaced` / `session_expired` (12 h idle on the mock clock), sign-out ends the session, `GET /me` carries it; the S31 takeover screen; signed-out reasons on the sign-in page (from the SSE event, any 401, or the event stream's 401); the mock sign-in shared by the tabs of a browser. Fix: the mock removes the presets it saved for a run after the run (the engine's user folder had grown to ~100 dictionaries and slowed runs). 2 session scenarios (the state-machine todos), 2 e2e flows (F01-AC5) |
 | 2026-11-13 | fb0a50c, 55d8bc2 | FE-011: F06 §6–7 on the mock and in the app: line edits (one override per line key; replace, restore, batch all or nothing; `unit_needs_quantity`, `reason_required`, `unknown_code`) and manual lines per BoQ, sent with every run (manual lines as a rule-set patch through the PoC engine) and put on the result's lines by the "Line edits applied" / "Manual items with codes" fakes; pending change `adjustments`; `POST /presets/check`. The sheet shows edits at once over the run's lines: in-place description, unit, quantity (with reason) and Item edits, edit markers with the engine's value, exclusions, Edited / Excluded filters, drag to reorder or move, bulk move / exclude / restore, Ctrl+Z (20 edits), Restore per field, manual lines with codes and an engine-checked formula. Contract: `RunLine.excluded` and a fuller `overridden`; runs list classifications under the engine's system id. 2 mock tests, 7 scenarios (F06-AC3 without the Excel part, AC4's refusal, AC6), 2 e2e flows |
 | 2026-11-13 | fa27738, 8e0d40f, 5050aea | FE-010: F05 on the mock and in the app: runs send the project's decisions and remember them and the questions they asked; questions joined with decisions (`answeredAfterRun`), answering one or many with a dry run listing the versions BR-23 would reopen, name answers added to the project dictionary, clear, promote to an org dictionary, terms for the picker, CSV; pending changes and the header's "N answers not applied yet – Regenerate"; the Questions tab (answer controls per `AnswerType`, suggestion preselected, leave it, bulk answers of one kind and control) and the Decisions page (edit, clear, promote, export); project cards count open blocking questions; contract fix for `QuestionWithDecision`, `Decision.answerType` added; 13 mock tests, 6 scenarios on the Duplex (F05-AC1, AC3), 2 e2e flows |
 | 2026-11-12 | e7bdf31 | Fix (FE-008): a Setup change (e.g. unticking a model) now shows at once even while the BoQ is being refetched (the optimistic update waited for the refetch to be cancelled first; CI caught it in `e2e/boqs.spec.ts`); the 20,000-line perf test warms up for a second before measuring (a cold CI runner measured 44 fps) |

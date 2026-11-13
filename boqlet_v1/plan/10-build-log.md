@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M1 (core loop) |
 | Role | Frontend agent |
-| Last task done | FE-011 Line edits and manual lines (F06 §6–7) (fb0a50c, 55d8bc2) |
-| Next task | FE-012 Single session (F01 §10) |
-| Waiting for the owner | — |
+| Last task done | FE-012 Single session (F01 §10) (924857e) |
+| Next task | FE-013 How it is calculated (F06 §5), on the "Trace steps" fake (mock-api.md) |
+| Waiting for the owner | — (the session stopped after FE-012 because the owner asked it to; start the next one with the usual prompt) |
 | In progress (not committed) | — |
-| Notes for the next session | Read the FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | Read the FE-012, FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,34 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M1 decisions: FE-012 (frontend agent)
+- **Built:** FE-012, 924857e. F01-AC5 / v1 criterion 16 in `e2e/sessions.spec.ts`; the Session state
+  machine's two todos are scenarios now (`tests/scenarios/state-machines.test.ts`).
+- **Decisions taken:**
+  - The session id travels in the mock's bearer token, `mock:<userId>:<sessionId>` (a `sid` claim bound
+    at session creation, 04-architecture/security.md). `AuthAdapter` gained `appSession()` and
+    `bindAppSession(id)`; the generic `AuthGate` opens the session after sign-in (`src/auth/app-session.ts`),
+    so a real adapter only has to bind the id its own way (cookie: nothing to do).
+  - Tokens without a session id are test clients' (shared suites, e2e `signInAs`, dev tools): the mock
+    accepts them without the one-session check, so parallel tests as one seeded user don't take over each
+    other. e2e helpers mark such sign-ins `sessionless`; `pickOnSignIn` signs in through the page and takes
+    over when asked. The suites get a session with `inSession(user, id)`.
+  - The start page (`/`) is gated too. Signed-out reasons (`session_replaced`, `session_expired`) reach the
+    sign-in page as `?reason=` from three places: the `session.revoked` event, any query's 401, and a 401 on
+    the event stream (a page that asks nothing else learns it there).
+  - Error codes: `session_active` (409, body `SessionConflict`), `session_replaced`, `session_expired` (401).
+    `ApiError` keeps the whole error body (`body`) for errors with more than `details`.
+  - The mock sign-in moved from `sessionStorage` to `localStorage` (architecture.md updated): F01 §10 says
+    the tabs of a browser share one session.
+  - Seeded Marko session: "Firefox on macOS", place "Amsterdam" (mock-api.md "Seed data").
+- **Deviations from the spec:** none.
+- **Fixes in earlier work:** the mock left every preset it saved for a run in the engine's user folder
+  (`presets/user`, read on every run); after many e2e runs ~100 project dictionaries slowed runs past the
+  e2e's 10 s budget. They are deleted after each run now (`startRun` in `handlers/boqs.ts`). A
+  `checkPreset` that saves a parent while a run is deleting the same id could fail; rare, retry works.
+- **For the next agent:** the suites still don't exercise the app's session; with a seeded user, sign in
+  through `signInAs` (session-less) unless the test is about sessions.
 
 ### 2026-11-13 — M1 decisions: FE-011 (frontend agent)
 - **Built:** FE-011, fb0a50c..55d8bc2. F06-AC3 (without the Excel part, FE-017), AC4 and AC6 run in
