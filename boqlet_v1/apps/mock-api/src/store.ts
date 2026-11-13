@@ -237,6 +237,18 @@ export interface ManualItemRec {
   createdBy: string;
   createdAt: string;
 }
+/** A sign-in's session (F01 §10, BR-54). */
+export interface SessionRec {
+  id: string;
+  userId: string;
+  status: "active" | "ended" | "replaced" | "expired";
+  deviceLabel: string;
+  place?: string;
+  lastSeenAt: string;
+  createdAt: string;
+  endedAt?: string;
+  replacedBy?: string;
+}
 /** Processing time used (BR-62), counted against `processingMinutesPerMonth`. */
 export interface UsageRec {
   orgId: string;
@@ -289,6 +301,7 @@ export interface Db {
   decisions: DecisionRec[];
   overrides: OverrideRec[];
   manualItems: ManualItemRec[];
+  sessions: SessionRec[];
   usage: UsageRec[];
   notifications: NotificationRec[];
   audit: AuditRec[];
@@ -323,6 +336,7 @@ export function loadStore(): boolean {
   state.decisions ??= [];
   state.overrides ??= [];
   state.manualItems ??= [];
+  state.sessions ??= [];
   state.usage ??= [];
   state.notifications ??= [];
   state.deletedOrgIds ??= [];

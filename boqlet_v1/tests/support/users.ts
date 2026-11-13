@@ -40,3 +40,12 @@ export async function signUp(name: string, email: string): Promise<TestUser> {
 
 /** A unique email for one test run. */
 export const uniqueEmail = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}@example.com`;
+
+/**
+ * The same person, signed in to the app's session `sessionId` (F01 §10): every request then carries
+ * the session. Mock: the session id joins the token (`mock:<userId>:<sessionId>`); Java: after BE-000.
+ */
+export function inSession(u: TestUser, sessionId: string): TestUser {
+  if (TARGET !== "mock") throw new Error(`no session strategy for target ${TARGET} yet (BE-000)`);
+  return { ...u, token: `${u.token}:${sessionId}` };
+}

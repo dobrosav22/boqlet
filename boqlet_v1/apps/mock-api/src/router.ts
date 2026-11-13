@@ -5,10 +5,10 @@
  * contract becomes a 500 with the validation errors, so drift shows up at once (mock-api.md).
  */
 import type { Context } from "hono";
-import { userFromAuthorization } from "./auth.js";
+import { authenticate } from "./auth.js";
 import { HttpError, unauthenticated } from "./http.js";
 import { describeErrors, escapePointer, type Operation, type Spec } from "@ifc-boq/api/spec";
-import type { UserRec } from "./store.js";
+import type { SessionRec, UserRec } from "./store.js";
 
 type Json = Record<string, unknown>;
 
@@ -17,6 +17,8 @@ export interface Ctx {
   op: Operation;
   /** null only on public operations (`security: []`). */
   user: UserRec | null;
+  /** The app's session the request is made in (absent for test clients' tokens). */
+  session?: SessionRec;
   params: Record<string, string>;
   query: Record<string, unknown>;
   body: unknown;
@@ -69,7 +71,15 @@ export function apiRouter(spec: Spec, handlers: Handlers) {
       }
       const { op, params } = found;
 
-      const user = userFromAuthorization(c.req.header("Authorization"));
+      // A session that isn't the active one only matters where the operation needs a user.
+      let auth: ReturnType<typeof authenticate> = null;
+      try {
+        auth = authenticate(c.req.header("Authorization"));
+      } catch (e) {
+        if (op.secured) throw e;
+      }
+      const user = auth?.user ?? null;
+      const session = auth?.session;
       if (op.secured && !user) throw unauthenticated();
 
       // Parameters
@@ -132,7 +142,7 @@ export function apiRouter(spec: Spec, handlers: Handlers) {
       if (!handler) {
         return json({ code: "not_implemented", message: `The mock does not implement ${op.operationId} yet.` }, 501);
       }
-      const response = await handler({ c, op, user, params, query, body });
+      const response = await handler({ c, op, user, ...(session ? { session } : {}), params, query, body });
       return validateResponses() ? await checkResponse(spec, op, response) : response;
     } catch (e) {
       if (e instanceof HttpError) return json(e.body(), e.status);

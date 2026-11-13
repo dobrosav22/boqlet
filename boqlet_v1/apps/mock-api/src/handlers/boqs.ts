@@ -348,26 +348,32 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
         stage = Math.min(stage + 1, RUN_STAGES.length - 2);
         ctx.progress(RUN_STAGES[stage]!, Math.min(8 + stage * 12, 85));
       }, 400);
+      // Presets saved through the PoC API for this run; removed afterwards, so the engine's user folder
+      // (read on every run) doesn't grow with every project dictionary version (FE-012).
+      const saved: [PresetFolder, string][] = [];
       try {
         const version = (id: string) => db().presetVersions.find((v) => v.id === id)!;
+        const keep = (folder: PresetFolder) => (id: string) => {
+          if (id.startsWith("mock-")) saved.push([folder, id]);
+          return id;
+        };
         const adjustments = run.request.adjustments ?? adjustmentsOf(boq.id, true);
-        let ruleSet = await enginePresetId(version(inputs.ruleSetVersionId));
+        let ruleSet = keep("rules")(await enginePresetId(version(inputs.ruleSetVersionId)));
         // Manual lines go to the engine as a patch that appends them to the rule set (data-model.md "ManualItem").
         if (adjustments.manualItems.length) {
           const patchId = `mock-run-${run.id}`;
           await engine().savePreset("rules", patchId, { schemaVersion: "1.0", id: patchId, name: `${boq.name}: manual lines`, version: "1", extends: ruleSet, manual: adjustments.manualItems.map((m) => m.item) });
-          ruleSet = patchId;
+          ruleSet = keep("rules")(patchId);
         }
         const dictionaryIds = [...inputs.dictionaryVersionIds, ...(run.request.projectDictionaryVersionId ? [run.request.projectDictionaryVersionId] : [])];
-        const dictionaries = await Promise.all(dictionaryIds.map((id) => enginePresetId(version(id))));
-        const classifications = await Promise.all(inputs.classificationVersionIds.map((id) => enginePresetId(version(id))));
+        const dictionaries = (await Promise.all(dictionaryIds.map((id) => enginePresetId(version(id))))).map(keep("dictionaries"));
+        const classifications = (await Promise.all(inputs.classificationVersionIds.map((id) => enginePresetId(version(id))))).map(keep("classifications"));
         const models = inputs.models.map((m) => {
           const v = db().modelVersions.find((x) => x.id === m.modelVersionId)!;
           return { modelId: v.engineModelId!, discipline: m.discipline, ...(m.scope ? { scope: m.scope as Record<string, unknown> } : {}) };
         });
         const decisions = (run.request.decisions ?? []).map((d) => ({ questionId: d.questionId, scope: "project", answer: d.answer }));
         const { result } = await engine().run({ models, ruleSet, dictionaries, classifications, decisions });
-        if (ruleSet.startsWith("mock-run-")) await engine().deletePreset("rules", ruleSet).catch(() => {});
         if (ctx.cancelled()) return;
         const codeLists = codeListsOf(inputs);
         applyManualCodes(result, adjustments.manualItems, codeLists);
@@ -409,6 +415,8 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
         throw Object.assign(new Error(RUN_MESSAGES[code]), { code, retryable: true });
       } finally {
         clearInterval(ticker);
+        // The manual-lines patch first: it extends the rule set.
+        for (const [folder, id] of saved.reverse()) await engine().deletePreset(folder, id).catch(() => {});
       }
     },
     (finished) => {

@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMe } from "@/api/hooks/me";
-import { useAuth, useSession } from "@/auth";
+import { useSession } from "@/auth";
 import { Button } from "@/components/ui/button";
+import { signOutOfApp } from "@/auth/app-session";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +20,6 @@ import {
 /** The signed-in user's menu in the top bar. FE-005 adds the account page and the org switcher. */
 export function UserMenu() {
   const t = useTranslations("shell.user");
-  const auth = useAuth();
   const session = useSession();
   const client = useQueryClient();
   const me = useMe();
@@ -58,7 +58,7 @@ export function UserMenu() {
           data-testid="sign-out"
           onClick={() => {
             client.clear();
-            void auth.signOut();
+            void signOutOfApp();
           }}
         >
           {t("signOut")}

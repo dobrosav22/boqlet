@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 export const MOCK_URL = process.env.MOCK_URL ?? "http://localhost:4010";
 
@@ -21,12 +21,13 @@ export async function devUser(key: string): Promise<DevUser> {
   return user;
 }
 
-/** Signs in through the mock adapter's session, without the sign-in page (for tests of other flows). */
+/** Signs in through the mock adapter's storage, without the sign-in page and without an app session (for tests of other flows). */
 export async function signInAs(page: Page, key: string): Promise<DevUser> {
   const user = await devUser(key);
-  const session = { token: user.token, userId: user.id, name: user.name, email: user.email };
+  // Session-less (F01 §10), like the shared suites: parallel tests as one seeded user don't take over each other.
+  const session = { token: user.token, userId: user.id, name: user.name, email: user.email, sessionless: true };
   await page.addInitScript((value) => {
-    if (!window.sessionStorage.getItem("boqlet-mock-session")) window.sessionStorage.setItem("boqlet-mock-session", value);
+    if (!window.localStorage.getItem("boqlet-mock-session")) window.localStorage.setItem("boqlet-mock-session", value);
   }, JSON.stringify(session));
   return user;
 }
@@ -67,9 +68,10 @@ export async function mailLinks(email: string): Promise<string[]> {
 
 /** Signs a page in as an arbitrary mock user (not only the seeded ones). */
 export async function signInAsUser(page: Page, user: DevUser) {
-  const session = { token: user.token, userId: user.id, name: user.name, email: user.email };
+  // Session-less (F01 §10), like the shared suites: parallel tests as one seeded user don't take over each other.
+  const session = { token: user.token, userId: user.id, name: user.name, email: user.email, sessionless: true };
   await page.addInitScript((value) => {
-    if (!window.sessionStorage.getItem("boqlet-mock-session")) window.sessionStorage.setItem("boqlet-mock-session", value);
+    if (!window.localStorage.getItem("boqlet-mock-session")) window.localStorage.setItem("boqlet-mock-session", value);
   }, JSON.stringify(session));
 }
 
@@ -120,5 +122,21 @@ export async function generatedDuplexBoq(bytes: Uint8Array, classificationSlugs:
     if (r.status !== "queued" && r.status !== "running") return { url: `/studio-demo/projects/${project.id}/boqs/${boq.id}`, projectUrl: `/studio-demo/projects/${project.id}`, projectId: project.id, run: r, olivia };
     if (Date.now() > deadline) throw new Error(`run ${run.id} still ${r.status}`);
     await new Promise((res) => setTimeout(res, 300));
+  }
+}
+
+/**
+ * Signs in on the sign-in page by picking a user, which opens an app session (F01 §10); when the
+ * account is open elsewhere, takes over on the session-conflict screen.
+ */
+export async function pickOnSignIn(page: Page, email: string) {
+  await page.getByTestId(`sign-in-as-${email}`).click();
+  const conflict = page.getByTestId("session-conflict");
+  await expect
+    .poll(async () => (await conflict.isVisible()) || (await page.locator("html").getAttribute("data-session")) === "active", { timeout: 15_000 })
+    .toBe(true);
+  if (await conflict.isVisible()) {
+    await page.getByTestId("session-continue").click();
+    await expect(page.locator("html")).toHaveAttribute("data-session", "active");
   }
 }

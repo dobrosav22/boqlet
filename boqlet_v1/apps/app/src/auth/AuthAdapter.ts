@@ -19,8 +19,18 @@ export interface AuthAdapter {
   getAccessToken(): Promise<string | null>;
   signIn(opts?: { returnTo?: string; email?: string }): Promise<void>;
   signUp(opts?: { returnTo?: string; email?: string }): Promise<void>;
-  /** Signs out; `returnTo` is where to come back after the next sign-in. */
-  signOut(opts?: { returnTo?: string }): Promise<void>;
+  /**
+   * Signs out; `returnTo` is where to come back after the next sign-in, `reason` why the person was
+   * signed out (e.g. `session_replaced`), shown on the sign-in page.
+   */
+  signOut(opts?: { returnTo?: string; reason?: string }): Promise<void>;
+  /**
+   * The backend session this sign-in is bound to (F01 §10, BR-54): its id, `"exempt"` for sign-ins
+   * that don't open one (test helpers), or null until the app has opened it after sign-in.
+   */
+  appSession(): { id: string } | "exempt" | null;
+  /** Binds the sign-in to the session `POST /sessions` opened, so every request carries it. */
+  bindAppSession(sessionId: string): void;
   /** Optional embedded UI for providers that render forms in-app. */
   SignInPage?: ComponentType;
   SignUpPage?: ComponentType;

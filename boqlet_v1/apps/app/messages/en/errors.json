@@ -42,6 +42,8 @@
     "reason_required": "Give a reason: changed quantities and exclusions need one.",
     "unknown_code": "That code is not in this BoQ's classification.",
     "duplicate_id": "Another manual line already has this id.",
-    "invalid_quantity": "A quantity is a number of zero or more."
+    "invalid_quantity": "A quantity is a number of zero or more.",
+    "session_replaced": "You were signed out because your account was opened on another device.",
+    "session_expired": "You were signed out after a long time without activity."
   }
 }

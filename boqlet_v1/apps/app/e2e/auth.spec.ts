@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { devUser, emit, signInAs } from "./helpers";
+import { devUser, emit, pickOnSignIn, signInAs } from "./helpers";
 
 /** FE-004: the mock auth adapter and the realtime client. */
 
@@ -7,7 +7,7 @@ test("signing in as a seeded user, then switching users, changes GET /me", async
   await page.goto("/");
   await expect(page).toHaveURL(/\/sign-in/);
   const meOlivia = page.waitForResponse((r) => r.url().endsWith("/api/v1/me") && r.status() === 200);
-  await page.getByTestId("sign-in-as-olivia@example.com").click();
+  await pickOnSignIn(page, "olivia@example.com");
   expect(((await (await meOlivia).json()) as { user: { name: string } }).user.name).toBe("Olivia Owner");
   // Two orgs and none used before in this browser: the start page asks which one (F01 §3).
   await page.getByTestId("org-picker").getByRole("link", { name: "Studio Demo" }).click();
@@ -19,7 +19,7 @@ test("signing in as a seeded user, then switching users, changes GET /me", async
   await expect(page).toHaveURL(/\/sign-in/);
 
   const meMarko = page.waitForResponse((r) => r.url().endsWith("/api/v1/me") && r.status() === 200);
-  await page.getByTestId("sign-in-as-marko@example.com").click();
+  await pickOnSignIn(page, "marko@example.com");
   expect(((await (await meMarko).json()) as { user: { name: string } }).user.name).toBe("Marko Estimator");
   await expect(page.getByTestId("user-name")).toHaveText("Marko Estimator");
 });
@@ -27,7 +27,7 @@ test("signing in as a seeded user, then switching users, changes GET /me", async
 test("an anonymous visitor is sent to sign-in and comes back to the page afterwards", async ({ page }) => {
   await page.goto("/studio-demo?tab=x");
   await expect(page).toHaveURL(/\/sign-in\?returnTo=%2Fstudio-demo%3Ftab%3Dx/);
-  await page.getByTestId("sign-in-as-ivana@example.com").click();
+  await pickOnSignIn(page, "ivana@example.com");
   await expect(page).toHaveURL(/\/studio-demo\?tab=x$/);
 });
 

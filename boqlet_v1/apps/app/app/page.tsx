@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { useMe } from "@/api/hooks/me";
 import { makeQueryClient } from "@/api/query-client";
 import { useSession } from "@/auth";
+import { AuthGate } from "@/auth/auth-gate";
 import { Wordmark } from "@/components/shell/wordmark";
 import { lastOrg } from "@/features/orgs/org-context";
 
@@ -19,7 +20,10 @@ export default function Home() {
   const [client] = useState(makeQueryClient);
   return (
     <QueryClientProvider client={client}>
-      <StartRedirect />
+      {/* Signed in means a session first (F01 §10), here too. */}
+      <AuthGate>
+        <StartRedirect />
+      </AuthGate>
     </QueryClientProvider>
   );
 }

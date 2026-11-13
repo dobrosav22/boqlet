@@ -11,6 +11,8 @@ export function connectRealtime(opts: {
   getToken: () => Promise<string | null>;
   onEvent: (e: RealtimeEvent & { id: string }) => void;
   onStatus?: (status: "open" | "retrying" | "closed") => void;
+  /** The stream was refused with 401: the error's code (e.g. `session_replaced`, F01 §10). */
+  onUnauthorized?: (code: string) => void;
 }): () => void {
   const controller = new AbortController();
   let delay = 1000;
@@ -30,7 +32,15 @@ export function connectRealtime(opts: {
         return;
       }
       // 401: the session is gone; stop and let the auth gate take over.
-      if (res.status === 401 || res.status === 403) throw new FatalError(String(res.status));
+      if (res.status === 401) {
+        const code = await res
+          .json()
+          .then((b: { code?: string }) => b.code ?? "unauthenticated")
+          .catch(() => "unauthenticated");
+        opts.onUnauthorized?.(code);
+        throw new FatalError("401");
+      }
+      if (res.status === 403) throw new FatalError(String(res.status));
       throw new Error(`events: ${res.status}`);
     },
     onmessage(msg) {

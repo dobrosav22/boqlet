@@ -25,8 +25,9 @@ function go(path: string) {
   window.location.assign(path);
 }
 
-function signInUrl(opts?: { returnTo?: string; email?: string }) {
+function signInUrl(opts?: { returnTo?: string; email?: string; reason?: string }) {
   const q = new URLSearchParams();
+  if (opts?.reason) q.set("reason", opts.reason);
   if (opts?.returnTo) q.set("returnTo", opts.returnTo);
   if (opts?.email) q.set("email", opts.email);
   const s = q.toString();
@@ -56,7 +57,19 @@ export const mockAuthAdapter: AuthAdapter = {
   },
   async signOut(opts) {
     writeMockSession(null);
-    go(signInUrl({ returnTo: opts?.returnTo }));
+    go(signInUrl({ returnTo: opts?.returnTo, reason: opts?.reason }));
+  },
+  appSession() {
+    const s = readMockSession();
+    if (!s) return null;
+    if (s.sessionless) return "exempt";
+    return s.sessionId ? { id: s.sessionId } : null;
+  },
+  bindAppSession(sessionId) {
+    const s = readMockSession();
+    if (!s) return;
+    // The session's id travels with the token, like a `sid` claim bound at session creation (security.md).
+    writeMockSession({ ...s, sessionId, token: `mock:${s.userId}:${sessionId}` });
   },
   SignInPage: MockSignInPage,
 };

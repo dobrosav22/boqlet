@@ -9,13 +9,16 @@ export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly details: Record<string, unknown> | undefined;
+  /** The whole error body, for errors that carry more than `details` (e.g. `SessionConflict`). */
+  readonly body: unknown;
 
-  constructor(status: number, code: string, message: string, details?: Record<string, unknown>) {
+  constructor(status: number, code: string, message: string, details?: Record<string, unknown>, body?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
     this.details = details;
+    this.body = body;
   }
 
   static async fromResponse(response: Response): Promise<ApiError> {
@@ -30,6 +33,7 @@ export class ApiError extends Error {
       body?.code ?? `http_${response.status}`,
       body?.message ?? response.statusText ?? "",
       body?.details as Record<string, unknown> | undefined,
+      body,
     );
   }
 

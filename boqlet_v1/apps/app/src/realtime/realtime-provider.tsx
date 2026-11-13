@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { keys } from "@/api/keys";
-import { authAdapter, useSession } from "@/auth";
+import { authAdapter, SIGNED_OUT_REASONS, signedOut, useSession } from "@/auth";
 import { invalidationsFor } from "./invalidation";
 import { connectRealtime } from "./sse";
 
@@ -20,6 +20,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     return connectRealtime({
       getToken: () => authAdapter.getAccessToken(),
       onEvent(e) {
+        // F01 §10: the account was opened on another device and this session was taken over.
+        if (e.event === "session.revoked") {
+          const mine = authAdapter.appSession();
+          if (typeof mine === "object" && mine !== null && e.data.sessionId === mine.id) signedOut("session_replaced");
+          return;
+        }
         if (e.event === "job.progress" && typeof e.data.jobId === "string") {
           client.setQueryData(keys.jobProgress(e.data.jobId), e.data);
           return;
@@ -34,6 +40,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           const id = typeof e.data.id === "string" ? e.data.id : undefined;
           toast(t.has(key) ? t(key, params) : e.data.kind, { id, ...(url ? { action: { label: t("open"), onClick: () => window.location.assign(url) } } : {}) });
         }
+      },
+      // A page with nothing else to ask learns here that its session was taken over or expired.
+      onUnauthorized(code) {
+        if (SIGNED_OUT_REASONS.has(code)) signedOut(code);
       },
       onStatus(s) {
         if (typeof document !== "undefined") document.documentElement.dataset.realtime = s;
