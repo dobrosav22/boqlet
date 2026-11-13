@@ -136,6 +136,26 @@ export interface DiffRec {
   jobId: string;
   createdAt: string;
 }
+/** A public share link (F18): the token is kept only as its sha256 (BR-56). */
+export interface ShareLinkRec {
+  id: string;
+  boqId: string;
+  projectId: string;
+  orgId: string;
+  mode: "pinned" | "latest_issued";
+  runId: string | null;
+  include: { lineDetail: boolean; viewer: boolean; log: boolean; excel: boolean; groupBy?: string };
+  label?: string;
+  tokenHash: string;
+  expiresAt: string | null;
+  revokedAt?: string;
+  views: number;
+  lastViewedAt: string | null;
+  createdBy: string;
+  createdAt: string;
+  /** The Excel a public visitor downloads, per run (written once). */
+  exportKeys?: Record<string, string>;
+}
 /** A file made by an export job (F12): `Export` in the contract, with where it is kept. */
 export interface ExportRec {
   id: string;
@@ -375,6 +395,7 @@ export interface Db {
   manualItems: ManualItemRec[];
   exports: ExportRec[];
   diffs: DiffRec[];
+  shareLinks: ShareLinkRec[];
   sessions: SessionRec[];
   usage: UsageRec[];
   notifications: NotificationRec[];
@@ -414,6 +435,7 @@ export function loadStore(): boolean {
   state.manualItems ??= [];
   state.exports ??= [];
   state.diffs ??= [];
+  state.shareLinks ??= [];
   state.sessions ??= [];
   state.usage ??= [];
   state.notifications ??= [];

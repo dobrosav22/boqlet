@@ -2357,6 +2357,14 @@ export interface components {
             createdBy?: components["schemas"]["UserRef"];
             /** Format: date-time */
             createdAt: string;
+            /** Format: uuid */
+            projectId?: string;
+            /** @description For the org's list (F18 §3) */
+            projectName?: string;
+            boqName?: string;
+            /** @description The version a pinned link shows, or the latest saved one; null when a following link has nothing saved yet */
+            revisionLabel?: string | null;
+            permissions?: components["schemas"]["Permissions"];
         };
         ShareLinkCreated: components["schemas"]["ShareLink"] & {
             /** @description Full public URL with the token. Shown once: the token is stored hashed. */
@@ -2367,11 +2375,17 @@ export interface components {
             firmName: string;
             projectName: string;
             boqName: string;
-            revisionLabel: string;
-            /** @enum {string} */
-            revisionStatus: "draft" | "in_review" | "approved" | "issued";
+            /** @description null: a link that follows the latest saved version, and none is saved yet (F18 §1: shows nothing until one is) */
+            revisionLabel: string | null;
+            /** @enum {string|null} */
+            revisionStatus: "draft" | "in_review" | "approved" | "issued" | null;
             /** Format: date-time */
-            runAt: string;
+            runAt: string | null;
+            /** @description The run's classifications (names for grouping) */
+            systems?: {
+                id: string;
+                name: string;
+            }[];
             include: components["schemas"]["ShareInclude"];
             /** @description for the viewer when included */
             modelVersionIds?: string[];
@@ -7670,7 +7684,10 @@ export interface operations {
     };
     getPublicShareScene: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description One of PublicShare.modelVersionIds (a BoQ of several models, F18 edge cases); default the first */
+                versionId?: string;
+            };
             header?: never;
             path: {
                 token: components["parameters"]["Token"];

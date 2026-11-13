@@ -12,21 +12,29 @@ export type ElementLines = Schemas["ElementLines"];
 /** A model version's scene index and geometry never change (F07 §1). */
 const FOREVER = { staleTime: Infinity, gcTime: 10 * 60_000 };
 
-/** Scene index and display geometry (glb bytes) of each model version, loaded in parallel (F07 §8). */
-export function useModelScenes(versionIds: string[]) {
+/**
+ * Scene index and display geometry (glb bytes) of each model version, loaded in parallel (F07 §8). With
+ * `publicToken`, through a share link's public endpoints (F18), no account needed.
+ */
+export function useModelScenes(versionIds: string[], publicToken?: string) {
   return useQueries({
     queries: versionIds.flatMap((versionId) => [
       {
-        queryKey: keys.scene(versionId),
+        queryKey: publicToken ? ["publicScene", publicToken, versionId] : keys.scene(versionId),
         ...FOREVER,
-        queryFn: async () => (await api.GET("/model-versions/{versionId}/scene", { params: { path: { versionId } } })).data!,
+        queryFn: async () =>
+          publicToken
+            ? ((await api.GET("/public/shares/{token}/scene", { params: { path: { token: publicToken }, query: { versionId } } })).data! as SceneIndex)
+            : (await api.GET("/model-versions/{versionId}/scene", { params: { path: { versionId } } })).data!,
       },
       {
-        queryKey: keys.geometry(versionId),
+        queryKey: publicToken ? ["publicGeometry", publicToken, versionId] : keys.geometry(versionId),
         ...FOREVER,
         // 302 to a signed URL the browser caches; the client follows it and hands back the bytes.
         queryFn: async () =>
-          (await api.GET("/model-versions/{versionId}/geometry", { params: { path: { versionId } }, parseAs: "arrayBuffer" })).data as unknown as ArrayBuffer,
+          (publicToken
+            ? (await api.GET("/public/shares/{token}/geometry/{versionId}", { params: { path: { token: publicToken, versionId } }, parseAs: "arrayBuffer" })).data
+            : (await api.GET("/model-versions/{versionId}/geometry", { params: { path: { versionId } }, parseAs: "arrayBuffer" })).data) as unknown as ArrayBuffer,
       },
     ]),
   });

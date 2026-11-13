@@ -12,6 +12,18 @@ const apiTarget = process.env.API_PROXY_TARGET ?? "http://localhost:4010";
 const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: ["@ifc-boq/api"],
+  // Share links (F18 "Security"): never indexed, never leak the token through the referrer.
+  async headers() {
+    return [
+      {
+        source: "/s/:token*",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+    ];
+  },
   async rewrites() {
     if (process.env.NODE_ENV === "production" && !process.env.API_PROXY_TARGET) return [];
     return [

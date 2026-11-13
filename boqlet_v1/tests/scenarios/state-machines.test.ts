@@ -83,7 +83,5 @@ describe("Session (BR-54, F01 §10)", () => {
   });
 });
 
-describe("ShareLink", () => {
-  it.todo("active → revoked; active → expired when expiresAt passes (FE-036, clock)");
-  it.todo("active → suspended when the org turns publicLinksAllowed off, and back (FE-036)");
-});
+// ShareLink (active → revoked; active → expired; active → suspended when the org turns public links off,
+// and back) is covered in scenarios/shares.test.ts (FE-036).

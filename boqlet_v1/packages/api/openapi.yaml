@@ -1657,6 +1657,8 @@ paths:
       tags: [public]
       operationId: getPublicShareScene
       security: []
+      parameters:
+        - { name: versionId, in: query, schema: { type: string, format: uuid }, description: "One of PublicShare.modelVersionIds (a BoQ of several models, F18 edge cases); default the first" }
       responses:
         "200": { description: OK (only when the link includes the viewer), content: { application/json: { schema: { $ref: "#/components/schemas/SceneIndex" } } } }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -2025,6 +2027,11 @@ components:
         lastViewedAt: { type: [string, "null"], format: date-time }
         createdBy: { $ref: "#/components/schemas/UserRef" }
         createdAt: { type: string, format: date-time }
+        projectId: { type: string, format: uuid }
+        projectName: { type: string, description: For the org's list (F18 §3) }
+        boqName: { type: string }
+        revisionLabel: { type: [string, "null"], description: "The version a pinned link shows, or the latest saved one; null when a following link has nothing saved yet" }
+        permissions: { $ref: "#/components/schemas/Permissions" }
     ShareLinkCreated:
       allOf:
         - $ref: "#/components/schemas/ShareLink"
@@ -2040,9 +2047,10 @@ components:
         firmName: { type: string }
         projectName: { type: string }
         boqName: { type: string }
-        revisionLabel: { type: string }
-        revisionStatus: { type: string, enum: [draft, in_review, approved, issued] }
-        runAt: { type: string, format: date-time }
+        revisionLabel: { type: [string, "null"], description: "null: a link that follows the latest saved version, and none is saved yet (F18 §1: shows nothing until one is)" }
+        revisionStatus: { type: [string, "null"], enum: [draft, in_review, approved, issued, null] }
+        runAt: { type: [string, "null"], format: date-time }
+        systems: { type: array, items: { type: object, required: [id, name], properties: { id: { type: string }, name: { type: string } } }, description: The run's classifications (names for grouping) }
         include: { $ref: "#/components/schemas/ShareInclude" }
         modelVersionIds: { type: array, items: { type: string, format: uuid }, description: for the viewer when included }
         madeWithBadge: { type: boolean }

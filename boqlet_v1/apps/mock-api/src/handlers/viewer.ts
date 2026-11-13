@@ -124,16 +124,23 @@ async function runView(run: RunRec): Promise<RunView> {
   return view;
 }
 
+/**
+ * A signed URL of a version's display geometry (fetched from the engine once and kept). It stays the same
+ * for a day by default, so the browser's cache holds it (F07 §1: immutable); public links ask for 5 minutes.
+ */
+export async function geometryUrl(version: ModelVersionRec, ttlSeconds = 86_400) {
+  const key = geometryKey(orgOfVersion(version), version);
+  if (!(await blobExists(key))) {
+    const engineId = readyEngineId(version);
+    await putBlob(key, await fromEngine(() => engine().geometry(engineId)));
+  }
+  return signedUrl(key, "GET", ttlSeconds, { stable: ttlSeconds >= 86_400 }).url;
+}
+
 export const viewerHandlers: Handlers = {
   async getModelGeometry({ user, params }) {
-    const { version, project } = versionOf(user!, params.versionId!);
-    const key = geometryKey(project.orgId, version);
-    if (!(await blobExists(key))) {
-      const engineId = readyEngineId(version);
-      await putBlob(key, await fromEngine(() => engine().geometry(engineId)));
-    }
-    // The URL stays the same for a day, so the browser's cache holds the geometry (F07 §1: immutable).
-    return new Response(null, { status: 302, headers: { Location: signedUrl(key, "GET", 86_400, { stable: true }).url } });
+    const { version } = versionOf(user!, params.versionId!);
+    return new Response(null, { status: 302, headers: { Location: await geometryUrl(version) } });
   },
 
   async getModelScene({ user, params }) {

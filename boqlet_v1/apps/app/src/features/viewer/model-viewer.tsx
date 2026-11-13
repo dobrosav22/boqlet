@@ -39,6 +39,7 @@ export function ModelViewer({
   onOpenLine,
   onSelectionChange,
   changes,
+  publicToken,
   className,
 }: {
   models: ViewerModel[];
@@ -62,6 +63,8 @@ export function ModelViewer({
    * ones are drawn as a red ghost from `ghostModels` (the older run's versions that differ).
    */
   changes?: { added: readonly string[]; changed: readonly string[]; removed: readonly string[]; ghostModels: ViewerModel[] };
+  /** A share link's viewer (F18): scenes and geometry through its public endpoints; no coverage, no element panel lines. */
+  publicToken?: string;
   className?: string;
 }) {
   const t = useTranslations("viewer");
@@ -80,12 +83,12 @@ export function ModelViewer({
   const [legendPick, setLegendPick] = useState<string | null>(null);
   const [section, setSection] = useState<{ bounds: Box; box: Box } | null>(null);
 
-  const queries = useModelScenes(models.map((m) => m.versionId));
+  const queries = useModelScenes(models.map((m) => m.versionId), publicToken);
   const scenes = models.map((_, i) => queries[i * 2]?.data as SceneIndex | undefined);
   const glbs = models.map((_, i) => queries[i * 2 + 1]?.data as ArrayBuffer | undefined);
   const failed = models.filter((_, i) => queries[i * 2]?.isError || queries[i * 2 + 1]?.isError);
   const coverage = useCoverage(runId);
-  const ghostQueries = useModelScenes((changes?.removed.length ? changes.ghostModels : []).map((m) => m.versionId));
+  const ghostQueries = useModelScenes((changes?.removed.length ? changes.ghostModels : []).map((m) => m.versionId), publicToken);
   const ghostGlbs = (changes?.ghostModels ?? []).map((_, i) => ghostQueries[i * 2 + 1]?.data as ArrayBuffer | undefined);
 
   // One element map for all models; which model each element is in (by our version id).

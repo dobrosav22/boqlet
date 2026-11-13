@@ -5,7 +5,8 @@
     "members": "Members",
     "billing": "Billing",
     "usage": "Usage",
-    "audit": "Audit"
+    "audit": "Audit",
+    "shares": "Share links"
   },
   "general": {
     "readOnly": "Only owners and admins can change these settings.",

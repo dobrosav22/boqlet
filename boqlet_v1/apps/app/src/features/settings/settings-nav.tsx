@@ -8,7 +8,7 @@ import type { OrgAction } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 /** Sections and who sees them (billing: owner; usage and audit: owner and admin, F14, S25). */
-const SECTIONS: { key: string; action?: OrgAction }[] = [{ key: "general" }, { key: "members" }, { key: "billing", action: "manageBilling" }, { key: "usage", action: "seeUsage" }, { key: "audit", action: "seeAudit" }];
+const SECTIONS: { key: string; action?: OrgAction }[] = [{ key: "general" }, { key: "members" }, { key: "billing", action: "manageBilling" }, { key: "usage", action: "seeUsage" }, { key: "shares", action: "manageShareLinks" }, { key: "audit", action: "seeAudit" }];
 
 export function SettingsNav({ org }: { org: string }) {
   const t = useTranslations("settings");

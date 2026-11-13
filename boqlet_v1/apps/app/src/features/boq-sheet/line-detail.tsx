@@ -6,10 +6,10 @@ import { Box, X } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import type { Param } from "@ifc-boq/types";
 import type { Run } from "@/api/hooks/boqs";
-import { useLine, useLines, usePresetVersion } from "@/api/hooks/sheet";
+import { useLine, useLines, usePresetVersion, type LineDetail } from "@/api/hooks/sheet";
 import { useErrorMessage } from "@/components/errors/use-error-message";
 import { Button } from "@/components/ui/button";
-import { lexicon, toReadable } from "@/features/library/lib/readable";
+import { lexicon, toReadable, type Lexicon } from "@/features/library/lib/readable";
 import { cn } from "@/lib/utils";
 import { useOrg } from "@/features/orgs/org-context";
 import { HowCalculated } from "./how-calculated";
@@ -53,7 +53,6 @@ export function LineDetailPanel({
 }) {
   const t = useTranslations("boqs.detail");
   const tl = useTranslations("library");
-  const format = useFormatter();
   const message = useErrorMessage();
   const { org } = useOrg();
   const detail = useLine(run.id, lineKey);
@@ -65,11 +64,8 @@ export function LineDetailPanel({
     return doc?.params ?? {};
   }, [ruleSet.data]);
   const lex = useMemo(() => lexicon(slots, (name) => (tl.has(`names.${name}.label`) ? tl(`names.${name}.label`) : name)), [slots, tl]);
-  const num = (v: number) => format.number(v, { maximumFractionDigits: 6 });
-  const value = (v: unknown) => (typeof v === "boolean" ? (v ? t("yes") : t("no")) : typeof v === "number" ? num(v) : typeof v === "string" ? v : JSON.stringify(v));
   const presetId = ruleSet.data?.presetId;
   const libraryHref = presetId ? `/${org.slug}/library/rule_set/${presetId}` : null;
-  const slotLabel = (name: string) => lex.slotLabels.get(name) ?? slots[name]?.label ?? name;
 
   return (
     <aside className={cn("flex w-full flex-col gap-5 border-l border-border pl-5 lg:w-[440px] lg:shrink-0", className)} aria-label={t("title")} data-testid="line-detail">
@@ -92,9 +88,46 @@ export function LineDetailPanel({
         </p>
       )}
       {!detail.data && !detail.isError && <div className="h-40" aria-busy="true" />}
-      {detail.data &&
-        (() => {
-          const line = detail.data;
+      {detail.data && (
+        <LineDetailBody line={detail.data} groupBy={groupBy} slots={slots} lex={lex} libraryHref={libraryHref} modelNames={modelNames} systemNames={systemNames} describe={(key) => descriptions.get(key)} onSelect={onSelect} />
+      )}
+    </aside>
+  );
+}
+
+/**
+ * The line detail's content (F06 §5) from a line and the rule set's settings: the panel above, and the
+ * public share page (F18, with its own data and no settings links) use it.
+ */
+export function LineDetailBody({
+  line,
+  groupBy,
+  slots,
+  lex,
+  libraryHref,
+  modelNames,
+  systemNames,
+  describe,
+  onSelect,
+  showLog = true,
+}: {
+  line: LineDetail;
+  groupBy?: string | null;
+  slots: Record<string, Param>;
+  lex: Lexicon;
+  libraryHref: string | null;
+  modelNames: Map<string, string>;
+  systemNames: Map<string, string>;
+  describe: (key: string) => string | undefined;
+  onSelect: (key: string) => void;
+  showLog?: boolean;
+}) {
+  const t = useTranslations("boqs.detail");
+  const format = useFormatter();
+  const num = (v: number) => format.number(v, { maximumFractionDigits: 6 });
+  const value = (v: unknown) => (typeof v === "boolean" ? (v ? t("yes") : t("no")) : typeof v === "number" ? num(v) : typeof v === "string" ? v : JSON.stringify(v));
+  const slotLabel = (name: string) => lex.slotLabels.get(name) ?? slots[name]?.label ?? name;
+
           const [, slot] = line.trace.formula.match(FROM_SLOT) ?? [];
           const formula = line.trace.formula.replace(FROM_SLOT, "");
           const elements = line.trace.elements;
@@ -124,7 +157,7 @@ export function LineDetailPanel({
               </div>
 
               <Section title={t("howCalculated")}>
-                <HowCalculated line={line} slots={slots} lex={lex} libraryHref={libraryHref} modelNames={modelNames} describe={(key) => descriptions.get(key)} onSelect={onSelect} />
+                <HowCalculated line={line} slots={slots} lex={lex} libraryHref={libraryHref} modelNames={modelNames} describe={describe} onSelect={onSelect} />
               </Section>
 
               <Section title={t("formula")}>
@@ -234,7 +267,7 @@ export function LineDetailPanel({
                 </Section>
               )}
 
-              <Section title={t("log")}>
+              {showLog && <Section title={t("log")}>
                 {(line.log ?? []).length === 0 ? (
                   <p className="text-muted-foreground">{t("noLog")}</p>
                 ) : (
@@ -247,12 +280,9 @@ export function LineDetailPanel({
                     ))}
                   </ol>
                 )}
-              </Section>
+              </Section>}
             </>
           );
-        })()}
-    </aside>
-  );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

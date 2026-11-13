@@ -33,6 +33,8 @@ const LISTS: Record<string, (projectId?: string) => QueryKey[]> = {
   // A BoQ's line edits and manual lines (entityId = the BoQ).
   override: () => [["overrides"]],
   manualItem: () => [["manualItems"]],
+  // A BoQ's share links changed (entityId = the BoQ).
+  shareLink: () => [["shareLinks"]],
   notification: () => [keys.notifications()],
 };
 

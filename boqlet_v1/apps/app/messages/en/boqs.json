@@ -97,7 +97,8 @@
     "submit": "Submit for review",
     "saveApproved": "Save approved version",
     "confirm": "Confirm BoQ",
-    "reopen": "Reopen"
+    "reopen": "Reopen",
+    "share": "Share"
   },
   "tabs": {
     "label": "BoQ",

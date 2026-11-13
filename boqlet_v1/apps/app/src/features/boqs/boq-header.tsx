@@ -22,6 +22,7 @@ import { SaveVersionDialog, SubmitDialog, type SaveMode } from "@/features/versi
 import { ReviewStrip } from "@/features/versions/review-strip";
 import { NewModelVersions } from "./new-model-versions";
 import { ReopenBoqDialog } from "./reopen-boq-dialog";
+import { ShareDialog } from "@/features/shares/share-dialog";
 import { headerState, saveBlockedReason } from "./run-state";
 
 export function Tag({ children, filled, className, ...rest }: { children: React.ReactNode; filled?: boolean; className?: string; "data-testid"?: string }) {
@@ -62,7 +63,7 @@ export function BoqHeader({ boq, runs, base, canArchive, approval }: { boq: Boq;
     onError: () => {},
   });
   // F09: save version (approval off), submit for review / save the approved version (on), confirm, reopen.
-  const [dialog, setDialog] = useState<SaveMode | "submit" | "reopen" | null>(null);
+  const [dialog, setDialog] = useState<SaveMode | "submit" | "reopen" | "share" | null>(null);
   const revisions = useRevisions(boq.id);
   const lastSaved = boq.latestIssuedRevisionId && boq.latestIssuedRevisionId !== revision.id ? revisions.data?.find((r) => r.id === boq.latestIssuedRevisionId)?.label : undefined;
 
@@ -127,6 +128,11 @@ export function BoqHeader({ boq, runs, base, canArchive, approval }: { boq: Boq;
           {boq.status === "confirmed" && can("reopen") && (
             <Button variant="outline" onClick={() => setDialog("reopen")} data-testid="reopen-boq">
               {t("actions.reopen")}
+            </Button>
+          )}
+          {can("share") && !boq.archived && (
+            <Button variant="outline" onClick={() => setDialog("share")} data-testid="share-boq">
+              {t("actions.share")}
             </Button>
           )}
           {(canArchive || can("confirm")) && (
@@ -209,6 +215,7 @@ export function BoqHeader({ boq, runs, base, canArchive, approval }: { boq: Boq;
       )}
       {dialog === "submit" && <SubmitDialog boq={boq} open onOpenChange={(v) => !v && setDialog(null)} base={base} />}
       {dialog === "reopen" && <ReopenBoqDialog boq={boq} open onOpenChange={(v) => !v && setDialog(null)} />}
+      {dialog === "share" && <ShareDialog boq={boq} open onOpenChange={(v) => !v && setDialog(null)} />}
     </div>
   );
 }
