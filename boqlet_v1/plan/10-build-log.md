@@ -20,13 +20,13 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 
 | | |
 |---|---|
-| Phase | 1 (frontend on the mock), milestone M3 (Versions, exports, sharing, notifications) |
+| Phase | 1 (frontend on the mock), milestone M4 (Admin console, extension points, co-editing) |
 | Role | Frontend agent |
-| Last task done | FE-036 Share links (2f2d757) |
-| Next task | FE-037 Excel edits import (F12) |
-| Waiting for the owner | — (the owner asked this session to stop after FE-037, the end of M3) |
+| Last task done | FE-037 Excel edits import (4e284ad); **M3 done** |
+| Next task | FE-038 Platform admin console (F19), M4 |
+| Waiting for the owner | — (the session stopped after FE-037, the end of M3, because the owner asked it to; start the next one with the usual prompt) |
 | In progress (not committed) | — |
-| Notes for the next session | Read the M3 decision entries (newest first), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | Read the M3 entry and the M3 decision entries (FE-037 … FE-029), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,33 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M3 Versions, exports, sharing, notifications (frontend agent)
+- **Built:** FE-029…FE-037, 966a5b7..151e16e (plus the record commits).
+- **Exit criteria:**
+  - *FL-2 (models to a confirmed BoQ):* upload, parse, generate (M1), save version, confirm, reopen: `e2e/versions.spec.ts`, `e2e/versions-flow.spec.ts`, `tests/scenarios/versions.test.ts`.
+  - *FL-3 (new model version → next saved version):* `e2e/versions-flow.spec.ts` end to end (v2 = the Duplex with one wall renamed until EN-008), plus `e2e/new-versions.spec.ts` (badge, notification, Use v2).
+  - *FL-9 (editing with the model):* steps 1–5 and 7 were M1's (`sheet-model.spec.ts`, `line-edits.spec.ts`); step 6, the Excel round-trip, in `e2e/exports.spec.ts` (FE-037).
+  - *FL-11 (share a BoQ):* `e2e/shares.spec.ts` (private window, no account, revoke).
+  - *v1 criterion 3 (revision):* `e2e/versions-flow.spec.ts` (the change report lists exactly the changed element; no question asked again); exact lines on EN-008's fixture are checked on synthetic results in `apps/mock-api/test/diff.test.ts` (fake).
+  - *v1 criterion 4 (traceability):* the automated part in `versions-flow.spec.ts` (formula, parameters, shares and the 3D view one click from a line); **not walked through by a person (M)**.
+  - *v1 criterion 5 (versions):* `versions.test.ts` (409 revision_locked for the owner, 409 boq_confirmed, approval and four-eyes) and the e2e specs above.
+  - *v1 criterion 13 (editing):* the Excel part (quantity, move, exclusion, manual line imported back) in `edits-import.test.ts` and `exports.spec.ts` (fake: the round-trip); **live co-editing is FE-040 (M4)**.
+  - *v1 criterion 15 (share link):* `shares.test.ts` (F18-AC1…AC4, BR-56 over every public response) and `shares.spec.ts`.
+  - Last full runs: typecheck, lint, app 194, mock 62, contract 172, scenarios 149, engine 194, e2e: the first full run failed six viewer tests on Studio's 50-project limit (fixed by the e2e global setup, 151e16e); the second passed 95 of 97, the two others (`library-editors.spec.ts` FE-022 and F10-AC2) failed on the engine race below and pass alone (8 of 8).
+- **Decisions taken:** in the FE-029 … FE-036 entries and below.
+- **Deviations from the spec:** contract additions and fixes, each in its task's entry: `DiffSummary.byModel`, audit `from`/`to` and `exportOrgAuditCsv`, the project audit CSV's filters, `PublicShare` nullable for following links, the public scene's `versionId`, `ShareLink` names and hints.
+- **Fakes:** "Change report" built; "BoQ export meta, edits import" extended with the round-trip; "Duplex v2 fixture" described as the renamed-wall v2 (mock-api.md).
+- **Known issues and debt:** docs/11 (new model versions, change report, versions, exports, audit, notifications, versions e2e, share links, edits import). `e2e/boqs.spec.ts` F04-AC2's 10 s budget missed once under parallel load (FE-031 entry). **Engine race under parallel e2e load (pre-existing, phase-1 path):** creating a preset (the engine's check) can answer 500 when a preview is deleting its temporary preset from the engine's user folder at the same moment (`FileNotFoundError` on `presets/user/rules/mock-preview-…`); FE-028 serialised previews with runs, but checks don't wait for preview cleanup. Next session: make the check wait like runs do (`presetsSettled`, `handlers/presets.ts`), or give previews their own folder.
+- **For the next agent:** M4 starts with FE-038. The e2e global setup (`e2e/global-setup.ts`) puts Studio Demo on Enterprise; test limits with `createOrg`. Writing Python edits to files through the shell: here-docs with single quotes break in this environment's Bash wrapper; write a script file instead.
+
+### 2026-11-13 — M3 decisions: FE-037 (frontend agent)
+- **Built:** FE-037, 4e284ad (and 151e16e). `engine/fakes/boq_roundtrip.py` (annotate after export, read an edited file), `handlers/edits-import.ts`, `features/exports/edits-import.tsx`; `tests/support/edit_boq_xlsx.py` edits a workbook as a person would (scenarios and e2e share it).
+- **Decisions taken:**
+  - The import compares the edited sheet with a very hidden `_boqlet` snapshot of what was exported (Ref, description, unit, quantity per key, the BoQ's id, the grouping system), not with the run: an item text in the Description column or a number format never reads as an edit. openpyxl, as the other fakes, instead of SheetJS (mock-api.md said SheetJS).
+  - Report shape per the contract: `manualItems[].item` is a `ManualItemInput` (`{item, codes}`), with `row`; new manual lines get ids `xlsx-<job>-<row>`. The job's output is `{importReport: {overrides, manualItems, problems}}` (counts); the report itself is kept in the blob folder.
+  - Import into the working version only (`409 revision_in_review` / `revision_locked` otherwise), with `editLines`; a BoQ without a run is `409 no_run`.
+  - The review ticks everything by default; quantity changes and exclusions need a reason before Apply (F06 §6).
 
 ### 2026-11-13 — M3 decisions: FE-036 (frontend agent)
 - **Built:** FE-036, 2f2d757. Mock `handlers/shares.ts`, `geometryUrl` in `viewer.ts`; app `features/shares/` (dialog, public page), `api/hooks/shares.ts`, `/{org}/settings/shares`, `/s/[token]` in the `(public)` group. Checked by `tests/scenarios/shares.test.ts` (10) and `e2e/shares.spec.ts` (2).

@@ -188,4 +188,4 @@ merges `v_1` into it.
 | Frontend, backend specs (06–07) | Written; backend decisions open on purpose |
 | Delivery (08) | Phases, milestones, task lists, session rules and build log written (P37–P40, P44, P45) |
 | Design (06) | Design guidelines decided (P43); wordmark SVG still to come from the owner |
-| **Build** | **Phase 1 in progress.** M0 (consolidation, contract, scaffolding) done 2026-11-12; M1 (core loop) done 2026-11-13, except the sample project's content (docs/11); M2 (Library and setup) done 2026-11-13, except v1 criterion 12's test with a person new to the app; next M3, FE-029. Live position: `10-build-log.md` |
+| **Build** | **Phase 1 in progress.** M0 (consolidation, contract, scaffolding) done 2026-11-12; M1 (core loop) done 2026-11-13, except the sample project's content (docs/11); M2 (Library and setup) done 2026-11-13, except v1 criterion 12's test with a person new to the app; M3 (versions, exports, sharing, notifications) done 2026-11-13, with v1 criterion 13's live co-editing left to FE-040 and criterion 4's walk-through by a person; next M4, FE-038. Live position: `10-build-log.md` |
