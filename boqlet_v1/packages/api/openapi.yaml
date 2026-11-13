@@ -257,6 +257,21 @@ paths:
         - { name: to, in: query, schema: { type: string, format: date-time } }
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuditPage" } } } }
+  /orgs/{orgId}/audit.csv:
+    parameters: [{ $ref: "#/components/parameters/OrgId" }]
+    get:
+      tags: [exports]
+      operationId: exportOrgAuditCsv
+      description: The org audit as CSV (S25 "filter, CSV"), with the same filters as listOrgAudit; owner and admin.
+      parameters:
+        - { name: actorId, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string } }
+        - { name: entityType, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses:
+        "200": { description: CSV, content: { text/csv: { schema: { type: string } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /orgs/{orgId}/terms:
     parameters: [{ $ref: "#/components/parameters/OrgId" }]
     get:
@@ -457,6 +472,8 @@ paths:
         - { name: actorId, in: query, schema: { type: string } }
         - { name: action, in: query, schema: { type: string } }
         - { name: entityType, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
       responses:
         "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuditPage" } } } }
   /projects/{projectId}/audit.csv:
@@ -469,6 +486,8 @@ paths:
         - { name: actorId, in: query, schema: { type: string } }
         - { name: action, in: query, schema: { type: string } }
         - { name: entityType, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
       responses:
         "200": { description: CSV, content: { text/csv: { schema: { type: string } } } }
 

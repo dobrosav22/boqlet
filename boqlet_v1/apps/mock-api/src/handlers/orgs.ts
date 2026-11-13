@@ -3,7 +3,7 @@
  * 03-domain/permissions.md; error codes per conventions.md.
  */
 import { randomBytes } from "node:crypto";
-import { audit } from "../audit.js";
+import { audit, auditCsv, auditView, filterAudit } from "../audit.js";
 import { now, nowIso } from "../clock.js";
 import { emit } from "../events.js";
 import { conflict, forbidden, HttpError, limitReached, notFound } from "../http.js";
@@ -329,27 +329,16 @@ export const orgHandlers: Handlers = {
 
   listOrgAudit({ user, params, query }) {
     const { org } = requireOrgAction(user!, params.orgId!, "seeAudit");
+    const items = filterAudit(db().audit.filter((a) => a.orgId === org.id), query, org.id);
     const limit = Math.min(Number(query.limit ?? 100), 1000);
     const offset = Number(query.cursor ?? 0) || 0;
-    const items = db()
-      .audit.filter((a) => a.orgId === org.id)
-      .filter((a) => !query.actorId || a.actorId === query.actorId)
-      .filter((a) => !query.action || a.action === query.action)
-      .filter((a) => !query.entityType || a.subjectType === query.entityType)
-      .filter((a) => !query.from || a.at >= String(query.from))
-      .filter((a) => !query.to || a.at <= String(query.to))
-      .sort((a, b) => b.at.localeCompare(a.at));
-    const page = items.slice(offset, offset + limit).map((a) => ({
-      id: a.id,
-      ...(a.actorId ? { actor: userRef(a.actorId), actorKind: "user" as const } : { actorKind: "system" as const }),
-      action: a.action,
-      entityType: a.subjectType,
-      entityId: a.subjectId,
-      projectId: a.projectId ?? null,
-      data: a.data ?? {},
-      at: a.at,
-    }));
-    return json({ items: page, nextCursor: offset + limit < items.length ? String(offset + limit) : null });
+    return json({ items: items.slice(offset, offset + limit).map(auditView), nextCursor: offset + limit < items.length ? String(offset + limit) : null });
+  },
+
+  /** S25 "filter, CSV": the org's audit events with the page's filters (owner, admin). */
+  exportOrgAuditCsv({ user, params, query }) {
+    const { org } = requireOrgAction(user!, params.orgId!, "seeAudit");
+    return auditCsv(filterAudit(db().audit.filter((a) => a.orgId === org.id), query, org.id), `${org.slug}_audit.csv`);
   },
 
   getAttention({ user, params }) {

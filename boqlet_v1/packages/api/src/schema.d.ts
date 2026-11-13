@@ -256,6 +256,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orgs/{orgId}/audit.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orgId: components["parameters"]["OrgId"];
+            };
+            cookie?: never;
+        };
+        /** @description The org audit as CSV (S25 "filter, CSV"), with the same filters as listOrgAudit; owner and admin. */
+        get: operations["exportOrgAuditCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orgs/{orgId}/terms": {
         parameters: {
             query?: never;
@@ -4624,6 +4643,35 @@ export interface operations {
             };
         };
     };
+    exportOrgAuditCsv: {
+        parameters: {
+            query?: {
+                actorId?: string;
+                action?: string;
+                entityType?: string;
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path: {
+                orgId: components["parameters"]["OrgId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
     listTerms: {
         parameters: {
             query?: {
@@ -5079,6 +5127,8 @@ export interface operations {
                 actorId?: string;
                 action?: string;
                 entityType?: string;
+                from?: string;
+                to?: string;
             };
             header?: never;
             path: {
@@ -5105,6 +5155,8 @@ export interface operations {
                 actorId?: string;
                 action?: string;
                 entityType?: string;
+                from?: string;
+                to?: string;
             };
             header?: never;
             path: {
