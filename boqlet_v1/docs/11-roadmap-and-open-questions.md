@@ -116,9 +116,17 @@ Things the product build doesn't do yet, with the task that deals with each.
 - Sheet (FE-009): no position numbers in the No. column (FE-040); Description shows the rule set's line
   text, not item texts (FE-027, EN-010); the line detail has the formula in words, settings, element
   shares, codes and the log, but not yet the plain-words "How it is calculated" steps (FE-013) or "Show in
-  3D" (FE-014, FE-016); no "not in the models" notice (FE-015); no edits, manual lines or "Edited" /
-  "overridden" filter (FE-011); the app loads up to 20,000 lines at once and doesn't yet switch to the
+  3D" (FE-014, FE-016); no "not in the models" notice (FE-015); the app loads up to 20,000 lines at once and doesn't yet switch to the
   server-side grouping above that (the mock serves it; FE-045).
+- Line edits and manual lines (FE-011): edits aren't in an Excel export yet, so F06-AC3's export part is
+  checked with FE-017; a derived line doesn't follow an edited quantity and an edit whose line is gone
+  raises no question (the mock's "Line edits applied" fake, EN-003); map rules don't see a manual line's
+  chosen codes (EN-007); no position numbers to renumber (FE-040), no live co-editing (FE-040), no
+  selection from the 3D view (FE-014); a manual line has no notes (`ManualItem` has no field for them);
+  undo keeps the last 20 edits of the open sheet only (not across reloads); edits on a version in review
+  are refused (`409 revision_locked`) until FE-031 builds BR-23 for them. The engine's check doesn't
+  syntax-check a manual item's `formula` key (`presets.py` EXPR_KEYS): the app sends the formula as a
+  formula slot the item points to, which it does check (EN-007 should add `formula` to the checked keys).
 - Questions and decisions (FE-010): no "Show in 3D" or element properties from a question (F05 §9,
   FE-016); no model filter (questions carry no model; FE-016 with the element index); promoting needs an
   org dictionary, which can only be created with the Library (FE-021), so F05-AC5 is checked in M2;
@@ -198,6 +206,7 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-11-13 | fb0a50c, 55d8bc2 | FE-011: F06 §6–7 on the mock and in the app: line edits (one override per line key; replace, restore, batch all or nothing; `unit_needs_quantity`, `reason_required`, `unknown_code`) and manual lines per BoQ, sent with every run (manual lines as a rule-set patch through the PoC engine) and put on the result's lines by the "Line edits applied" / "Manual items with codes" fakes; pending change `adjustments`; `POST /presets/check`. The sheet shows edits at once over the run's lines: in-place description, unit, quantity (with reason) and Item edits, edit markers with the engine's value, exclusions, Edited / Excluded filters, drag to reorder or move, bulk move / exclude / restore, Ctrl+Z (20 edits), Restore per field, manual lines with codes and an engine-checked formula. Contract: `RunLine.excluded` and a fuller `overridden`; runs list classifications under the engine's system id. 2 mock tests, 7 scenarios (F06-AC3 without the Excel part, AC4's refusal, AC6), 2 e2e flows |
 | 2026-11-13 | fa27738, 8e0d40f, 5050aea | FE-010: F05 on the mock and in the app: runs send the project's decisions and remember them and the questions they asked; questions joined with decisions (`answeredAfterRun`), answering one or many with a dry run listing the versions BR-23 would reopen, name answers added to the project dictionary, clear, promote to an org dictionary, terms for the picker, CSV; pending changes and the header's "N answers not applied yet – Regenerate"; the Questions tab (answer controls per `AnswerType`, suggestion preselected, leave it, bulk answers of one kind and control) and the Decisions page (edit, clear, promote, export); project cards count open blocking questions; contract fix for `QuestionWithDecision`, `Decision.answerType` added; 13 mock tests, 6 scenarios on the Duplex (F05-AC1, AC3), 2 e2e flows |
 | 2026-11-12 | e7bdf31 | Fix (FE-008): a Setup change (e.g. unticking a model) now shows at once even while the BoQ is being refetched (the optimistic update waited for the refetch to be cancelled first; CI caught it in `e2e/boqs.spec.ts`); the 20,000-line perf test warms up for a second before measuring (a cold CI runner measured 44 fps) |
 | 2026-11-12 | 94c6cc4 | FE-009: F06 sheet on the mock and in the app: lines, line detail, warnings and the paged log served from the run's stored result (with server-side grouping for large runs); the Sheet tab, virtualised and grouped by any attached classification with subtotals, filters, toggleable columns and keyboard; the line detail with the formula in words (PoC `readable.ts` ported), settings, element shares and their total, codes, notes and log; the warnings bar and the Log tab; contract fix for `RunLine`; 10 sheet scenarios, 5 e2e flows, the 20,000-line perf test (60 fps scrolling, Group by switch 27 ms on a production build) |

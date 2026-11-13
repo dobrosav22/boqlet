@@ -38,12 +38,12 @@ a fake are marked "(fake)" in phase-1 test runs and re-checked in phase 3.
 
 | Fake | What the mock does in phase 1 | Known gap until the real task | Replaced by |
 |---|---|---|---|
-| Line edits applied | Applies `LineOverride` fields (quantity, text, unit, code, exclusion) to the engine's result lines after the run | Derived lines don't follow an edited quantity; no `orphan_override` question | EN-003 |
+| Line edits applied | Applies `LineOverride` fields (quantity, text, unit, code, exclusion) to the engine's result lines after the run, records them in `overridden` with the engine's values, and orders lines by `sortAfter` and manual lines' `sortHint` (`engine/fakes/line-edits.ts`, FE-011) | Derived lines don't follow an edited quantity; no `orphan_override` question | EN-003 |
 | Message codes | None: the UI falls back to the engine's `message` text (F15 §4 allows it) | Questions and warnings untranslated | EN-004 |
 | Preview | Saves the draft as a temporary user preset through the PoC API, runs, deletes it; diff of two runs by line key | Slower; no `compareWith` in one job | EN-005 |
 | Change report | Diffs two runs' lines by line key and elements by GlobalId (plain comparison, no measuring) | Causes limited to `elements_*` and `override_changed` | EN-002 |
 | BoQ export meta, edits import | PoC Excel as is; edits import reads the uploaded xlsx with SheetJS using a hidden line-key column the mock adds on export | Layout differs from the final export | EN-006 |
-| Manual items with codes | Adds the chosen codes to manual lines after the run | Map rules don't see them | EN-007 |
+| Manual items with codes | The BoQ's manual items go to the engine as a rule-set patch `mock-run-<runId>` (deleted after the run); the chosen codes are put on their lines after the run (FE-011) | Map rules don't see them | EN-007 |
 | Duplex v2 fixture | Seeds "v2" as a copy of v1 with a different file name | Change report shows no element changes | EN-008 |
 | Item texts filled | Fills `{name}` blanks in a code's `description` with the line's values by plain substitution | No expressions (`{thickness*1000}`), no `item_text_blank` warning | EN-010 |
 | Setup markers | The F16 "Wizard content for As modelled" markers (`setupSteps`, `setup` per slot) kept in the mock's config and merged into the flattened rule set it serves; parts 1a and 1b are derived from the rule set as F16 says | Only "As modelled" and patches on it have markers | EN-011 |

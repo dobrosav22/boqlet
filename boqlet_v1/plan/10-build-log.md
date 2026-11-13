@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M1 (core loop) |
 | Role | Frontend agent |
-| Last task done | FE-010 Questions and decisions (F05) (fa27738, 8e0d40f, 5050aea) |
-| Next task | FE-011 Line edits and manual lines (F06 §6–7), on the "Line edits applied" and "Manual items with codes" fakes (mock-api.md) |
+| Last task done | FE-011 Line edits and manual lines (F06 §6–7) (fb0a50c, 55d8bc2) |
+| Next task | FE-012 Single session (F01 §10) |
 | Waiting for the owner | — |
 | In progress (not committed) | — |
-| Notes for the next session | Read the FE-010 entry below (decisions on runs, answer controls). Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | Read the FE-011 and FE-010 entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,37 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M1 decisions: FE-011 (frontend agent)
+- **Built:** FE-011, fb0a50c..55d8bc2. F06-AC3 (without the Excel part, FE-017), AC4 and AC6 run in
+  `tests/scenarios/line-edits.test.ts` (fake) and `e2e/line-edits.spec.ts`.
+- **Decisions taken:**
+  - An override is replaced whole (`setOverride` and every batch entry): the app always sends a line's
+    complete edit (`withChange` in `apps/app/src/features/boq-sheet/edits.ts`). The app writes every edit
+    through `POST /boqs/{id}/overrides/batch`, so an edit of many lines is one request and its undo is one
+    batch too (`batchFor`).
+  - Display: the sheet rebuilds each line from the engine's values (`RunLine.overridden` keeps them) and
+    lays the BoQ's *current* overrides over them, so an edit shows at once and a restored edit disappears
+    before the next run. Manual lines saved since the run are pending rows (italic, "Next run").
+  - Order: `sortAfter` applies within the section of the Group-by system shown; dropping a line on a line
+    of another section also moves it there; `null` means first. Excluded lines stay in the count of a
+    group but leave its sum.
+  - Unit edits are sent as typed: without a quantity edit the API refuses them (`409 unit_needs_quantity`)
+    and the sheet shows the reason (F06-AC4). Restoring a quantity restores its unit; a reason is kept only
+    with a quantity or an exclusion.
+  - Clicking a line now selects it (FE-009 toggled it off on a second click): the toggle closed the detail
+    on the first click of a double-click and moved the cells under the pointer. Escape and the close button
+    close the detail.
+  - The run's `classifications` use the engine's system id (`engineIdOf` in `handlers/boqs.ts`): shipped
+    lists keep their slug, others are `mock-<versionId>`, the key of the lines' `codes`.
+  - Error codes added: `unit_needs_quantity` (409), `reason_required`, `unknown_code`, `invalid_quantity`
+    (400), `duplicate_id` (409, a manual line id used twice in a BoQ).
+- **Deviations from the spec:** contract fix: `RunLine.excluded` and `overridden.fields` with the engine's
+  values per field (EN-003 extended describes them; the contract only had the quantity).
+- **Fakes:** "Line edits applied" and "Manual items with codes" built (`engine/fakes/line-edits.ts`).
+- **Known issues and debt:** the engine's check skips manual items' `formula` (docs/11; for EN-007).
+- **For the next agent:** e2e: select a line before double-clicking one of its cells (the detail opens and
+  the sheet narrows); line keys go into selectors as `[data-key=${JSON.stringify(key)}]`.
 
 ### 2026-11-13 — M1 decisions: FE-010 (frontend agent)
 - **Built:** FE-010, fa27738..5050aea. F05 criteria 1 and 3 run on the Duplex (`tests/scenarios/questions.test.ts`,
