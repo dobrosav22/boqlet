@@ -27,6 +27,9 @@ const LISTS: Record<string, (projectId?: string) => QueryKey[]> = {
   // Decisions belong to the project: its decisions, and every run's questions (joined with them).
   decision: (p) => [p ? keys.decisions(p) : ["decisions"], ["questions"]],
   preset: () => [["presets"], ["terms"]],
+  // A BoQ's line edits and manual lines (entityId = the BoQ).
+  override: () => [["overrides"]],
+  manualItem: () => [["manualItems"]],
   notification: () => [keys.notifications()],
 };
 

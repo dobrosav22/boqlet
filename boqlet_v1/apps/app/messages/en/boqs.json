@@ -150,7 +150,9 @@
       "measured": "Measured",
       "derived": "Derived",
       "manual": "Manual",
-      "flagged": "To confirm"
+      "flagged": "To confirm",
+      "edited": "Edited",
+      "excluded": "Excluded"
     },
     "toConfirm": "To confirm",
     "tableLabel": "Bill of quantities",
@@ -282,5 +284,82 @@
       "detail": "Detail",
       "warning": "Warning"
     }
+  },
+  "edits": {
+    "select": "Select line",
+    "selectAll": "Select all shown lines",
+    "undo": "Undo",
+    "undoHint": "Undo the last edit (Ctrl+Z)",
+    "addLine": "Add line",
+    "addToGroup": "Add a line to {name}",
+    "pending": "Next run",
+    "engineHover": "The engine's value: {value}",
+    "noCode": "no code",
+    "quantityTitle": "Why this quantity?",
+    "quantitySummary": "{line}: {value}. A changed quantity needs a reason; it shows on the line and in the exports.",
+    "excludeTitle": "{count, plural, one {Why exclude this line?} other {Why exclude # lines?}}",
+    "excludeSummary": "{count} lines leave the totals and the BoQ sheet of the exports. They stay listed as excluded.",
+    "reason": "Reason",
+    "reasonHint": "e.g. measured on site, by the client",
+    "cancel": "Cancel",
+    "save": "Save",
+    "title": "Edits",
+    "restore": "Restore",
+    "restoreAll": "Restore all",
+    "restoreEdits": "Restore edits",
+    "engineWas": "engine: {value}",
+    "reasonWas": "Reason: {reason}",
+    "fields": {
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "description": "Description",
+      "codes": "Section",
+      "excluded": "Excluded",
+      "order": "Order"
+    },
+    "toConfirm": "to confirm",
+    "included": "included",
+    "excludedValue": "excluded from the totals",
+    "engineOrder": "engine order",
+    "movedValue": "moved",
+    "exclude": "Exclude…",
+    "include": "Include again",
+    "markToConfirm": "Mark as to confirm…",
+    "addBelow": "Add line below",
+    "editManual": "Edit manual line",
+    "removeManual": "Delete manual line",
+    "pendingManual": "Saved: this manual line gets its quantity and codes when the BoQ is generated again.",
+    "bulkLabel": "Edit the selected lines",
+    "selected": "{count, plural, one {# line selected} other {# lines selected}}",
+    "moveTo": "Move to a {system} section",
+    "clearSelection": "Clear selection"
+  },
+  "manual": {
+    "addTitle": "Add a line",
+    "editTitle": "Edit the manual line",
+    "intro": "A line the models can't give: site setup, provisional sums, anything priced by hand. It is coded, logged and exported like any line from the next run.",
+    "description": "Description",
+    "unit": "Unit",
+    "kind": "Kind",
+    "quantity": "Quantity",
+    "formula": "Formula",
+    "kinds": {
+      "other": "Other",
+      "preliminary": "Preliminary",
+      "provisional_sum": "Provisional sum",
+      "lump_sum": "Lump sum",
+      "daywork": "Daywork"
+    },
+    "modes": {
+      "quantity": "A number",
+      "formula": "A formula"
+    },
+    "emptyIsFlagged": "Empty: to confirm later",
+    "formulaHelp": "Over the building's values, e.g. building.gross_volume / 100. The engine checks it before saving.",
+    "pickCode": "Choose a code",
+    "noCode": "No code matches.",
+    "cancel": "Cancel",
+    "save": "Save line",
+    "formulaPlaceholder": "building.gross_volume / 100"
   }
 }

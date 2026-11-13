@@ -28,6 +28,7 @@ export function LineDetailPanel({
   systemNames,
   onSelect,
   onClose,
+  children,
 }: {
   run: Run;
   lineKey: string;
@@ -35,6 +36,8 @@ export function LineDetailPanel({
   systemNames: Map<string, string>;
   onSelect: (key: string) => void;
   onClose: () => void;
+  /** The line's edits and actions (F06 §6), above its explanation. */
+  children?: React.ReactNode;
 }) {
   const t = useTranslations("boqs.detail");
   const tl = useTranslations("library");
@@ -59,6 +62,7 @@ export function LineDetailPanel({
           <X aria-hidden />
         </Button>
       </div>
+      {children}
       {detail.isError && (
         <p role="alert" className="text-error">
           {message(detail.error)}

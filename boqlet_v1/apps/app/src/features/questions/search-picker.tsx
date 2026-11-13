@@ -24,6 +24,8 @@ export function SearchPicker({
   empty,
   disabled,
   className,
+  autoFocus,
+  onDismiss,
   "data-testid": testId,
 }: {
   items: readonly PickItem[];
@@ -36,6 +38,9 @@ export function SearchPicker({
   empty: string;
   disabled?: boolean;
   className?: string;
+  autoFocus?: boolean;
+  /** Called when the person leaves without picking (Escape or moving away). */
+  onDismiss?: () => void;
   "data-testid"?: string;
 }) {
   const id = useId();
@@ -74,7 +79,11 @@ export function SearchPicker({
           setOpen(true);
           setActive(0);
         }}
-        onBlur={() => setOpen(false)}
+        autoFocus={autoFocus}
+        onBlur={() => {
+          setOpen(false);
+          onDismiss?.();
+        }}
         onChange={(e) => {
           setQuery(e.target.value);
           setActive(0);
@@ -94,6 +103,7 @@ export function SearchPicker({
           } else if (e.key === "Escape") {
             setOpen(false);
             setQuery("");
+            onDismiss?.();
           }
         }}
         className="h-8 w-full rounded-[var(--radius)] border border-input bg-transparent px-2 text-ui outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"

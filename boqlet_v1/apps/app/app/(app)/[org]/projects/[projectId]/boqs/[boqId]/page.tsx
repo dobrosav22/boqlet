@@ -56,7 +56,7 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
           </Link>
         ))}
       </nav>
-      {tab === "sheet" && (current ? <Sheet key={current.id} run={current} /> : <RunFigures run={current} />)}
+      {tab === "sheet" && (current ? <Sheet key={current.id} run={current} boq={boq.data} /> : <RunFigures run={current} />)}
       {tab === "log" && <LogTab key={current?.id ?? "none"} run={current} />}
       {tab === "questions" && <QuestionsTab boq={boq.data} />}
       {tab === "setup" && <SetupTab boq={boq.data} orgId={org.id} />}

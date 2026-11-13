@@ -33,9 +33,9 @@ test("F06-AC1 switching Group by regroups without a request and keeps every line
   // A collapsed group hides its lines; the count comes back when it opens.
   await page.getByTestId("group-by").selectOption({ label: "ACME cost codes" });
   const group = page.getByTestId("sheet-group").first();
-  await group.getByRole("button").click();
+  await group.getByRole("button", { name: /^(Collapse|Expand) / }).click();
   await expect(grid).not.toHaveAttribute("data-lines", String(run.stats!.lines));
-  await group.getByRole("button").click();
+  await group.getByRole("button", { name: /^(Collapse|Expand) / }).click();
   await expect(grid).toHaveAttribute("data-lines", String(run.stats!.lines));
 });
 

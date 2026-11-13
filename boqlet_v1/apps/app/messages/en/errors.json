@@ -37,6 +37,11 @@
     "not_implemented": "This isn't available yet.",
     "invalid_answer": "That answer doesn't fit the question. Check it and try again.",
     "not_promotable": "Only an answer to a name question can go to a company dictionary.",
-    "invalid_preset": "Choose one of your organisation's dictionaries."
+    "invalid_preset": "Choose one of your organisation's dictionaries.",
+    "unit_needs_quantity": "A new unit needs a new quantity too: a number in m² doesn't become m³ by relabelling. Change the quantity first.",
+    "reason_required": "Give a reason: changed quantities and exclusions need one.",
+    "unknown_code": "That code is not in this BoQ's classification.",
+    "duplicate_id": "Another manual line already has this id.",
+    "invalid_quantity": "A quantity is a number of zero or more."
   }
 }

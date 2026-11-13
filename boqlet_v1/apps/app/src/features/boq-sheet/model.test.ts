@@ -86,3 +86,21 @@ describe("displayUnit", () => {
     expect(["m2", "m3", "ft2", "m", "nr", "kg/m3"].map(displayUnit)).toEqual(["m²", "m³", "ft²", "m", "nr", "kg/m³"]);
   });
 });
+
+describe("edits in the sheet (F06 §6)", () => {
+  const a = line([["9", "Preliminaries"]], { quantity: 4 });
+  const b = { ...line([["9", "Preliminaries"]], { quantity: 6 }), excluded: true, edit: { override: { id: "o", boqId: "b", lineKey: "x", createdAt: "" }, fields: ["excluded" as const], engine: { quantity: 6, description: "", unit: "m2", codes: {} } } };
+  const c = { ...line([["9", "Preliminaries"]], { quantity: 1 }), sortAfter: null };
+
+  it("keeps an excluded line listed but out of the subtotal, and orders a section by its edits", () => {
+    const rows = buildRows([a, b, c], "acme");
+    const group = rows[0] as GroupRow;
+    expect(group).toMatchObject({ lineCount: 3, quantity: 5 });
+    expect(rows.slice(1).map((r) => r.id)).toEqual([c.key, a.key, b.key]);
+  });
+
+  it("filters edited and excluded lines", () => {
+    expect(filterLines([a, b, c], { source: "excluded" })).toEqual([b]);
+    expect(filterLines([a, b, c], { source: "edited" })).toEqual([b]);
+  });
+});

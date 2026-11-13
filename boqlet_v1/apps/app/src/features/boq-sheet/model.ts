@@ -1,14 +1,18 @@
 /**
  * The sheet's rows, built client-side from a run's lines (F06 §1–4): filtered, grouped by one
  * classification's code path with subtotals, lines without a code in that system last under
- * "Unclassified" (never hidden, BR-03). Pure functions: no React, no formatting.
+ * "Unclassified" (never hidden, BR-03). Lines carry their current edits (`edits.ts`): excluded lines
+ * stay listed but leave the subtotals, and edits' order applies within each section.
+ * Pure functions: no React, no formatting.
  */
-import type { RunLine } from "@/api/hooks/sheet";
+import { orderSection, type SheetLine } from "./edits";
 
 export type Source = "measured" | "derived" | "manual" | "flagged";
+/** The source filter also lists edited and excluded lines (F06 §4, §6). */
+export type SourceFilter = Source | "edited" | "excluded";
 
 export interface SheetFilters {
-  source?: Source;
+  source?: SourceFilter;
   storey?: string;
   family?: string;
   /** Engine model id (as in the trace's elements). */
@@ -33,17 +37,17 @@ export interface LineRow {
   kind: "line";
   id: string;
   depth: number;
-  line: RunLine;
+  line: SheetLine;
 }
 export type Row = GroupRow | LineRow;
 
 export const UNCLASSIFIED = "~unclassified";
 
-export function filterLines(lines: RunLine[], f: SheetFilters): RunLine[] {
+export function filterLines(lines: SheetLine[], f: SheetFilters): SheetLine[] {
   const q = f.q?.trim().toLowerCase();
   if (!f.source && !f.storey && !f.family && !f.model && !q) return lines;
   return lines.filter((l) => {
-    if (f.source && l.source !== f.source) return false;
+    if (f.source === "edited" ? !l.edit : f.source === "excluded" ? !l.excluded : f.source && l.source !== f.source) return false;
     if (f.storey && l.location?.storey !== f.storey && !l.location?.storeys?.includes(f.storey)) return false;
     if (f.family && l.family !== f.family) return false;
     if (f.model && !l.trace.elements.some((e) => e.model === f.model)) return false;
@@ -53,7 +57,7 @@ export function filterLines(lines: RunLine[], f: SheetFilters): RunLine[] {
 }
 
 /** Distinct values for the filter menus. */
-export function facets(lines: RunLine[]) {
+export function facets(lines: SheetLine[]) {
   const storeys = new Set<string>();
   const families = new Set<string>();
   const models = new Set<string>();
@@ -72,7 +76,7 @@ interface Node {
   code: string;
   title: string | null;
   children: Map<string, Node>;
-  lines: RunLine[];
+  lines: SheetLine[];
   count: number;
   units: Set<string>;
   sum: number;
@@ -87,9 +91,9 @@ const byCode = (a: Node, b: Node) => (a.id === UNCLASSIFIED ? 1 : b.id === UNCLA
  * Rows in display order. Without a system the lines are listed flat. Groups nest by the code path
  * (one level per path segment), each with its line count and, when the unit is shared, the sum.
  */
-export function buildRows(lines: RunLine[], system: string | null, collapsed: ReadonlySet<string> = new Set()): Row[] {
+export function buildRows(lines: SheetLine[], system: string | null, collapsed: ReadonlySet<string> = new Set()): Row[] {
+  if (!system) return orderSection(lines).map((line) => ({ kind: "line", id: line.key, depth: 0, line }));
   const ordered = [...lines].sort((a, b) => a.sortIndex - b.sortIndex);
-  if (!system) return ordered.map((line) => ({ kind: "line", id: line.key, depth: 0, line }));
   const root = node("", "", null);
   for (const line of ordered) {
     const path = line.codes[system]?.path ?? [];
@@ -113,6 +117,8 @@ export function buildRows(lines: RunLine[], system: string | null, collapsed: Re
     at.lines.push(line);
     for (const n of chain) {
       n.count += 1;
+      // An excluded line stays listed but is out of the totals (F06 §6).
+      if (line.excluded) continue;
       n.units.add(line.unit);
       n.sum += line.quantity ?? 0;
       if (line.quantity !== null) n.measured += 1;
@@ -126,7 +132,7 @@ export function buildRows(lines: RunLine[], system: string | null, collapsed: Re
       const isCollapsed = collapsed.has(child.id);
       rows.push({ kind: "group", id: child.id, depth, code: child.code, title: child.title, lineCount: child.count, unit: shared, quantity: shared && child.measured > 0 ? child.sum : null, collapsed: isCollapsed });
       if (isCollapsed) continue;
-      for (const line of child.lines) rows.push({ kind: "line", id: line.key, depth: depth + 1, line });
+      for (const line of orderSection(child.lines)) rows.push({ kind: "line", id: line.key, depth: depth + 1, line });
       walk(child, depth + 1);
     }
   };
