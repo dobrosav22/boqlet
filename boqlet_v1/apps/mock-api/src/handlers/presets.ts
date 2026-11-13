@@ -34,6 +34,18 @@ export function versionInfo(v: PresetVersionRec) {
   };
 }
 
+/** A version with its document (`PresetVersion`); `flattened` for rule-set patches. */
+export function presetVersionView(v: PresetVersionRec, flattened?: unknown) {
+  return {
+    ...versionInfo(v),
+    presetId: v.presetId,
+    doc: v.doc,
+    extendsVersionId: v.extendsVersionId,
+    problems: v.problems,
+    ...(flattened ? { flattened } : {}),
+  };
+}
+
 /** Revisions whose inputs name one of the preset's versions. */
 function usedByCount(presetId: string) {
   const ids = new Set(presetVersionsOf(presetId).map((v) => v.id));
@@ -120,14 +132,7 @@ export const presetHandlers: Handlers = {
         flattened = undefined;
       }
     }
-    return json({
-      ...versionInfo(version),
-      presetId: version.presetId,
-      doc: version.doc,
-      extendsVersionId: version.extendsVersionId,
-      problems: version.problems,
-      ...(flattened ? { flattened } : {}),
-    });
+    return json(presetVersionView(version, flattened));
   },
 
   listPresetVersions({ user, params }) {

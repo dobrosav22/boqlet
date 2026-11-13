@@ -1,7 +1,7 @@
 /**
  * F04 BoQs and runs (FE-008): BoQs with their working version (a `draft` revision), revision
  * inputs, generating runs through the engine as `run` jobs, run history, pending changes, archive.
- * Saving versions, confirming and review come with FE-031; decisions with FE-010.
+ * Saving versions, confirming and review come with FE-031. Runs carry the project's decisions (FE-010).
  */
 import { gzipSync } from "node:zlib";
 import { audit } from "../audit.js";
@@ -9,6 +9,7 @@ import { putBlob, signedUrl } from "../blobs.js";
 import { nowIso } from "../clock.js";
 import { EngineRefused, EngineUnavailable, engine, type PresetFolder } from "../engine/engine.js";
 import { emit } from "../events.js";
+import { decisionsSnapshot, unappliedQuestionIds } from "../decisions.js";
 import { conflict, HttpError, limitReached, notFound } from "../http.js";
 import { newId } from "../ids.js";
 import { createJob, jobView, projectAudience, runJob } from "../jobs.js";
@@ -129,7 +130,7 @@ const modelsKey = (models: RevisionInputs["models"]) =>
 
 /**
  * What differs from the current run's request (F04 §4, 07-backend/architecture.md): the inputs,
- * the project dictionary's version and (from FE-010) the decisions.
+ * the project dictionary's version and the decisions (an answer given, changed or cleared since).
  */
 export function pendingChanges(revision: RevisionRec, project: ProjectRec): string[] {
   const run = revision.currentRunId ? db().runs.find((r) => r.id === revision.currentRunId) : undefined;
@@ -143,6 +144,7 @@ export function pendingChanges(revision: RevisionRec, project: ProjectRec): stri
   if (!same(was.dictionaryVersionIds, is.dictionaryVersionIds) || run.request.projectDictionaryVersionId !== projectDictionaryVersionId(project)) out.push("inputs.dictionaries");
   if ((was.federationVersionId ?? null) !== (is.federationVersionId ?? null)) out.push("inputs.federation");
   if ((was.resolutionVersionId ?? null) !== (is.resolutionVersionId ?? null)) out.push("inputs.resolution");
+  if (unappliedQuestionIds(run).length) out.push("decisions");
   return out;
 }
 
@@ -327,14 +329,15 @@ function startRun(run: RunRec, revision: RevisionRec, boq: BoqRec, project: Proj
           const v = db().modelVersions.find((x) => x.id === m.modelVersionId)!;
           return { modelId: v.engineModelId!, discipline: m.discipline, ...(m.scope ? { scope: m.scope as Record<string, unknown> } : {}) };
         });
-        // Decisions join the request with FE-010.
-        const { result } = await engine().run({ models, ruleSet, dictionaries, classifications, decisions: [] });
+        const decisions = (run.request.decisions ?? []).map((d) => ({ questionId: d.questionId, scope: "project", answer: d.answer }));
+        const { result } = await engine().run({ models, ruleSet, dictionaries, classifications, decisions });
         if (ctx.cancelled()) return;
         ctx.progress("index", 95);
         run.resultKey = `orgs/${org.id}/runs/${run.id}/result.json.gz`;
         await putBlob(run.resultKey, gzipSync(JSON.stringify(result)));
         const blocking = result.questions.filter((q) => q.blocking).length;
         run.stats = { ...result.stats, questions: result.questions.length, blockingQuestions: blocking, warnings: result.warnings.length };
+        run.askedQuestionIds = result.questions.map((q) => q.id);
         run.models = result.models;
         if (result.building) run.building = result.building;
         run.classifications = inputs.classificationVersionIds.map((id) => {
@@ -525,7 +528,7 @@ export const boqHandlers: Handlers = {
       revisionId: revision.id,
       jobId: "",
       status: "queued",
-      request: { inputs: structuredClone(inputs), projectDictionaryVersionId: projectDictionaryVersionId(project), decisionsHash: "" },
+      request: { inputs: structuredClone(inputs), projectDictionaryVersionId: projectDictionaryVersionId(project), decisions: decisionsSnapshot(project.id) },
       createdBy: user!.id,
       createdAt: nowIso(),
     };

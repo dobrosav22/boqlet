@@ -5,6 +5,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Schemas } from "@ifc-boq/api";
+import type { Question } from "@ifc-boq/types";
 import { dataDir } from "./paths.js";
 
 export type OrgRole = Schemas["OrgRole"];
@@ -157,8 +158,13 @@ export interface RunRec {
   revisionId: string;
   jobId: string;
   status: Schemas["RunStatus"];
-  /** What the run was asked for: the inputs as they were, the project dictionary appended, the decisions used. */
-  request: { inputs: RevisionInputs; projectDictionaryVersionId: string | null; decisionsHash: string };
+  /**
+   * What the run was asked for: the inputs as they were, the project dictionary appended, and the
+   * project's decisions as they were sent (with the question each answers, F05 §1).
+   */
+  request: { inputs: RevisionInputs; projectDictionaryVersionId: string | null; decisions?: DecisionSnapshot[] };
+  /** Ids of the questions the engine asked (the result's open questions), for pending changes. */
+  askedQuestionIds?: string[];
   stats?: Schemas["Run"]["stats"];
   models?: unknown[];
   building?: unknown;
@@ -170,6 +176,33 @@ export interface RunRec {
   createdBy: string;
   createdAt: string;
   finishedAt?: string;
+}
+/** An engine question, as a run's result holds it. */
+export type QuestionRec = Question;
+/** A decision as a run was generated with it. */
+export interface DecisionSnapshot {
+  questionId: string;
+  kind: string;
+  answer: string | number | boolean | null;
+  question?: QuestionRec;
+}
+/**
+ * A project decision (data-model.md "Decision"). A changed or cleared answer keeps its old row with
+ * `supersededAt`; the API returns current rows only.
+ */
+export interface DecisionRec {
+  id: string;
+  projectId: string;
+  questionId: string;
+  kind: string;
+  answer: string | number | boolean | null;
+  note?: string;
+  /** The question as last asked, when a run of the project asked it. */
+  question?: QuestionRec;
+  decidedBy: string;
+  decidedAt: string;
+  promotedToPresetVersionId: string | null;
+  supersededAt?: string;
 }
 /** Processing time used (BR-62), counted against `processingMinutesPerMonth`. */
 export interface UsageRec {
@@ -220,6 +253,7 @@ export interface Db {
   boqs: BoqRec[];
   revisions: RevisionRec[];
   runs: RunRec[];
+  decisions: DecisionRec[];
   usage: UsageRec[];
   notifications: NotificationRec[];
   audit: AuditRec[];
@@ -251,6 +285,7 @@ export function loadStore(): boolean {
   state.boqs ??= [];
   state.revisions ??= [];
   state.runs ??= [];
+  state.decisions ??= [];
   state.usage ??= [];
   state.notifications ??= [];
   state.deletedOrgIds ??= [];

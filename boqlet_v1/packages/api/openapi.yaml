@@ -2742,6 +2742,9 @@ components:
         decidedAt: { type: string, format: date-time }
         usedByLatestRuns: { type: boolean }
         promotedToPresetVersionId: { type: [string, "null"], format: uuid }
+        answerType:
+          $ref: "../types/schema/boq-result.schema.json#/definitions/AnswerType"
+          description: The answer control of the question it answers, as last asked (S13 edits with it)
     DecisionInput:
       type: object
       required: [questionId, kind, answer]
@@ -3005,12 +3008,29 @@ components:
             log: { type: array, items: { $ref: "../types/schema/boq-result.schema.json#/definitions/LogEntry" } }
             reviewComments: { type: array, items: { $ref: "#/components/schemas/ReviewComment" } }
     QuestionWithDecision:
-      allOf:
-        - $ref: "../types/schema/boq-result.schema.json#/definitions/Question"
-        - type: object
-          properties:
-            decision: { $ref: "#/components/schemas/Decision" }
-            answeredAfterRun: { type: boolean }
+      type: object
+      description: >-
+        An engine Question (boq-result.schema.json, Question) joined with the project's decision for it.
+        Its fields are listed one by one because the generated Question schema allows no other
+        properties, so an allOf with it could never validate (FE-010, like RunLine).
+      required: [id, kind, blocking, message, answer, answeredAfterRun]
+      properties:
+        id: { $ref: "../types/schema/boq-result.schema.json#/definitions/Question/properties/id" }
+        kind: { $ref: "../types/schema/boq-result.schema.json#/definitions/Question/properties/kind" }
+        blocking: { $ref: "../types/schema/boq-result.schema.json#/definitions/Question/properties/blocking" }
+        message: { $ref: "../types/schema/boq-result.schema.json#/definitions/Question/properties/message" }
+        answer: { $ref: "../types/schema/boq-result.schema.json#/definitions/Question/properties/answer" }
+        guids: { $ref: "../types/schema/boq-result.schema.json#/definitions/Question/properties/guids" }
+        field: { $ref: "../types/schema/boq-result.schema.json#/definitions/Question/properties/field" }
+        raw: { $ref: "../types/schema/boq-result.schema.json#/definitions/Question/properties/raw" }
+        occurrences: { $ref: "../types/schema/boq-result.schema.json#/definitions/Question/properties/occurrences" }
+        suggestion: { $ref: "../types/schema/boq-result.schema.json#/definitions/Question/properties/suggestion" }
+        decision: { $ref: "#/components/schemas/Decision" }
+        answeredAfterRun:
+          type: boolean
+          description: >-
+            The project's answer differs from the one this run was generated with (answered, changed or
+            cleared after the run): it applies on the next run (F05 §1, §3).
     LogPage:
       type: object
       required: [items]

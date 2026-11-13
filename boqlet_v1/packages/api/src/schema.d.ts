@@ -3101,6 +3101,8 @@ export interface components {
             usedByLatestRuns?: boolean;
             /** Format: uuid */
             promotedToPresetVersionId?: string | null;
+            /** @description The answer control of the question it answers, as last asked (S13 edits with it) */
+            answerType?: components["schemas"]["AnswerType"];
         };
         DecisionInput: {
             questionId: string;
@@ -3371,9 +3373,21 @@ export interface components {
             log?: components["schemas"]["LogEntry"][];
             reviewComments?: components["schemas"]["ReviewComment"][];
         };
-        QuestionWithDecision: components["schemas"]["Question"] & {
+        /** @description An engine Question (boq-result.schema.json, Question) joined with the project's decision for it. Its fields are listed one by one because the generated Question schema allows no other properties, so an allOf with it could never validate (FE-010, like RunLine). */
+        QuestionWithDecision: {
+            id: components["schemas"]["id"];
+            kind: components["schemas"]["QuestionKind"];
+            blocking: components["schemas"]["blocking"];
+            message: components["schemas"]["message"];
+            answer: components["schemas"]["AnswerType"];
+            guids?: components["schemas"]["guids"];
+            field?: components["schemas"]["field"];
+            raw?: components["schemas"]["raw"];
+            occurrences?: components["schemas"]["occurrences"];
+            suggestion?: components["schemas"]["suggestion"];
             decision?: components["schemas"]["Decision"];
-            answeredAfterRun?: boolean;
+            /** @description The project's answer differs from the one this run was generated with (answered, changed or cleared after the run): it applies on the next run (F05 §1, §3). */
+            answeredAfterRun: boolean;
         };
         LogPage: {
             items: components["schemas"]["LogEntry"][];
@@ -3700,6 +3714,31 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /** @description What kind of answer a question expects; drives the UI control. */
+        AnswerType: {
+            /** @constant */
+            kind: "term";
+            category?: string;
+        } | {
+            /** @constant */
+            kind: "number";
+            unit?: components["schemas"]["Unit"];
+        } | {
+            /** @constant */
+            kind: "rule";
+        } | {
+            /** @constant */
+            kind: "code";
+            system: string;
+        } | {
+            /** @constant */
+            kind: "choice";
+            options: {
+                value: string;
+                label: string;
+                recommended?: boolean;
+            }[];
+        };
         /** @description What federation did with one model of a run. */
         ModelReport: {
             id: string;
@@ -3833,48 +3872,19 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        id: string;
         /** @enum {string} */
         QuestionKind: "unknown_name" | "missing_data" | "unmatched" | "double_claim" | "unclassified" | "classification_conflict" | "contradiction" | "overlap";
-        /** @description What kind of answer a question expects; drives the UI control. */
-        AnswerType: {
-            /** @constant */
-            kind: "term";
-            category?: string;
-        } | {
-            /** @constant */
-            kind: "number";
-            unit?: components["schemas"]["Unit"];
-        } | {
-            /** @constant */
-            kind: "rule";
-        } | {
-            /** @constant */
-            kind: "code";
-            system: string;
-        } | {
-            /** @constant */
-            kind: "choice";
-            options: {
-                value: string;
-                label: string;
-                recommended?: boolean;
-            }[];
-        };
-        Question: {
-            id: string;
-            kind: components["schemas"]["QuestionKind"];
-            /** @description Blocking questions stop the BoQ from being "complete"; others are informative. */
-            blocking: boolean;
-            message: string;
-            answer: components["schemas"]["AnswerType"];
-            guids?: string[];
-            /** @description For unknown_name: the field and raw text. */
-            field?: string;
-            raw?: string;
-            occurrences?: number;
-            /** @description What the engine would use if nobody answers. */
-            suggestion?: string | number;
-        };
+        /** @description Blocking questions stop the BoQ from being "complete"; others are informative. */
+        blocking: boolean;
+        message: string;
+        guids: string[];
+        /** @description For unknown_name: the field and raw text. */
+        field: string;
+        raw: string;
+        occurrences: number;
+        /** @description What the engine would use if nobody answers. */
+        suggestion: string | number;
         Warning: {
             code: string;
             message: string;
