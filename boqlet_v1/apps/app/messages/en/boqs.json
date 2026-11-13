@@ -102,7 +102,8 @@
     "viewer": "Viewer",
     "setup": "Setup",
     "versions": "Versions",
-    "log": "Log"
+    "log": "Log",
+    "changes": "Changes"
   },
   "sheet": {
     "empty": "Generate the BoQ to see its lines.",
@@ -220,7 +221,10 @@
     "lines": "Lines",
     "flagged": "To confirm",
     "duration": "Duration",
-    "current": "Current"
+    "current": "Current",
+    "compare": "Compare",
+    "compareHint": "Tick two runs to compare them",
+    "pick": "Pick for comparing"
   },
   "detail": {
     "title": "Line detail",
@@ -433,5 +437,102 @@
     "reason": "Why is it reopened?",
     "submit": "Reopen",
     "cancel": "Cancel"
+  },
+  "changes": {
+    "noRun": "Generate the BoQ to compare it with an earlier version.",
+    "compareWith": "Compare with",
+    "pick": {
+      "choose": "Choose a run…",
+      "saved": "Version {label} (saved)",
+      "earlier": "Earlier run, {when}",
+      "boq": "{name}, {when}",
+      "other": "The chosen run"
+    },
+    "olderRun": "Showing an older run of this version, not the current one.",
+    "chooseFirst": "Choose what to compare the current run with: an earlier run, a saved version or another BoQ of the project.",
+    "nothingToCompare": "Nothing to compare with yet: save a version, or generate again after a change.",
+    "comparing": "Comparing…",
+    "export": "Export changes",
+    "exporting": "Writing the change report…",
+    "exported": "{file} is downloaded",
+    "viewer": "In the model",
+    "summary": {
+      "title": "Summary",
+      "linesAdded": "Lines added",
+      "linesRemoved": "Lines removed",
+      "linesChanged": "Lines changed",
+      "linesUnchanged": "Lines unchanged",
+      "elementsAdded": "Elements added",
+      "elementsRemoved": "Elements removed",
+      "elementsChanged": "Elements changed",
+      "questionsNew": "New questions",
+      "questionsResolved": "Questions resolved",
+      "inputs": "What differs: {what}.",
+      "sameInputs": "Same inputs: the same model versions, presets, answers and line edits.",
+      "byModel": "{model}: {added} added, {removed} removed, {changed} changed",
+      "churn": "More than 50% of elements changed id. Check the export settings of the authoring tool."
+    },
+    "inputs": {
+      "inputs_models": "model versions",
+      "inputs_ruleSet": "rule set",
+      "inputs_classifications": "classifications",
+      "inputs_dictionaries": "dictionaries",
+      "inputs_federation": "federation settings",
+      "inputs_resolution": "resolution settings",
+      "decisions": "answers",
+      "adjustments": "line edits"
+    },
+    "lines": {
+      "title": "Lines",
+      "change": "Change",
+      "all": "All changes",
+      "threshold": "Hide changes under (%)",
+      "groupBy": "Group by",
+      "group": "Group",
+      "allGroups": "All groups",
+      "noGroup": "No group",
+      "legend": "Lines are matched by their key. When a rule's line key changes, its lines show as removed and added with the cause \"rules changed\"; that is expected.",
+      "none": "No line changed.",
+      "noneFiltered": "No line passes the filters.",
+      "description": "Description",
+      "before": "Before",
+      "after": "After",
+      "delta": "Δ",
+      "deltaPct": "Δ %",
+      "unit": "Unit",
+      "causes": "Why",
+      "was": "Was: {text}"
+    },
+    "change": {
+      "added": "Added",
+      "removed": "Removed",
+      "changed": "Changed"
+    },
+    "causes": {
+      "elements_added": "elements added",
+      "elements_removed": "elements removed",
+      "elements_changed": "elements changed",
+      "rules_changed": "rules changed",
+      "decision_changed": "an answer changed",
+      "override_changed": "line edit changed"
+    },
+    "elements": {
+      "title": "Elements",
+      "none": "No element changed: both runs use the same model versions, or the versions have the same elements.",
+      "guid": "GlobalId",
+      "model": "Model",
+      "fields": "What changed",
+      "lines": "Lines affected",
+      "lineCount": "{count, plural, =0 {none} one {# line} other {# lines}}",
+      "more": "Show more ({count} left)"
+    },
+    "fields": {
+      "quantities": "quantities",
+      "type": "type",
+      "class": "class",
+      "name": "name",
+      "storey": "storey",
+      "material": "material"
+    }
   }
 }

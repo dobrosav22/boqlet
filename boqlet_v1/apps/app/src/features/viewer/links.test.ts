@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLinks, colorsFor, COVERAGE_COLORS, EDITED_COLORS, elementOfMesh, SOURCE_COLORS, type LinkLine, type SceneElements } from "./links";
+import { buildLinks, CHANGE_COLORS, colorsFor, COVERAGE_COLORS, EDITED_COLORS, elementOfMesh, SOURCE_COLORS, type LinkLine, type SceneElements } from "./links";
 
 /** F07 §3–5: links between lines and elements, and the colour modes (FE-016). */
 
@@ -66,6 +66,19 @@ describe("colour modes (F07 §5)", () => {
       ["measured", 2],
       ["unmatched", 1],
     ]);
+  });
+
+  it("changes (F08 §4): added blue, changed orange through their meshes; removed counted, drawn as ghosts elsewhere", () => {
+    const { colors, legend } = colorsFor({ mode: "changes", elements, links, changes: { added: ["door"], changed: ["roof"], removed: ["gone1", "gone2"] } });
+    expect(colors.get("door")).toBe(CHANGE_COLORS.added);
+    expect(colors.get("slab1")).toBe(CHANGE_COLORS.changed);
+    expect(colors.has("wall")).toBe(false);
+    expect(legend.map((l) => [l.key, l.guids.length])).toEqual([
+      ["added", 1],
+      ["changed", 1],
+      ["removed", 2],
+    ]);
+    expect(colorsFor({ mode: "changes", elements, links }).legend).toEqual([]);
   });
 
   it("source tells measured, derived-only and edited apart", () => {

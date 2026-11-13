@@ -12,7 +12,8 @@
     "code": "Code group",
     "source": "Source",
     "edited": "Edited",
-    "model": "Model"
+    "model": "Model",
+    "changes": "Changes"
   },
   "system": "Classification",
   "storey": "Storey",
@@ -48,6 +49,11 @@
     "edited": {
       "edited": "In an edited line",
       "unedited": "Not edited"
+    },
+    "changes": {
+      "added": "Added",
+      "changed": "Changed",
+      "removed": "Removed (from the older version)"
     }
   },
   "line": "Line",

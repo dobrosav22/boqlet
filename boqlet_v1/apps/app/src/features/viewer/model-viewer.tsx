@@ -38,6 +38,7 @@ export function ModelViewer({
   stacked = false,
   onOpenLine,
   onSelectionChange,
+  changes,
   className,
 }: {
   models: ViewerModel[];
@@ -56,6 +57,11 @@ export function ModelViewer({
   onOpenLine?: (key: string) => void;
   /** The picked elements and the lines they feed ("N lines from M elements", F07 §9). */
   onSelectionChange?: (selection: { elements: string[]; lines: string[] }) => void;
+  /**
+   * A change report's elements (F08 §4): the viewer opens in the "changes" colour mode, and the removed
+   * ones are drawn as a red ghost from `ghostModels` (the older run's versions that differ).
+   */
+  changes?: { added: readonly string[]; changed: readonly string[]; removed: readonly string[]; ghostModels: ViewerModel[] };
   className?: string;
 }) {
   const t = useTranslations("viewer");
@@ -66,7 +72,8 @@ export function ModelViewer({
   const [loaded, setLoaded] = useState<ReadonlySet<string>>(new Set());
   const [counts, setCounts] = useState({ meshes: 0, visible: 0 });
   const [hiddenModels, setHiddenModels] = useState<ReadonlySet<string>>(new Set());
-  const [mode, setMode] = useState<ColorMode>(runId ? "coverage" : "type");
+  const [mode, setMode] = useState<ColorMode>(changes ? "changes" : runId ? "coverage" : "type");
+  const [ghosts, setGhosts] = useState(0);
   const [system, setSystem] = useState<string | undefined>(systems[0]?.id);
   const [storey, setStorey] = useState<string>("");
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
@@ -78,6 +85,8 @@ export function ModelViewer({
   const glbs = models.map((_, i) => queries[i * 2 + 1]?.data as ArrayBuffer | undefined);
   const failed = models.filter((_, i) => queries[i * 2]?.isError || queries[i * 2 + 1]?.isError);
   const coverage = useCoverage(runId);
+  const ghostQueries = useModelScenes((changes?.removed.length ? changes.ghostModels : []).map((m) => m.versionId));
+  const ghostGlbs = (changes?.ghostModels ?? []).map((_, i) => ghostQueries[i * 2 + 1]?.data as ArrayBuffer | undefined);
 
   // One element map for all models; which model each element is in (by our version id).
   // Scene data never changes once loaded, so which ones are in is what the memo depends on.
@@ -126,8 +135,23 @@ export function ModelViewer({
     });
   });
 
-  const legendInput = { mode, elements, links, coverage: coverage.data, system, modelOf: (g: string) => modelOf.get(g), models: models.map((m) => ({ id: m.versionId, label: m.label })) };
-  const { colors, legend } = useMemo(() => colorsFor(legendInput), [mode, elements, links, coverage.data, system, modelOf, models]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The older versions' removed elements, as ghosts (once each geometry is in).
+  const ghostsLoaded = useRef(new Set<string>());
+  useEffect(() => {
+    const v = view.current;
+    if (!ready || !v || !changes?.removed.length) return;
+    const keep = new Set(changes.removed);
+    changes.ghostModels.forEach((m, i) => {
+      const glb = ghostGlbs[i];
+      if (!glb || ghostsLoaded.current.has(m.versionId)) return;
+      ghostsLoaded.current.add(m.versionId);
+      void v.loadGhost(m.versionId, glb, keep).then((n) => setGhosts((g) => g + n));
+    });
+  });
+  useEffect(() => view.current?.setGhostsVisible(mode === "changes"), [mode, ghosts]);
+
+  const legendInput = { mode, elements, links, coverage: coverage.data, system, modelOf: (g: string) => modelOf.get(g), models: models.map((m) => ({ id: m.versionId, label: m.label })), changes };
+  const { colors, legend } = useMemo(() => colorsFor(legendInput), [mode, elements, links, coverage.data, system, modelOf, models, changes]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // What is shown strongly: a legend group, else the "Show in 3D" line or elements.
   const focusElements = useMemo(() => {
@@ -249,6 +273,8 @@ export function ModelViewer({
       data-focus={focusMeshes.size}
       data-scope={scopeMeshes ? scopeMeshes.size : ""}
       data-picked={picked.size}
+      data-mode={mode}
+      data-ghosts={ghosts}
     >
       <div className="relative min-h-[420px] flex-1 border border-border bg-muted/40">
         <div ref={host} className="absolute inset-0" data-testid="viewer-canvas" />
@@ -319,7 +345,7 @@ export function ModelViewer({
               }}
               data-testid="viewer-mode"
             >
-              {(["type", ...(runId ? (["coverage", "code", "source", "edited"] as const) : []), ...(models.length > 1 ? (["model"] as const) : [])] as ColorMode[]).map((m) => (
+              {(["type", ...(runId ? (["coverage", "code", "source", "edited"] as const) : []), ...(models.length > 1 ? (["model"] as const) : []), ...(changes ? (["changes"] as const) : [])] as ColorMode[]).map((m) => (
                 <option key={m} value={m}>
                   {t(`modes.${m}`)}
                 </option>

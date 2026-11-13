@@ -22,8 +22,8 @@ const LISTS: Record<string, (projectId?: string) => QueryKey[]> = {
   project: () => [["projects"]],
   model: (p) => [p ? keys.models(p) : ["models"], ["modelVersions"]],
   modelVersion: (p) => [p ? keys.models(p) : ["models"], ["modelVersions"], ["model"]],
-  boq: (p) => [p ? keys.boqs(p) : ["boqs"]],
-  revision: () => [["boq"]],
+  boq: (p) => [p ? keys.boqs(p) : ["boqs"], ["revisions"]],
+  revision: () => [["boq"], ["revisions"]],
   run: () => [["runs"]],
   // Decisions belong to the project: its decisions, and every run's questions (joined with them).
   decision: (p) => [p ? keys.decisions(p) : ["decisions"], ["questions"]],

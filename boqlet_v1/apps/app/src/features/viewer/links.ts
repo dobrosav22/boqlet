@@ -69,7 +69,7 @@ export function elementOfMesh(mesh: string, elements: SceneElements, links: Link
 
 /* ---------------------------------------------------------------- colour modes (F07 §5) */
 
-export type ColorMode = "type" | "coverage" | "code" | "source" | "edited" | "model";
+export type ColorMode = "type" | "coverage" | "code" | "source" | "edited" | "model" | "changes";
 
 export interface LegendEntry {
   key: string;
@@ -84,6 +84,8 @@ export interface LegendEntry {
 export const COVERAGE_COLORS = { measured: 0x9fc29a, excluded: 0xbdb7ad, unmatched: 0xd9534f, coveredByParent: 0xc9dcc5 } as const;
 export const SOURCE_COLORS = { measured: 0x9fc29a, derived: 0x7d9be6, edited: 0xf2b705, none: 0xd9d4cc } as const;
 export const EDITED_COLORS = { edited: 0xf2b705, unedited: 0xd9d4cc } as const;
+/** F08 §4 / design-guidelines.md: added blue, changed orange, removed (a ghost of the old version) red. */
+export const CHANGE_COLORS = { added: 0x1e4fb8, changed: 0xe8590c, removed: 0xc62423 } as const;
 const PALETTE = [0x4e79a7, 0xf28e2b, 0x59a14f, 0xb07aa1, 0x76b7b2, 0xedc948, 0xff9da7, 0x9c755f, 0xe15759, 0xbab0ac, 0x86bcb6, 0x8cd17d];
 const NO_CODE = 0xd0d0d0;
 
@@ -98,10 +100,12 @@ export interface ColorInput {
   /** Model mode: each element's model, and the models' labels in order. */
   modelOf?: (guid: string) => string | undefined;
   models?: { id: string; label: string }[];
+  /** Changes mode: the elements a change report found (removed ones are drawn as ghosts, not coloured here). */
+  changes?: { added: readonly string[]; changed: readonly string[]; removed: readonly string[] };
 }
 
 /** Mesh colours for a mode, and its legend. "type" = the viewer's own colours by IFC class. */
-export function colorsFor({ mode, elements, links, coverage, system, modelOf, models }: ColorInput) {
+export function colorsFor({ mode, elements, links, coverage, system, modelOf, models, changes }: ColorInput) {
   const colors = new Map<string, number>();
   const groups = new Map<string, LegendEntry>();
   const put = (guid: string, entry: Omit<LegendEntry, "guids">) => {
@@ -117,6 +121,14 @@ export function colorsFor({ mode, elements, links, coverage, system, modelOf, mo
     for (const k of ["measured", "coveredByParent", "excluded", "unmatched"] as const)
       for (const guid of coverage[k]) put(guid, { key: k, label: `coverage.${k}`, translate: true, color: COVERAGE_COLORS[k] });
     return { colors, legend: (["measured", "coveredByParent", "excluded", "unmatched"] as const).map((k) => groups.get(k)).filter((g): g is LegendEntry => !!g) };
+  }
+
+  if (mode === "changes") {
+    if (!changes) return { colors, legend: [] as LegendEntry[] };
+    for (const k of ["added", "changed"] as const) for (const guid of changes[k]) put(guid, { key: k, label: `changes.${k}`, translate: true, color: CHANGE_COLORS[k] });
+    // Removed elements aren't in the newer models: their entry counts them, and selects nothing.
+    if (changes.removed.length) groups.set("removed", { key: "removed", label: "changes.removed", translate: true, color: CHANGE_COLORS.removed, guids: [...changes.removed] });
+    return { colors, legend: (["added", "changed", "removed"] as const).map((k) => groups.get(k)).filter((g): g is LegendEntry => !!g) };
   }
 
   if (mode === "source") {

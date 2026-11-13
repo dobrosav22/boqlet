@@ -26,6 +26,16 @@ export function useBoq(boqId: string) {
   });
 }
 
+/** One run (a finished run never changes). */
+export function useRun(runId: string | undefined) {
+  return useQuery({
+    queryKey: keys.run(runId ?? "none"),
+    enabled: !!runId,
+    staleTime: (q) => (q.state.data && q.state.data.status !== "queued" && q.state.data.status !== "running" ? Infinity : 0),
+    queryFn: async () => (await api.GET("/runs/{runId}", { params: { path: { runId: runId! } } })).data!,
+  });
+}
+
 export function useRuns(revisionId: string | undefined) {
   return useQuery({
     queryKey: keys.runs(revisionId ?? "none"),

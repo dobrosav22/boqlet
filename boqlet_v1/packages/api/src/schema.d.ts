@@ -3451,8 +3451,18 @@ export interface components {
             elementsChanged?: number;
             questionsNew?: number;
             questionsResolved?: number;
+            /** @description More than half of a model's elements changed GlobalId (F08 edge cases) */
             guidChurnWarning?: boolean;
+            /** @description What differs between the two runs' requests, as BoqRevision.pendingChanges names it */
             inputsChanged?: string[];
+            /** @description Elements added, removed and changed per model (F08 §4); only models with changes */
+            byModel?: {
+                /** @description The model's name */
+                model: string;
+                added: number;
+                removed: number;
+                changed: number;
+            }[];
         };
         LineChange: {
             lineKey: string;

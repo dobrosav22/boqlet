@@ -3102,8 +3102,19 @@ components:
         elementsChanged: { type: integer }
         questionsNew: { type: integer }
         questionsResolved: { type: integer }
-        guidChurnWarning: { type: boolean }
-        inputsChanged: { type: array, items: { type: string } }
+        guidChurnWarning: { type: boolean, description: "More than half of a model's elements changed GlobalId (F08 edge cases)" }
+        inputsChanged: { type: array, items: { type: string }, description: "What differs between the two runs' requests, as BoqRevision.pendingChanges names it" }
+        byModel:
+          type: array
+          description: Elements added, removed and changed per model (F08 §4); only models with changes
+          items:
+            type: object
+            required: [model, added, removed, changed]
+            properties:
+              model: { type: string, description: The model's name }
+              added: { type: integer }
+              removed: { type: integer }
+              changed: { type: integer }
     LineChange:
       type: object
       required: [lineKey, change]

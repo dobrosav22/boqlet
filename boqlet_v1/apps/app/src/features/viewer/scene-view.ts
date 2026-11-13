@@ -36,6 +36,8 @@ const DEFAULT_COLOR = 0xcfcac2;
 const FOCUS = 0x1e4fb8;
 const PICKED = 0xe8590c;
 const GHOST = 0xc5ccd3;
+/** Removed elements in the "changes" mode (design-guidelines.md): a red ghost from the old version. */
+const REMOVED = 0xc62423;
 
 export class SceneView {
   private renderer: THREE.WebGLRenderer;
@@ -44,6 +46,9 @@ export class SceneView {
   private controls: OrbitControls;
   private root = new THREE.Group();
   private groups = new Map<string, THREE.Group>();
+  /** Old model versions' removed elements (F08 §4 viewer): drawn, never picked or painted. */
+  private ghosts = new Map<string, THREE.Group>();
+  private ghostsOn = true;
   private meshes = new Map<string, THREE.Mesh>();
   private modelOf = new Map<string, string>();
   private classOf = new Map<string, string>();
@@ -142,6 +147,47 @@ export class SceneView {
     this.root.add(group);
     this.applyVisibility();
     this.fit();
+  }
+
+  /**
+   * Adds the elements of an older model version that are gone from the newer one, as a red ghost
+   * (F08 §4 "removed as a red ghost from the old version"). Only `keep` (their GlobalIds) is drawn.
+   * Returns how many were drawn.
+   */
+  async loadGhost(model: string, glb: ArrayBuffer, keep: ReadonlySet<string>) {
+    if (this.ghosts.has(model)) return 0;
+    const gltf = await new GLTFLoader().parseAsync(glb.slice(0), "");
+    const drop: THREE.Object3D[] = [];
+    let drawn = 0;
+    gltf.scene.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      const guid = o.name || o.parent?.name || "";
+      if (!keep.has(guid)) {
+        drop.push(o);
+        return;
+      }
+      drawn++;
+      o.name = `ghost:${guid}`;
+      o.material = new THREE.MeshStandardMaterial({ color: REMOVED, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
+    });
+    for (const o of drop) {
+      o.removeFromParent();
+      (o as THREE.Mesh).geometry.dispose();
+    }
+    const group = new THREE.Group();
+    group.name = `ghost:${model}`;
+    group.add(gltf.scene);
+    group.visible = this.ghostsOn;
+    this.ghosts.set(model, group);
+    this.root.add(group);
+    this.render();
+    return drawn;
+  }
+
+  setGhostsVisible(on: boolean) {
+    this.ghostsOn = on;
+    for (const g of this.ghosts.values()) g.visible = on;
+    this.render();
   }
 
   /** Meshes drawn (elements; spaces and openings excluded). */

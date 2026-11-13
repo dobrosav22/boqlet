@@ -10,6 +10,7 @@ import { DimensionRule } from "@/components/dimension-rule";
 import { BoqHeader } from "@/features/boqs/boq-header";
 import { RunHistory } from "@/features/boqs/run-history";
 import { SetupTab } from "@/features/boqs/setup-tab";
+import { ChangesTab } from "@/features/changes/changes-tab";
 import { LogTab } from "@/features/boq-sheet/log-tab";
 import { Sheet } from "@/features/boq-sheet/sheet";
 import { useOrg } from "@/features/orgs/org-context";
@@ -18,12 +19,12 @@ import { ViewerTab } from "@/features/viewer/viewer-tab";
 import { useProjectScope } from "@/features/projects/project-context";
 import { cn } from "@/lib/utils";
 
-const TABS = ["sheet", "questions", "viewer", "log", "setup", "versions"] as const;
+const TABS = ["sheet", "questions", "viewer", "changes", "log", "setup", "versions"] as const;
 type Tab = (typeof TABS)[number];
 
 /**
- * S12: the BoQ workspace: header, Sheet (FE-009), Questions (FE-010), Viewer (FE-016), Log, Setup
- * and the run history (FE-008).
+ * S12: the BoQ workspace: header, Sheet (FE-009), Questions (FE-010), Viewer (FE-016), Changes
+ * (FE-030; leads, estimators and approvers, S12d), Log, Setup and the run history (FE-008).
  */
 export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: string }> }) {
   const { boqId } = use(params);
@@ -35,7 +36,9 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
   const boq = useBoq(boqId);
   const runs = useRuns(boq.data?.currentRevision.id);
   const requested = search.get("tab") as Tab | null;
-  const tab: Tab = requested && (TABS as readonly string[]).includes(requested) ? requested : "sheet";
+  // S12d: the change report is for leads, estimators and approvers (seeAudit: lead, approver).
+  const tabs = TABS.filter((k) => k !== "changes" || can("seeAudit") || can("editBoqs"));
+  const tab: Tab = requested && (tabs as readonly string[]).includes(requested) ? requested : "sheet";
   const base = `/${org.slug}/projects/${project.id}/boqs/${boqId}`;
 
   if (boq.isError) return <p role="alert" className="text-error">{message(boq.error)}</p>;
@@ -45,7 +48,7 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
     <div className="flex flex-col gap-6" data-testid="boq-workspace">
       <BoqHeader boq={boq.data} runs={runs.data} base={base} canArchive={can("archive")} />
       <nav aria-label={t("tabs.label")} className="flex gap-6 border-b border-border">
-        {TABS.map((key) => (
+        {tabs.map((key) => (
           <Link
             key={key}
             href={`${base}?tab=${key}`}
@@ -59,10 +62,11 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
       </nav>
       {tab === "sheet" && (current ? <Sheet key={current.id} run={current} boq={boq.data} /> : <RunFigures run={current} />)}
       {tab === "viewer" && <ViewerTab run={current} base={base} />}
+      {tab === "changes" && <ChangesTab boq={boq.data} runs={runs.data} base={base} />}
       {tab === "log" && <LogTab key={current?.id ?? "none"} run={current} />}
       {tab === "questions" && <QuestionsTab boq={boq.data} />}
       {tab === "setup" && <SetupTab boq={boq.data} orgId={org.id} />}
-      {tab === "versions" && <RunHistory runs={runs.data} currentRunId={current?.id} />}
+      {tab === "versions" && <RunHistory runs={runs.data} currentRunId={current?.id} base={base} canCompare={tabs.includes("changes")} />}
     </div>
   );
 }

@@ -122,11 +122,25 @@ export interface ModelVersionRec {
   engineModelId?: string;
   archived?: boolean;
 }
+/** A change report between two runs (F08 §3, the "Change report" fake): the body is kept gzipped in the blob folder. */
+export interface DiffRec {
+  id: string;
+  fromRunId: string;
+  toRunId: string;
+  projectId: string;
+  orgId: string;
+  /** `RunDiff.summary` and `.questions`; lines and elements are in the blob at `key`. */
+  summary: Record<string, unknown>;
+  questions: { new: string[]; resolved: string[] };
+  key: string;
+  jobId: string;
+  createdAt: string;
+}
 /** A file made by an export job (F12): `Export` in the contract, with where it is kept. */
 export interface ExportRec {
   id: string;
   kind: string;
-  subjectType: "run";
+  subjectType: "run" | "diff";
   subjectId: string;
   revisionId: string;
   projectId: string;
@@ -329,6 +343,7 @@ export interface Db {
   overrides: OverrideRec[];
   manualItems: ManualItemRec[];
   exports: ExportRec[];
+  diffs: DiffRec[];
   sessions: SessionRec[];
   usage: UsageRec[];
   notifications: NotificationRec[];
@@ -367,6 +382,7 @@ export function loadStore(): boolean {
   state.overrides ??= [];
   state.manualItems ??= [];
   state.exports ??= [];
+  state.diffs ??= [];
   state.sessions ??= [];
   state.usage ??= [];
   state.notifications ??= [];

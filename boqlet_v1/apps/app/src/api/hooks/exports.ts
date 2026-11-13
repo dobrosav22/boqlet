@@ -1,8 +1,11 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import type { Schemas } from "@ifc-boq/api";
 import { api } from "@/api/client";
 import { localJobs } from "@/realtime/local-jobs";
+
+type Job = Schemas["Job"];
 
 /** How often an export job is asked about while it runs (exports take seconds, F12). */
 const POLL_MS = 500;
@@ -21,28 +24,38 @@ export function saveFile(blob: Blob, fileName: string) {
 }
 
 /**
- * F12: a run's BoQ Excel. Starts the `export_xlsx` job, waits for it (SSE also announces it; asking
- * keeps this independent of the event stream), then downloads the file through the signed URL.
+ * Waits for an export job (asking `GET /jobs/{id}`; SSE also announces it, asking keeps this independent
+ * of the event stream), then downloads its file through the signed URL. Returns the export's record.
  */
+export async function downloadWhenDone(job: Job) {
+  localJobs.add(job.id);
+  const deadline = Date.now() + TIMEOUT_MS;
+  let current = job;
+  while (current.status === "queued" || current.status === "running") {
+    if (Date.now() > deadline) throw new Error("export timed out");
+    await new Promise((r) => setTimeout(r, POLL_MS));
+    current = (await api.GET("/jobs/{jobId}", { params: { path: { jobId: job.id } } })).data!;
+  }
+  if (current.status !== "succeeded") throw Object.assign(new Error(current.error?.message ?? "export failed"), { code: current.error?.code });
+  const exportId = (current.output as { exportId?: string } | undefined)?.exportId;
+  if (!exportId) throw new Error("export without a file");
+  const meta = (await api.GET("/exports/{exportId}", { params: { path: { exportId } } })).data!;
+  const blob = (await api.GET("/exports/{exportId}/download", { params: { path: { exportId } }, parseAs: "blob" })).data as unknown as Blob;
+  saveFile(blob, meta.fileName);
+  return meta;
+}
+
+/** F12: a run's BoQ Excel (the `export_xlsx` job), downloaded when it is written. */
 export function useExportRun(runId: string) {
   return useMutation({
-    mutationFn: async ({ groupBy }: { groupBy?: string | null }) => {
-      const job = (await api.POST("/runs/{runId}/exports", { params: { path: { runId } }, body: { format: "xlsx", ...(groupBy ? { groupBy } : {}) } })).data!;
-      localJobs.add(job.id);
-      const deadline = Date.now() + TIMEOUT_MS;
-      let current = job;
-      while (current.status === "queued" || current.status === "running") {
-        if (Date.now() > deadline) throw new Error("export timed out");
-        await new Promise((r) => setTimeout(r, POLL_MS));
-        current = (await api.GET("/jobs/{jobId}", { params: { path: { jobId: job.id } } })).data!;
-      }
-      if (current.status !== "succeeded") throw Object.assign(new Error(current.error?.message ?? "export failed"), { code: current.error?.code });
-      const exportId = (current.output as { exportId?: string } | undefined)?.exportId;
-      if (!exportId) throw new Error("export without a file");
-      const meta = (await api.GET("/exports/{exportId}", { params: { path: { exportId } } })).data!;
-      const blob = (await api.GET("/exports/{exportId}/download", { params: { path: { exportId } }, parseAs: "blob" })).data as unknown as Blob;
-      saveFile(blob, meta.fileName);
-      return meta;
-    },
+    mutationFn: async ({ groupBy }: { groupBy?: string | null }) =>
+      downloadWhenDone((await api.POST("/runs/{runId}/exports", { params: { path: { runId } }, body: { format: "xlsx", ...(groupBy ? { groupBy } : {}) } })).data!),
+  });
+}
+
+/** F08 §7: a change report's Excel, downloaded when it is written. */
+export function useExportDiff(diffId: string | undefined) {
+  return useMutation({
+    mutationFn: async () => downloadWhenDone((await api.POST("/diffs/{diffId}/export", { params: { path: { diffId: diffId! } } })).data!),
   });
 }
