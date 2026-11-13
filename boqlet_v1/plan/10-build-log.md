@@ -22,8 +22,8 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M3 (Versions, exports, sharing, notifications) |
 | Role | Frontend agent |
-| Last task done | FE-030 Change report (8444b84) |
-| Next task | FE-031 Versions, confirmation, optional approval (F09) |
+| Last task done | FE-031 Versions, confirmation, optional approval (f7e9428) |
+| Next task | FE-032 Exports tab and frozen exports (F12) |
 | Waiting for the owner | — (the owner asked this session to stop after FE-037, the end of M3) |
 | In progress (not committed) | — |
 | Notes for the next session | Read the M3 decision entries (newest first), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
@@ -44,6 +44,45 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-13 — M3 decisions: FE-031 (frontend agent)
+- **Built:** FE-031, f7e9428. Mock `handlers/versions.ts` (issue, submit, request changes, approve, withdraw =
+  `reopenRevision`, comments, confirm, reopen; `reopenBoq` moved here from `boqs.ts`); app
+  `features/versions/` (dialogs, review strip, Review tab, Versions tab), `api/hooks/versions.ts`. Checked by
+  `tests/scenarios/versions.test.ts` (14; the BoqRevision and Boq todos of `state-machines.test.ts` point there)
+  and `e2e/versions.spec.ts` (4: save and read-only, confirm and "Reopen to update", the approval flow with two
+  browser contexts, withdraw).
+- **Decisions taken:**
+  - Revision `permissions` (free-form hints) gained state-aware keys: `saveVersion` (approval off and the working
+    version can be saved), `submit`, `approve` (approve and request changes; four-eyes applied), `saveApproved`,
+    `withdraw`, `comment`, `confirm`, `reopen`. Write keys are false while in review: the UI changes nothing
+    until the review is withdrawn. The API still takes edits in review and withdraws it (BR-23,
+    `settleReviews` after inputs, line edits and answers: any pending change on a revision in review sends it
+    back); generating in review is `409 revision_in_review`.
+  - Error codes: `not_ready` (details `reason`: `no_run`, `run_not_finished`, `pending` with `pendingChanges`),
+    `label_taken`, `not_approved`, `four_eyes` (403), `revision_in_review`, `approval_off`, `invalid_reviewer`,
+    `not_saved` (confirm with approval on while the working version differs from the last saved one).
+    `400 invalid_body` with `field: notModelledConfirmed` without the tick.
+  - Saving: the label defaults to the number's letter; another label is stored on the revision and must not be
+    any other version's (saved label or letter). The next working version keeps the saved run as its current
+    run (`basedOnRunId` = the saved one's frozen run), so the sheet stays until the next generate. The frozen
+    Excel (`issued_boq_xlsx`) is written by `startRunExport` (exports.ts), its id added to `frozen.exportIds`,
+    and the revision announced (`entity.changed`) when it is there.
+  - Confirm with nothing new marks the working version `closed` (hidden from `listRevisions`) instead of
+    deleting it (a deleted revision made open queries 404 into the not-found page); reopen takes a closed
+    working version up again, so letters stay in sequence.
+  - Approval is on when `settings.approvalRequired` and the plan's `approvalWorkflow`; switching it on without
+    the feature is `402 limit_reached` (`limit: approvalWorkflow`). The app reads `org.settings.approvalRequired`
+    as the hint for the confirm dialog.
+  - Mutations with `meta.ownConflicts` show their 409s inline, without the global toast (query-client.ts).
+  - The submit message is stored as the first review comment.
+- **Known issues:** `e2e/boqs.spec.ts` F04-AC2 (a run within 10 s) missed its budget once while four workers ran
+  engine jobs at the same time; it passes alone. Watch it in the full e2e run.
+- **For the next agent:** test hooks: `save-version`, `submit-for-review`, `save-approved`, `save-version-dialog
+  [data-mode]`, `version-label`, `version-note`, `save-not-modelled-tick`, `save-version-submit`, `submit-dialog`,
+  `reviewer[data-name]`, `review-strip[data-status]`, `approve`, `request-changes`, `withdraw-review`,
+  `withdraw-confirm`, `confirm-boq` (in `boq-menu`), `reopen-boq`, `saved-version[data-label]`, `version-excel`,
+  `open-version`, `viewing-version`, `back-to-working`, `review-tab`, `review-comment[data-line][data-outcome]`.
 
 ### 2026-11-13 — M3 decisions: FE-030 (frontend agent)
 - **Built:** FE-030, 8444b84. `features/changes/` (tab, model), `api/hooks/diffs.ts`, the viewer's "changes"

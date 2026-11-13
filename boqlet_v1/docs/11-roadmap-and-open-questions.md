@@ -229,6 +229,14 @@ Things the product build doesn't do yet, with the task that deals with each.
   default comparison is the last saved version's run; saving versions comes with FE-031, so until then the
   person picks a run. Lines are listed in full (no paging in the table) and the elements table shows 100
   at a time.
+- Versions (FE-031): a saved version opened read-only shows its frozen run's lines, but the line edits panel
+  lists the BoQ's current edits (the frozen copy is kept, not shown yet). Position numbers aren't frozen
+  (they come with FE-040). The review's warning before an edit is the Withdraw review button (the working
+  version is read-only while in review); answering a question that a version in review used warns through
+  the decisions dry run (FE-010) and withdraws it. Confirming with nothing new closes the working version
+  (kept, hidden from the version list) and reopening takes it up again. Approval switched on for an org whose
+  plan lacks `approvalWorkflow` is refused with `402`; the settings toggle doesn't say so before trying.
+  The Excel export of the working version right after a save shares the saved version's run.
 - Phase-1 interim: the mock reads check details from the PoC engine's cache on the same machine, and
   drops the `null` optional fields the PoC sends in names (the worker should omit them, EN-001).
 
@@ -297,6 +305,7 @@ Newest first. One line per piece of work; details are in the commit and the link
 
 | Date | Commit | What |
 |---|---|---|
+| 2026-11-13 | f7e9428 | FE-031: versions, confirmation and optional approval (F09): Save version with label, note, open questions and the not-in-the-models tick; the next working version; frozen run, edits and Excel; saved versions read-only (`?version=`), their Excel, compare; Confirm and Reopen; with `approvalRequired`: submit with reviewers, the review strip and Review tab (comments overall or on a line, the change report first), request changes, approve, save the approved version, four-eyes, withdraw; edits during review withdraw it (BR-23). Mock: the version workflow, the plan check on approval. 14 scenarios, 4 e2e flows |
 | 2026-11-13 | 8444b84 | FE-030: the change report (F08 §3–7): the Changes tab (compare with the last saved version's run, an earlier run or another BoQ's; summary with inputs that differ and elements per model, lines grouped like the sheet with change, \|Δ%\| and group filters, causes, elements, the viewer's "changes" colour mode with removed elements as a red ghost, Excel export); Compare from the run history. Mock: compare, diffs, lines, elements, export; the "Change report" fake. Contract: `DiffSummary.byModel`. 8 scenarios, 3 e2e flows, unit tests |
 | 2026-11-13 | 966a5b7 | FE-029: new model versions (F08 §1–2): the header names each model with a newer ready version, "Use vN" (and "Use all") swaps it into the working version as a pending change, a confirmed BoQ offers "Reopen to update" with the reopen dialog; badges in the BoQ list and the project overview. Mock: `boq.new_version_available` to the project's leads and estimators and a refreshed BoQ when a version becomes ready; `POST /boqs/{boqId}/reopen` (F09 §6). 2 scenarios, 4 mock tests, 2 e2e flows |
 | 2026-11-13 | 210e7fa | FE-028: the setup wizard (F16): start, how you measure (checklist, details, the six measuring screens from the rule set's data), item numbers and texts, names, review with Publish all (publish, star, project defaults); progress in `Org.setup` with resume; the dashboard gate for a new org's owner, onboarding into the wizard, Guided setup in the Library, the sheet hint. Mock: `GET/PUT /orgs/{orgId}/setup`, the "Setup markers" fake; previews share the run queue. 1 scenario, 2 e2e flows, step derivation tests |
