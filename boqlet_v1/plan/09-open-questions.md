@@ -10,7 +10,7 @@ when each is closed. **None of these blocks phase 1** (the frontend on the mock)
 | When | Must be answered | Who |
 |---|---|---|
 | Before the first screens are reviewed (M1) | The boqlet wordmark as SVG (light and dark) and a favicon; until then it is set in the display face | Owner |
-| Start of phase 2 (BE-000) | Every item in `07-backend/decisions-to-make.md`: the open ones D1–D9 (Q16 auth provider and Q17 hosting and region among them) and the decisions already in the plan B1–B16, to confirm or change, after the agent's analysis (P47) | The backend owner (whoever runs phase 2), asked by the backend agent; contract or product changes go to the product owner |
+| Start of phase 2 (BE-000) | Every item in `07-backend/decisions-to-make.md`: the open ones D1–D18 (budget, auth, hosting, compute, uploads, abuse, engine upgrades, delivery, operations, data protection, contract changes; Q16 and Q17 among them) and the decisions already in the plan B1–B20, to confirm or change, after the agent's analysis (P47) | The backend owner (whoever runs phase 2), asked by the backend agent; product-behaviour changes (including how users are told about engine upgrades, D14) go to the product owner |
 | Before BE-032 (end of phase 2) | A hosting account in the provider and region chosen in D8, for staging, with credentials the agent can use | Owner |
 | Before FE-047 (release) | The production account, the domain, and the provider secrets for auth (D1), email (D6) and billing (D7); whether the pricing module is on at launch; the go to merge `v_1` into `main` | Owner |
 | After the merge in FE-047 | Remove or repoint the Vercel demo project; the PoC stays reachable as the git tag `poc-final` | Owner |

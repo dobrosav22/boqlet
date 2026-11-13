@@ -80,8 +80,9 @@ to `boqlet_v1/CLAUDE.md`; after FE-046 it is `plan/` at the repository root agai
 
 **In phase 2, backend matters belong to the backend owner** (P47), the person who ran BE-000.
 Their answers are in `07-backend/decisions.md`. Ask them, not the product owner, about anything
-in the right-hand column that only concerns the backend (accounts and money included). Product
-behaviour, the contracts and the shared suites stay with the product owner.
+in the right-hand column that only concerns the backend (accounts and money included), and
+about contract changes, which follow `05-api/contract-changes.md`. Product behaviour (what users
+can do or see) stays with the product owner.
 
 When a question blocks a task: add it to `09-open-questions.md` (with "Blocks: <task>"), ask the
 owner in the session, and **go on with the next task that doesn't depend on it**. Note the

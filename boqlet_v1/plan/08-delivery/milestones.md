@@ -43,7 +43,7 @@ that replaces it. The frontend agent does not change `engine/`.
 
 | # | Milestone | Contents | Exit criteria |
 |---|---|---|---|
-| **BE-000** | Backend review and decisions (P47) | The agent analyses the backend plan (`07-backend/review.md`) and puts every backend decision to the backend owner: the open ones (D1–D9) and the ones the plan already made (B1–B16, `07-backend/decisions-to-make.md`); the plan is updated to the answers | Every item answered by the backend owner and recorded (`07-backend/decisions.md`; platform-level ones as P-numbers and in `docs/02`); backend plan and tasks updated; contracts and shared suites unchanged unless the product owner approved. **No backend code before this** |
+| **BE-000** | Backend review and decisions (P47) | The agent analyses the backend plan (`07-backend/review.md`) and puts every backend decision to the backend owner: the open ones (D1–D18) and the ones the plan already made (B1–B20, `07-backend/decisions-to-make.md`); the plan is updated to the answers | Every item answered by the backend owner and recorded (`07-backend/decisions.md`; platform-level ones as P-numbers and in `docs/02`); backend plan and tasks updated; contract changes listed in `05-api/contract-changes.md`; product-behaviour changes approved by the product owner. **No backend code before this** |
 | **ME** | Real engine | EN-001…EN-008, EN-010…EN-013 (EN-009 in M6, EN-P1 with MP2) | Every engine task's acceptance; `npm run test:engine` green incl. the Duplex test; the mock switched from the PoC API and its fakes to the worker (each fake deleted as its task lands) |
 | **M5** | Backend core (Java) | BE-001…BE-012, BE-027, BE-031 | Contract and scenario suites green for the core tags against Java |
 | **M6** | Queue workers and realtime | EN-009, BE-013…BE-015 | Jobs flow through Postgres; heartbeat re-queue tested; SSE across two API instances |
@@ -57,7 +57,7 @@ against Java unchanged, the engine has no open EN task, and staging runs Java + 
 
 | # | Milestone | Contents | Exit criteria |
 |---|---|---|---|
-| **M8a** | Wire up | FE-041…FE-043 | The app runs against Java on staging with the real auth adapter; every "(fake)" criterion from phase 1 re-checked green on the real engine; UI adjusted where real behaviour differs |
+| **M8a** | Wire up | FE-041…FE-043 | The app runs against Java on staging with the real auth adapter; every "(fake)" criterion from phase 1 re-checked green on the real engine; UI adjusted where real behaviour differs; every phase-2 contract change adapted (`05-api/contract-changes.md`) |
 | **M8** | Hardening, new root, release | FE-044, FE-045, BE-025, BE-026, TS-002…TS-004, then FE-046, FE-047 | All v1 acceptance criteria pass on staging; NFR targets measured; `boqlet_v1/` is the repository root and nothing of the PoC is left (FE-046); `v_1` merged into `main`, production deployed from `main` and tagged `v1.0.0` (FE-047) |
 
 BE-025 and BE-026 (observability, staging acceptance) are infrastructure the backend agent leaves

@@ -6,7 +6,8 @@ on the mock. Order: BE-000 → the engine tasks (`tasks-engine.md`, milestone ME
 `boqlet_v1/` (P44); FE-000 already moved the engine there. The contract and scenario suites written in phase 1 are the specification:
 make them pass against Java without changing them; a suite that looks wrong goes to the owner.
 
-Start with **BE-000**. In it the backend owner (P47) reviews this whole plan: the tasks below
+Start with **BE-000**. In it the backend owner (P47) reviews this whole plan, contracts
+included (`05-api/contract-changes.md`): the tasks below
 are the default, and BE-000 may change them. After BE-000 the backend owner's answers in
 `07-backend/decisions.md` win over this file. Every task is done when the contract suite passes for its endpoints
 (08-delivery/testing.md), and when its Policy and state-machine unit tests cover every row of
@@ -30,7 +31,7 @@ before this task is done.**
 
    Either way, every item gets their answer; none is assumed.
 3. **Write the analysis** in `07-backend/review.md`. For each item in `decisions-to-make.md`
-   (open D1–D9, already made B1–B16) give:
+   (open D1–D18, already made B1–B20) give:
    - what the plan says and why;
    - what phase 1 showed;
    - the alternatives, with risks, costs and effort;
@@ -40,15 +41,19 @@ before this task is done.**
    Add the items the analysis finds: gaps, contradictions, risks (for example data volumes from
    nfr.md, GDPR, costs). Each becomes a D-item if open, a B-item if the plan already decided it.
 4. **Put the items to the backend owner**, one area at a time:
-   - accounts and money first: D1 auth, D8 hosting, D6 email, D7 billing;
-   - then the shape: B1–B5, B16;
+   - budget and scale first: D10;
+   - then accounts and money: D1 auth, D8 hosting, D6 email, D7 billing;
+   - then risk: D11 compute, D12 untrusted uploads, D13 abuse, D17 data protection;
+   - then the shape: B1–B5, B16, D18 (contract changes);
    - then the rest.
 
    For each item the answer is "confirm", "change to …" or "defer until <task>, because …".
    Deferring is allowed only when no task before that point depends on the item.
-5. **Keep the boundary.** A choice that needs a change to the contracts, the shared suites, a
-   product P-decision or a BR rule goes to the product owner, with its cost to the frontend
-   (`decisions-to-make.md`, "Fixed for BE-000").
+5. **Keep the boundary.** The backend owner may change the contracts, by the rules in
+   `05-api/contract-changes.md`: contract first, suites, mock and the smallest app fix in one
+   commit, every change listed for phase 3. A choice that changes product behaviour (a P-decision
+   about the product, a BR rule, what users can do or see) goes to the product owner, with its
+   cost.
 6. **Record:**
    - every answer in `07-backend/decisions.md`;
    - platform-level ones also as P-numbers in `plan/README.md` and in `docs/02-decisions.md`.
@@ -69,8 +74,8 @@ before this task is done.**
   - every D- and B-item, including the added ones, has a recorded answer from the backend owner
     in `07-backend/decisions.md`;
   - the backend plan and task lists agree with the answers;
-  - the contracts and the shared suites are unchanged, unless the product owner approved a
-    change and it is listed;
+  - every contract change made so far is listed in `05-api/contract-changes.md`, and every
+    product-behaviour change has the product owner's approval;
   - no backend code was written before this.
 
 ### BE-001 Service skeleton

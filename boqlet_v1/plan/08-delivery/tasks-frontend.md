@@ -331,10 +331,22 @@ Playwright: FL-4 and FL-5 end to end; module switched off for an org hides every
 ## Phase 3, M8a: wire up
 
 ### FE-041 Point the app at Java
-Base URL per environment, per-tag switch while the backend lands (a tag served by Java once its
-contract tests pass), SSE against Java, file uploads to real storage; the mock stays as the e2e
-test double. Run the full Playwright suite against Java staging.
-**Accept:** every M1–M4 flow passes against Java staging.
+- **Adapt to the contract changes of phase 2** (`05-api/contract-changes.md`). For each row:
+  - adapt the UI properly where the change affects it, and remove the
+    `// contract-change: <id>` markers;
+  - set "Adapted" with the commit, or "nothing to adapt".
+
+  Read the build log's phase-2 entries for the backend owner's decisions that change behaviour
+  (`07-backend/decisions.md`).
+- Base URL per environment, and a per-tag switch while the backend lands (a tag is served by
+  Java once its contract tests pass).
+- SSE against Java; file uploads to real storage.
+- The mock stays as the e2e test double.
+- Run the full Playwright suite against Java staging.
+**Accept:**
+- every M1–M4 flow passes against Java staging;
+- every row in `05-api/contract-changes.md` is adapted or marked "nothing to adapt";
+- `git grep contract-change: apps/app` is empty.
 
 ### FE-042 Remove the engine fakes
 For each row of `mock-api.md` "Engine fakes": confirm the replacing EN task is done, delete the
