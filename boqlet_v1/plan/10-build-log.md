@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M4 (Admin console, extension points, co-editing) |
 | Role | Frontend agent |
-| Last task done | FE-038 Platform admin console (280ee74) |
-| Next task | FE-039 Extension registries (P36, modules.md), M4 |
+| Last task done | FE-039 Extension registries (23ab381) |
+| Next task | FE-040 Position numbers and live co-editing (F06 §13–14), M4 |
 | Waiting for the owner | — |
 | In progress (not committed) | — |
-| Notes for the next session | **MP1 and MP2 (the pricing module) are for a later phase (P48, the owner, 2026-11-14): skip them; phase 1 ends after M4, phase 2 after M7.** Read the FE-038 entry, then the M3 entry and the M3 decision entries (FE-037 … FE-029), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | **MP1 and MP2 (the pricing module) are for a later phase (P48, the owner, 2026-11-14): skip them; phase 1 ends after M4, phase 2 after M7.** Read the FE-039 and FE-038 entries, then the M3 entry and the M3 decision entries (FE-037 … FE-029), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,16 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-14 — M4 decisions: FE-039 (frontend agent)
+- **Built:** FE-039, 23ab381. `apps/app/src/extensions/` (`registry.ts`, `index.ts`, `area-host.tsx`, `testing/test-module.tsx`, `extensions.test.tsx`), `src/modules.ts`, `settings/[section]` and `areas/[area]/[[...segments]]` routes; the core screens read the registries.
+- **Decisions taken:**
+  - Labels, panels, cards and actions are components (a module renders its own namespace and queries); badges are a hook per module (`useBadges`), called once per sheet in registration order. A key registered twice throws.
+  - Importing `@/extensions` runs `src/modules.ts` first, so registration always precedes reading. `src/modules.ts` registers nothing: the pricing module is for a later phase (P48), and `MODULE_PRICING=1` throws in next.config until it exists.
+  - Areas: an `[org]` catch-all broke the real 404 for unknown org paths (a page-level `notFound()` after streaming starts answers 200). Instead next.config rewrites `/{area}/…` to `/areas/{area}/…` (`beforeFiles`, so it wins over `[org]`) for the areas of the modules in the build (`MODULE_AREAS`, empty).
+  - Org slugs refuse the app's route names and `areas` (mock `RESERVED_SLUGS`; a bug before: an org named `admin` was unreachable). A module's backend reserves its area paths.
+  - Component tests render with the app's React 19 through a small helper: Testing Library and next-intl sit at the workspace root next to the PoC's React 18; vitest inlines next-intl/use-intl with aliases to the app's React, and `next/link` is mocked as an anchor.
+- **For the next agent:** deleting a route leaves stale `.next/dev/types` (typecheck fails on the missing page) until the dev server runs once or the folder is removed.
 
 ### 2026-11-14 — M4 decisions: FE-038 (frontend agent)
 - **Built:** FE-038, 280ee74. Mock `handlers/admin.ts`, `org-status.ts` (the suspension guard in the router), `request-context.ts` (the refused operation for limit events); app `features/admin/`, `api/hooks/admin.ts`, routes under `app/(admin)/admin/`. Checked by `tests/contract/admin.test.ts` (3), `tests/scenarios/admin.test.ts` (11), `e2e/admin.spec.ts` (6).
