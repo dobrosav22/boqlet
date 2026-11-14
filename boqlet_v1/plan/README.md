@@ -11,7 +11,7 @@ product to build. When they disagree about the *product*, `plan/` wins. When the
 
 ## Start here (a new session)
 
-**Build status: in progress** (phase 1; the owner said go on 2026-11-12; live position in
+**Build status: in progress** (phase 1 done 2026-11-14, phase 2 next with BE-000; the owner said go on 2026-11-12; live position in
 `10-build-log.md`). Every session, in every phase, starts with the prompt in
 `08-delivery/sessions.md` and works by
 that file: it says how to start, what to decide yourself and what to ask, when to stop and how
@@ -189,4 +189,4 @@ merges `v_1` into it.
 | Frontend, backend specs (06–07) | Written; backend decisions open on purpose |
 | Delivery (08) | Phases, milestones, task lists, session rules and build log written (P37–P40, P44, P45); the pricing module (MP1, MP2) is for a later phase (P48) |
 | Design (06) | Design guidelines decided (P43); wordmark SVG still to come from the owner |
-| **Build** | **Phase 1 in progress.** M0 (consolidation, contract, scaffolding) done 2026-11-12; M1 (core loop) done 2026-11-13, except the sample project's content (docs/11); M2 (Library and setup) done 2026-11-13, except v1 criterion 12's test with a person new to the app; M3 (versions, exports, sharing, notifications) done 2026-11-13, with v1 criterion 13's live co-editing left to FE-040 and criterion 4's walk-through by a person; next M4, FE-038. Live position: `10-build-log.md` |
+| **Build** | **Phase 1 done 2026-11-14** (M0–M4 on the mock; MP1 for a later phase, P48). M0 done 2026-11-12; M1, M2, M3 done 2026-11-13 (M1 except the sample project's content, M2 except v1 criterion 12's test with a person new to the app, M3 except criterion 4's walk-through by a person); M4 (admin console, extension points, co-editing) done 2026-11-14. **Next: phase 2, BE-000** (the backend owner's review and decisions). Live position: `10-build-log.md` |

@@ -20,13 +20,13 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 
 | | |
 |---|---|
-| Phase | 1 (frontend on the mock), milestone M4 (Admin console, extension points, co-editing) |
-| Role | Frontend agent |
-| Last task done | FE-040 Position numbers and live co-editing (2662a36) |
-| Next task | Close M4 and phase 1: the shared suites' coverage of every core operation, the "Needs you" list (still empty, docs/11), the M4 entry and the phase summary |
-| Waiting for the owner | — |
+| Phase | **2 (backend)**, starting with BE-000 (backend review and decisions, P47). Phase 1 is done (2026-11-14) |
+| Role | **Backend agent** |
+| Last task done | Phase 1 close (89bdaa9): M4 done, phase 1 summary below |
+| Next task | **BE-000** Backend review and decisions (`07-backend/review.md`, `07-backend/decisions-to-make.md`): analyse the backend plan and put every backend decision (D1–D18 open, B1–B20 already made) to the backend owner, the person who runs the session. No backend code before their answers (P47) |
+| Waiting for the owner | BE-000 always waits for the backend owner's answers. The phase-1 session stopped here, at the end of the phase (sessions.md "When to stop" 2) |
 | In progress (not committed) | — |
-| Notes for the next session | **MP1 and MP2 (the pricing module) are for a later phase (P48, the owner, 2026-11-14): skip them; phase 1 ends after M4, phase 2 after M7.** Read the FE-040, FE-039 and FE-038 entries, then the M3 entry and the M3 decision entries (FE-037 … FE-029), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | **MP1 and MP2 (the pricing module) are for a later phase (P48): BE-P1…BE-P4 and EN-P1 are not built in phase 2; phase 2 ends after M7.** Read the "Phase 1 summary" entry first, then the M4 entry and the FE-038…FE-040 entries, then `08-delivery/milestones.md` "Phase 2" and `tasks-backend.md`. The shared suites in `tests/contract` and `tests/scenarios` are the backend's specification: they run against `API_URL` (`npm run test:contract`, `npm run test:scenarios`) and must pass against Java unchanged; contract changes go by `05-api/contract-changes.md`. |
 
 ## Entry template
 
@@ -44,6 +44,30 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-14 — Phase 1 summary: frontend on the mock (frontend agent)
+- **Built:** M0 (FE-000…FE-004, TS-001), M1 (FE-005…FE-020), M2 (FE-021…FE-028), M3 (FE-029…FE-037), M4 (FE-038…FE-040) and the phase close, 2026-11-12…2026-11-14. MP1 (pricing on the mock) is for a later phase (P48, the owner, 2026-11-14).
+- **Exit criteria:**
+  - *M0–M4 exit criteria hold on the mock:* each milestone's entry below says how it was checked.
+  - *`tests/contract` and `tests/scenarios` cover every core operation:* 160 operations in `openapi.yaml`; the shared suites call every one except `billingWebhook` (no payment provider in phase 1: the `manual` adapter has no webhooks; the provider is the backend owner's decision, BE-000). The last gaps (`updateModel`, `deleteModelVersion`, `revokeOrgInvitation`, `deleteOrg`, `getAttention`) were closed at the phase close (89bdaa9) by `scenarios/isolation.test.ts` and the versions scenarios.
+  - *…and every business rule:* the core rules are checked by the suites (by name where the test says so, e.g. BR-23/24/25/26/28/29/54/56/57/60), the e2e specs, or the engine tests (BR-01, 03, 04, 06, 10, 11, 30–32: the mock measures nothing; `npm run test:engine` and the Duplex acceptance test); BR-41 (the core never depends on the module) by the lint rule and the build with no module (FE-039); BR-50 and BR-52 by `scenarios/isolation.test.ts`; BR-51 (audit) by `scenarios/audit.test.ts`; BR-53 (no licensed content) by review of `presets/`; BR-60…62 by `scenarios/billing.test.ts` and the usage checks of `scenarios/admin.test.ts`. The pricing rules (BR-40, 42–48, 55) are the module's (P48).
+  - *The list of fakes in `mock-api.md` is complete:* "Engine fakes" lists every engine fake with the EN task that replaces it; nothing was faked in M4 (presence and "Needs you" are backend behaviour the mock implements, under "What it implements").
+  - *"(fake)" criteria to re-check in phase 3 on the real engine:* v1 criteria 3, 12 and 13, F06 criteria 3 and 5, F10 criteria 5, 7 and 8, F12 criterion 4 (milestones.md); also v1 criterion 4's walk-through by a person and criterion 12's test with a person new to the app (M2, M3 entries).
+  - Last full runs (2026-11-14): typecheck, lint, app 208, mock 64, contract 177, scenarios 169, engine 194; e2e 104 of 105 in the full parallel run after FE-040 (the other, F01-AC3, green on its own), and every spec touched since then green on its own.
+- **For the backend agent:** the mock (`apps/mock-api`) is the executable specification of the API; its behaviour beyond the contract is in `06-frontend/mock-api.md` "What it implements". The contract changes made in phase 1 are in the task entries below. What the mock does that the backend must decide how to do for real: presence (in memory, P31), position numbers (computed per request), the admin console's aggregates (computed live), limit events, the "Needs you" list, the suspension guard (`409 org_suspended`).
+
+### 2026-11-14 — M4 Admin console, extension points, co-editing (frontend agent)
+- **Built:** FE-038 (280ee74), FE-039 (23ab381), FE-040 (2662a36), the phase close (89bdaa9), plus the record commits.
+- **Exit criteria:**
+  - *FL-12 (platform admin) works:* `e2e/admin.spec.ts` "FL-12": the funnel to the orgs stuck at a step, "hit a limit", an org's usage and limit events, a note, a tag and a trial extended by 14 days with a reason, visible in the org's audit log; `scenarios/admin.test.ts` the same through the API.
+  - *v1 criterion 16 (single session):* `e2e/sessions.spec.ts` (F01-AC5: the second browser asks first; continuing signs the first out) and `scenarios/state-machines.test.ts` "Session (BR-54)"; the admin's "end session" in `scenarios/admin.test.ts` and `e2e/admin.spec.ts`.
+  - *v1 criterion 17 (admin console):* `scenarios/admin.test.ts`: the orgs table's seats, active projects and minutes equal each org's own usage page (seed data), and no `/admin/*` response contains project, file or BoQ names or line descriptions (seed data and a fresh org); `contract/admin.test.ts`: every `/admin/*` operation answers 404 to non-admins.
+  - *The app builds with no module:* `npm run build:app` (2026-11-14, after FE-040) and the full e2e suite with no module registered (FE-039).
+  - *F06 criteria 9 and 10* (position numbers, two browsers): `e2e/co-editing.spec.ts`.
+- **Decisions taken:** in the FE-038, FE-039 and FE-040 entries.
+- **Deviations from the spec:** contract additions and fixes, each in its task's entry: `Org.status`, the orgs filters `country` and `stuckAt`, `AdminFunnelStep`; `PUT`/`DELETE /boqs/{boqId}/presence`, `BoqPresence`, `BoqLineEdited`; `BoqRevision.frozen.adjustments`. The console's Vendors section (the pricing module's) and MP1 are for a later phase (P48).
+- **Fakes:** none added or removed.
+- **Known issues and debt:** docs/11 ("Platform admin", "Extension registries", "Co-editing", "Needs you").
 
 ### 2026-11-14 — M4 decisions: FE-040 (frontend agent)
 - **Built:** FE-040, 2662a36. Mock `positions.ts`, `presence.ts`, presence handlers and `boq.line_edited` in `handlers/adjustments.ts`, `positionNo` in `handlers/lines.ts`; app `features/boq-sheet/positions.ts`, `features/boqs/presence.tsx`, `realtime/boq-events.ts`, the No. column, markers and the conflict notice in `sheet.tsx`. Checked by `tests/scenarios/co-editing.test.ts` (3), `e2e/co-editing.spec.ts` (F06-AC9, AC10) and unit tests.
