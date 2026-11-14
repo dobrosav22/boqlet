@@ -9,7 +9,8 @@ import { audit } from "../audit.js";
 import { putBlob, signedUrl } from "../blobs.js";
 import { nowIso } from "../clock.js";
 import { exportXlsx } from "../engine/fakes/export-xlsx.js";
-import { conflict, forbidden, HttpError, limitReached, notFound } from "../http.js";
+import { conflict, forbidden, HttpError, notFound } from "../http.js";
+import { limitRefused } from "../limits.js";
 import { newId } from "../ids.js";
 import { roleIn } from "../permissions.js";
 import { projectPermissions, projectRoleOf, visibleProject } from "../projects.js";
@@ -157,7 +158,7 @@ export const shareHandlers: Handlers = {
     const { boq, project, role } = boqFor(user!, params.boqId!);
     if (!projectPermissions(project, role).share) throw forbidden("lead|estimator|approver");
     const org = db().orgs.find((o) => o.id === project.orgId)!;
-    if (planLimits(org).shareLinks === false) throw limitReached("shareLinks", 0, 0);
+    if (planLimits(org).shareLinks === false) throw limitRefused(org.id, "shareLinks", 0, 0);
     if (org.settings?.publicLinksAllowed === false) throw conflict("public_links_off", "Public links are switched off for this organisation.");
     const b = (body ?? {}) as { mode?: "pinned" | "latest_issued"; revisionId?: string; include?: Partial<ShareLinkRec["include"]>; label?: string; expiresAt?: string | null };
     if (b.mode !== "pinned" && b.mode !== "latest_issued") throw new HttpError(400, "invalid_body", "mode is pinned or latest_issued.", { field: "mode" });

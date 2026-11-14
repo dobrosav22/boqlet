@@ -7,6 +7,8 @@
 import type { Context } from "hono";
 import { authenticate } from "./auth.js";
 import { HttpError, unauthenticated } from "./http.js";
+import { checkOrgWritable } from "./org-status.js";
+import { runInRequest } from "./request-context.js";
 import { describeErrors, escapePointer, type Operation, type Spec } from "@ifc-boq/api/spec";
 import type { SessionRec, UserRec } from "./store.js";
 
@@ -142,7 +144,10 @@ export function apiRouter(spec: Spec, handlers: Handlers) {
       if (!handler) {
         return json({ code: "not_implemented", message: `The mock does not implement ${op.operationId} yet.` }, 501);
       }
-      const response = await handler({ c, op, user, ...(session ? { session } : {}), params, query, body });
+      checkOrgWritable(op.method.toUpperCase(), (op.raw.tags as string[] | undefined) ?? [], params);
+      const response = await runInRequest({ operationId: op.operationId, ...(user ? { userId: user.id } : {}) }, () =>
+        handler({ c, op, user, ...(session ? { session } : {}), params, query, body }),
+      );
       return validateResponses() ? await checkResponse(spec, op, response) : response;
     } catch (e) {
       if (e instanceof HttpError) return json(e.body(), e.status);

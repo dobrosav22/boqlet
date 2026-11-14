@@ -40,6 +40,7 @@ export function devRoutes() {
     if (!u) {
       u = { id: newId(), email, name, locale: "en" };
       db().users.push(u);
+      db().userCreatedAt[u.id] = now().toISOString();
       persist();
     }
     return c.json({ id: u.id, name: u.name, email: u.email, platformRole: null, token: `mock:${u.id}`, memberships: [] }, 201);

@@ -11,7 +11,8 @@ import { nowIso } from "../clock.js";
 import { EngineRefused, EngineUnavailable, engine } from "../engine/engine.js";
 import { emit } from "../events.js";
 import { notify as sendNotification } from "../notify.js";
-import { conflict, HttpError, limitReached, notFound } from "../http.js";
+import { conflict, HttpError, notFound } from "../http.js";
+import { limitRefused } from "../limits.js";
 import { newId } from "../ids.js";
 import { createJob, jobView, projectAudience, requestCancel, runJob } from "../jobs.js";
 import { visibleProject, writableProject } from "../projects.js";
@@ -259,7 +260,7 @@ export const modelHandlers: Handlers = {
     const org = db().orgs.find((o) => o.id === project.orgId)!;
     const maxMb = planLimits(org).maxModelVersionMb;
     const sizeMb = Math.ceil(b.sizeBytes / (1024 * 1024));
-    if (maxMb !== undefined && b.sizeBytes > maxMb * 1024 * 1024) throw limitReached("maxModelVersionMb", sizeMb, maxMb);
+    if (maxMb !== undefined && b.sizeBytes > maxMb * 1024 * 1024) throw limitRefused(org.id, "maxModelVersionMb", sizeMb, maxMb);
     const id = newId();
     const number = db().modelVersions.filter((v) => v.modelId === model.id).reduce((n, v) => Math.max(n, v.number), 0) + 1;
     const version: ModelVersionRec = {

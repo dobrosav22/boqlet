@@ -50,4 +50,11 @@ export const keys = {
   usage: (orgId: string, month: string) => ["usage", orgId, month] as const,
   billing: (orgId: string) => ["billing", orgId] as const,
   notificationPreferences: () => ["notificationPreferences"] as const,
+  adminOverview: (period: object) => ["adminOverview", period] as const,
+  adminFunnel: (period: object) => ["adminFunnel", period] as const,
+  adminOrgs: (filters: object) => ["adminOrgs", filters] as const,
+  adminOrg: (orgId: string) => ["adminOrg", orgId] as const,
+  adminNotes: (orgId: string) => ["adminNotes", orgId] as const,
+  adminUsers: (q: string) => ["adminUsers", q] as const,
+  adminHealth: () => ["adminHealth"] as const,
 };

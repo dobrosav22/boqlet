@@ -1710,11 +1710,13 @@ paths:
         - { $ref: "#/components/parameters/Cursor" }
         - { $ref: "#/components/parameters/Limit" }
         - { name: plan, in: query, schema: { type: string } }
-        - { name: status, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string }, description: "the org's status (active, suspended) or its subscription status (active, trialing)" }
+        - { name: country, in: query, schema: { type: string } }
         - { name: tag, in: query, schema: { type: string } }
         - { name: signal, in: query, schema: { type: string, enum: [hit_limit, inactive_30d, trial_ending_7d, stuck_in_setup] } }
-        - { name: q, in: query, schema: { type: string } }
-        - { name: sort, in: query, schema: { type: string } }
+        - { name: stuckAt, in: query, schema: { $ref: "#/components/schemas/AdminFunnelStep" }, description: "orgs that reached the step before this one and not this one (F19 §2, a funnel step clicked)" }
+        - { name: q, in: query, schema: { type: string }, description: "name, slug or owner email" }
+        - { name: sort, in: query, schema: { type: string }, description: "a column of AdminOrgRow (name, planId, createdAt, lastActivityAt, limitHits30d, seats, activeProjects, processingMinutes), `-` in front for descending" }
       responses:
         "200":
           description: OK
@@ -1731,6 +1733,16 @@ paths:
     get:
       tags: [admin]
       operationId: adminExportOrgs
+      description: The orgs table as CSV, with the same filters and sort as `adminListOrgs`.
+      parameters:
+        - { name: plan, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string }, description: "the org's status (active, suspended) or its subscription status (active, trialing)" }
+        - { name: country, in: query, schema: { type: string } }
+        - { name: tag, in: query, schema: { type: string } }
+        - { name: signal, in: query, schema: { type: string, enum: [hit_limit, inactive_30d, trial_ending_7d, stuck_in_setup] } }
+        - { name: stuckAt, in: query, schema: { $ref: "#/components/schemas/AdminFunnelStep" }, description: "orgs that reached the step before this one and not this one (F19 §2, a funnel step clicked)" }
+        - { name: q, in: query, schema: { type: string }, description: "name, slug or owner email" }
+        - { name: sort, in: query, schema: { type: string }, description: "a column of AdminOrgRow (name, planId, createdAt, lastActivityAt, limitHits30d, seats, activeProjects, processingMinutes), `-` in front for descending" }
       responses:
         "200": { description: CSV of the orgs table, content: { text/csv: { schema: { type: string } } } }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -2079,7 +2091,7 @@ components:
             type: object
             required: [step, orgs]
             properties:
-              step: { type: string, enum: [signed_up, org_created, setup_done, first_model_ready, first_boq, first_saved_version, first_export_or_share] }
+              step: { $ref: "#/components/schemas/AdminFunnelStep" }
               orgs: { type: integer }
               conversionPct: { type: number }
               medianHoursFromPrevious: { type: [number, "null"] }
@@ -2090,6 +2102,9 @@ components:
             properties:
               week: { type: string }
               counts: { type: array, items: { type: integer } }
+    AdminFunnelStep:
+      type: string
+      enum: [signed_up, org_created, setup_done, first_model_ready, first_boq, first_saved_version, first_export_or_share]
     AdminOrgRow:
       type: object
       required: [id, name, planId, status]
@@ -2245,6 +2260,7 @@ components:
         planId: { type: string }
         settings: { $ref: "#/components/schemas/OrgSettings" }
         setup: { $ref: "#/components/schemas/OrgSetup" }
+        status: { type: string, enum: [active, suspended], description: "suspended by a platform admin (F19): read-only, no new jobs; writes answer 409 org_suspended" }
         createdAt: { type: string, format: date-time }
     OrgSetup:
       type: object

@@ -18,10 +18,6 @@
     "title": "IFC → BoQ",
     "noOrg": "You are not in an organisation yet."
   },
-  "admin": {
-    "title": "Platform admin",
-    "placeholder": "The admin console is built in F19."
-  },
   "roles": {
     "owner": "Owner",
     "admin": "Admin",

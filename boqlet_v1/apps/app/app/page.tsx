@@ -40,6 +40,8 @@ function StartRedirect() {
 
   useEffect(() => {
     if (session.status === "anonymous") router.replace("/sign-in");
+    // A platform admin outside any org works in the console (F19).
+    else if (me.data && memberships.length === 0 && me.data.user.platformRole === "admin") router.replace("/admin");
     else if (me.data && memberships.length === 0) router.replace("/onboarding");
     else if (target) router.replace(`/${target}`);
   }, [session.status, me.data, memberships.length, target, router]);

@@ -54,6 +54,11 @@ export function UserMenu() {
         <DropdownMenuItem render={<Link href="/account" />} data-testid="account-link">
           {t("account")}
         </DropdownMenuItem>
+        {me.data?.user.platformRole === "admin" && (
+          <DropdownMenuItem render={<Link href="/admin" />} data-testid="admin-link">
+            {t("admin")}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           data-testid="sign-out"
           onClick={() => {

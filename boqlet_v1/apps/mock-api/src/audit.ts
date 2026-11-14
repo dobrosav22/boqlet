@@ -33,7 +33,7 @@ export function auditView(a: AuditRec) {
   const u = a.actorId ? db().users.find((x) => x.id === a.actorId) : undefined;
   return {
     id: a.id,
-    ...(a.actorId ? { actor: { id: a.actorId, name: u?.name ?? "Unknown", ...(u?.email ? { email: u.email } : {}) }, actorKind: "user" as const } : { actorKind: "system" as const }),
+    ...(a.actorId ? { actor: { id: a.actorId, name: u?.name ?? "Unknown", ...(u?.email ? { email: u.email } : {}) }, actorKind: a.actorKind ?? ("user" as const) } : { actorKind: "system" as const }),
     action: a.action,
     entityType: a.subjectType,
     entityId: a.subjectId,

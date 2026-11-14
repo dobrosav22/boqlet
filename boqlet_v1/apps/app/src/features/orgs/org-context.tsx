@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 import type { Schemas } from "@ifc-boq/api";
+import { useTranslations } from "next-intl";
 import { useMe } from "@/api/hooks/me";
 import { NotFoundView } from "@/components/errors/not-found-view";
 import { orgCan, type OrgAction, type OrgRole } from "@/lib/permissions";
@@ -51,7 +52,22 @@ export function OrgProvider({ slug, children }: { slug: string; children: ReactN
     );
   }
   const scope: OrgScope = { org: membership.org, role: membership.role, can: (action) => orgCan(membership.role, action) };
-  return <OrgContext.Provider value={scope}>{children}</OrgContext.Provider>;
+  return (
+    <OrgContext.Provider value={scope}>
+      {membership.org.status === "suspended" && <SuspendedBanner />}
+      {children}
+    </OrgContext.Provider>
+  );
+}
+
+/** F19: a suspended org is read-only; every change answers 409 org_suspended. */
+function SuspendedBanner() {
+  const t = useTranslations("orgs");
+  return (
+    <p role="status" className="border-b border-border bg-[var(--red)] px-4 py-2 text-center text-[var(--paper)]" data-testid="org-suspended">
+      {t("suspended")}
+    </p>
+  );
 }
 
 export function useOrg(): OrgScope {

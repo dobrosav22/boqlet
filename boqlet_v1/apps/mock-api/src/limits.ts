@@ -5,8 +5,10 @@
  */
 import { nowIso } from "./clock.js";
 import { HttpError, limitReached } from "./http.js";
+import { newId } from "./ids.js";
 import { notify } from "./notify.js";
-import { db } from "./store.js";
+import { currentRequest } from "./request-context.js";
+import { db, persist } from "./store.js";
 
 const NEAR = 0.8;
 
@@ -24,9 +26,20 @@ function tellAdmins(orgId: string, kind: "limit.near" | "limit.reached", params:
   for (const m of admins) notify({ userId: m.userId, orgId, kind, params, url: `/${org.slug}/settings/usage`, entity: { type: "org", id: orgId } });
 }
 
-/** The 402 for a limit, and `limit.reached` to the owners and admins. Feature limits (max 0) aren't announced. */
+/**
+ * The 402 for a limit, recorded as a limit event (F19 "hit a limit", data-model.md "LimitEvent"), and
+ * `limit.reached` to the owners and admins. Feature limits (max 0) aren't announced.
+ */
 export function limitHit(orgId: string, limit: string, current: number, max: number): HttpError {
   if (max > 0) tellAdmins(orgId, "limit.reached", { limit, current, max });
+  return limitRefused(orgId, limit, current, max);
+}
+
+/** The 402 for a per-action limit or a feature (no notification, docs/11), recorded as a limit event. */
+export function limitRefused(orgId: string, limit: string, current: number, max: number): HttpError {
+  const req = currentRequest();
+  db().limitEvents.push({ id: newId(), orgId, ...(req?.userId ? { userId: req.userId } : {}), limit, current, max, action: req?.operationId ?? "unknown", at: nowIso() });
+  persist();
   return limitReached(limit, current, max);
 }
 

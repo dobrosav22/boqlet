@@ -17,6 +17,7 @@
   "user": {
     "menu": "Account menu",
     "signOut": "Sign out",
-    "account": "Account"
+    "account": "Account",
+    "admin": "Platform admin"
   }
 }

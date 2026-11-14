@@ -2,12 +2,13 @@
  * F01: orgs, members, invitations, my profile (FE-005). Behaviour per F01 "Behaviour" and
  * 03-domain/permissions.md; error codes per conventions.md.
  */
-import { limitHit, usageNow } from "../limits.js";
+import { limitHit, limitRefused, usageNow } from "../limits.js";
 import { randomBytes } from "node:crypto";
 import { audit, auditCsv, auditView, filterAudit } from "../audit.js";
 import { now, nowIso } from "../clock.js";
 import { emit } from "../events.js";
-import { conflict, forbidden, HttpError, limitReached, notFound } from "../http.js";
+import { conflict, forbidden, HttpError, notFound } from "../http.js";
+import type { Schemas } from "@ifc-boq/api";
 import { newId } from "../ids.js";
 import { sendEmail } from "../outbox.js";
 import { memberOrg, orgVisible, requireOrgAction, roleIn } from "../permissions.js";
@@ -65,8 +66,11 @@ export function seatsInUse(orgId: string) {
   return members + pending;
 }
 
-export function planLimits(org: OrgRec) {
-  return db().plans.find((p) => p.id === org.planId)?.entitlements ?? {};
+/** The org's effective entitlements: its plan's, with the platform admin's overrides on top (F14, F19). */
+export function planLimits(org: OrgRec): Schemas["Entitlements"] {
+  const plan = db().plans.find((p) => p.id === org.planId)?.entitlements ?? {};
+  const overrides = db().orgOps[org.id]?.overrides ?? {};
+  return { ...plan, ...overrides };
 }
 
 function sendInvitationEmail(org: OrgRec, inv: InvitationRec, by: UserRec) {
@@ -167,7 +171,7 @@ export const orgHandlers: Handlers = {
     const { name, slug, settings } = body as { name?: string; slug?: string; settings?: OrgRec["settings"] };
     if (slug !== undefined && slug !== org.slug && db().orgs.some((o) => o.slug === slug)) throw conflict("slug_taken", `The address ${slug} is taken.`, { slug });
     // Review and approval is a plan feature (F09 §4, 05-plans-and-limits.md `approvalWorkflow`).
-    if (settings?.approvalRequired === true && !org.settings?.approvalRequired && planLimits(org).approvalWorkflow !== true) throw limitReached("approvalWorkflow", 0, 0);
+    if (settings?.approvalRequired === true && !org.settings?.approvalRequired && planLimits(org).approvalWorkflow !== true) throw limitRefused(org.id, "approvalWorkflow", 0, 0);
     const before = { name: org.name, slug: org.slug };
     if (name !== undefined) {
       if (!name.trim()) throw new HttpError(400, "invalid_body", "The name can't be empty.");

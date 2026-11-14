@@ -2122,6 +2122,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description The orgs table as CSV, with the same filters and sort as `adminListOrgs`. */
         get: operations["adminExportOrgs"];
         put?: never;
         post?: never;
@@ -2412,8 +2413,7 @@ export interface components {
         };
         AdminFunnel: {
             steps?: {
-                /** @enum {string} */
-                step: "signed_up" | "org_created" | "setup_done" | "first_model_ready" | "first_boq" | "first_saved_version" | "first_export_or_share";
+                step: components["schemas"]["AdminFunnelStep"];
                 orgs: number;
                 conversionPct?: number;
                 medianHoursFromPrevious?: number | null;
@@ -2423,6 +2423,8 @@ export interface components {
                 counts?: number[];
             }[];
         };
+        /** @enum {string} */
+        AdminFunnelStep: "signed_up" | "org_created" | "setup_done" | "first_model_ready" | "first_boq" | "first_saved_version" | "first_export_or_share";
         AdminOrgRow: {
             /** Format: uuid */
             id: string;
@@ -2600,6 +2602,11 @@ export interface components {
             planId: string;
             settings: components["schemas"]["OrgSettings"];
             setup?: components["schemas"]["OrgSetup"];
+            /**
+             * @description suspended by a platform admin (F19): read-only, no new jobs; writes answer 409 org_suspended
+             * @enum {string}
+             */
+            status?: "active" | "suspended";
             /** Format: date-time */
             createdAt?: string;
         };
@@ -7805,10 +7812,16 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 limit?: components["parameters"]["Limit"];
                 plan?: string;
+                /** @description the org's status (active, suspended) or its subscription status (active, trialing) */
                 status?: string;
+                country?: string;
                 tag?: string;
                 signal?: "hit_limit" | "inactive_30d" | "trial_ending_7d" | "stuck_in_setup";
+                /** @description orgs that reached the step before this one and not this one (F19 §2, a funnel step clicked) */
+                stuckAt?: components["schemas"]["AdminFunnelStep"];
+                /** @description name, slug or owner email */
                 q?: string;
+                /** @description a column of AdminOrgRow (name, planId, createdAt, lastActivityAt, limitHits30d, seats, activeProjects, processingMinutes), `-` in front for descending */
                 sort?: string;
             };
             header?: never;
@@ -7834,7 +7847,20 @@ export interface operations {
     };
     adminExportOrgs: {
         parameters: {
-            query?: never;
+            query?: {
+                plan?: string;
+                /** @description the org's status (active, suspended) or its subscription status (active, trialing) */
+                status?: string;
+                country?: string;
+                tag?: string;
+                signal?: "hit_limit" | "inactive_30d" | "trial_ending_7d" | "stuck_in_setup";
+                /** @description orgs that reached the step before this one and not this one (F19 §2, a funnel step clicked) */
+                stuckAt?: components["schemas"]["AdminFunnelStep"];
+                /** @description name, slug or owner email */
+                q?: string;
+                /** @description a column of AdminOrgRow (name, planId, createdAt, lastActivityAt, limitHits30d, seats, activeProjects, processingMinutes), `-` in front for descending */
+                sort?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

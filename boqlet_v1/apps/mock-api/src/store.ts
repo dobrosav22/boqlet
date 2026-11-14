@@ -365,11 +365,42 @@ export interface AuditRec {
   orgId: string | null;
   projectId?: string | null;
   actorId: string | null;
+  /** Missing: `user` when there is an actor, else `system`. */
+  actorKind?: "platform_admin";
   action: string;
   subjectType: string;
   subjectId: string;
   at: string;
   data?: Record<string, unknown>;
+}
+/** A `402` (data-model.md "LimitEvent"): the admin console's "hit a limit" signal (F19). */
+export interface LimitEventRec {
+  id: string;
+  orgId: string;
+  userId?: string;
+  limit: string;
+  current: number;
+  max: number;
+  /** The operation that was refused (its operationId). */
+  action: string;
+  at: string;
+}
+/** A platform admin's note on an org (F19); never shown to the org. */
+export interface AdminNoteRec {
+  id: string;
+  orgId: string;
+  authorId: string;
+  text: string;
+  createdAt: string;
+}
+/** What the platform admin keeps on an org (F19) besides `Org.status`: never shown to the org. */
+export interface OrgOpsRec {
+  tags?: string[];
+  /** Entitlement overrides on top of the plan (F14, F19). */
+  overrides?: Record<string, unknown>;
+  /** A trial set through the `manual` billing provider. */
+  trialEndsAt?: string | null;
+  planHistory?: { planId: string; at: string; by: string }[];
 }
 
 export interface Db {
@@ -402,6 +433,12 @@ export interface Db {
   /** Email choices per user and category (F13); missing = on. */
   notificationPreferences: Record<string, Record<string, boolean>>;
   audit: AuditRec[];
+  limitEvents: LimitEventRec[];
+  adminNotes: AdminNoteRec[];
+  /** By org id. */
+  orgOps: Record<string, OrgOpsRec>;
+  /** When each person signed up (the User contract has no date), by user id. */
+  userCreatedAt: Record<string, string>;
   /** Orgs being deleted (F01 §9): hidden everywhere, removed later. */
   deletedOrgIds: string[];
 }
@@ -441,6 +478,10 @@ export function loadStore(): boolean {
   state.notifications ??= [];
   state.notificationPreferences ??= {};
   state.deletedOrgIds ??= [];
+  state.limitEvents ??= [];
+  state.adminNotes ??= [];
+  state.orgOps ??= {};
+  state.userCreatedAt ??= {};
   return true;
 }
 

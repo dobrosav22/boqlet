@@ -11,6 +11,7 @@ import { activeProjectCount } from "../projects.js";
 import { json, type Handlers } from "../router.js";
 import { db } from "../store.js";
 import { planLimits, seatsInUse } from "./orgs.js";
+import { subscriptionOf } from "./admin.js";
 
 const minutes = (ms: number) => Math.round((ms / 60000) * 100) / 100;
 const monthUsage = (orgId: string, month: string) => db().usage.filter((u) => u.orgId === orgId && u.at.startsWith(month));
@@ -52,7 +53,8 @@ export const billingHandlers: Handlers = {
 
   getBilling({ user, params }) {
     const { org } = requireOrgAction(user!, params.orgId!, "manageBilling");
-    return json({ planId: org.planId, status: "active", provider: "manual", trialEndsAt: null, currentPeriodEnd: null, plans: db().plans });
+    const sub = subscriptionOf(org);
+    return json({ planId: org.planId, status: sub.status, provider: sub.provider, trialEndsAt: sub.trialEndsAt, currentPeriodEnd: null, plans: db().plans });
   },
 
   createCheckout({ user, params, body }) {

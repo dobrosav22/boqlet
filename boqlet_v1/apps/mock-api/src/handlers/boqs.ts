@@ -3,7 +3,7 @@
  * inputs, generating runs through the engine as `run` jobs, run history, pending changes, archive.
  * Saving versions, confirming and review come with FE-031. Runs carry the project's decisions (FE-010).
  */
-import { limitHit, usageNow } from "../limits.js";
+import { limitHit, limitRefused, usageNow } from "../limits.js";
 import { gzipSync } from "node:zlib";
 import { audit } from "../audit.js";
 import { putBlob, signedUrl } from "../blobs.js";
@@ -15,7 +15,7 @@ import { codeListsOf } from "../codes.js";
 import { decisionsSnapshot, unappliedQuestionIds } from "../decisions.js";
 import { applyManualCodes, applyOverrides } from "../engine/fakes/line-edits.js";
 import { addTraceSteps } from "../engine/fakes/trace-steps.js";
-import { conflict, HttpError, limitReached, notFound } from "../http.js";
+import { conflict, HttpError, notFound } from "../http.js";
 import { newId } from "../ids.js";
 import { createJob, jobView, projectAudience, runJob } from "../jobs.js";
 import { PROJECT_PERMISSIONS, projectPermissions, projectRoleOf, visibleProject, writableProject } from "../projects.js";
@@ -114,7 +114,7 @@ function validateInputs(project: ProjectRec, inputs: RevisionInputs) {
 function checkModelLimit(project: ProjectRec, count: number) {
   const org = db().orgs.find((o) => o.id === project.orgId)!;
   const max = planLimits(org).maxModelsPerBoq;
-  if (max !== undefined && count > max) throw limitReached("maxModelsPerBoq", count, max);
+  if (max !== undefined && count > max) throw limitRefused(org.id, "maxModelsPerBoq", count, max);
 }
 
 function mergeInputs(base: RevisionInputs, patch: InputsPatch): RevisionInputs {

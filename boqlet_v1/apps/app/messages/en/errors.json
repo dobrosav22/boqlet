@@ -24,6 +24,7 @@
     "email_mismatch": "This invitation was sent to another email address.",
     "confirm_mismatch": "Type the organisation's name exactly to confirm.",
     "limit_reached": "Your plan's limit is reached.",
+    "org_suspended": "This organisation is suspended and read-only. Contact support to reactivate it.",
     "project_archived": "The project is archived and read-only. Restore it to make changes.",
     "not_org_member": "Only members of your organisation can join a project. Send a share link to people outside it.",
     "last_lead": "A project needs at least one lead.",
