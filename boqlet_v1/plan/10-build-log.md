@@ -24,9 +24,9 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 | Role | Frontend agent |
 | Last task done | FE-037 Excel edits import (4e284ad); **M3 done** |
 | Next task | FE-038 Platform admin console (F19), M4 |
-| Waiting for the owner | — (the session stopped after FE-037, the end of M3, because the owner asked it to; start the next one with the usual prompt) |
+| Waiting for the owner | — |
 | In progress (not committed) | — |
-| Notes for the next session | Read the M3 entry and the M3 decision entries (FE-037 … FE-029), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | **MP1 and MP2 (the pricing module) are for a later phase (P48, the owner, 2026-11-14): skip them; phase 1 ends after M4, phase 2 after M7.** Read the M3 entry and the M3 decision entries (FE-037 … FE-029), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,17 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-14 — Owner decision: the pricing module is for a later phase (frontend agent)
+
+The owner said: "Skip the MP1 and make a note that MP1 and MP2 are for a later phase."
+Recorded as P48 in `plan/README.md` and carried into `08-delivery/milestones.md` (diagram and
+both milestone rows), the three task files (FE-P1…FE-P7, BE-P1…BE-P4, EN-P1 marked "for a later
+phase"), `00-product/03-v1-scope.md` criterion 6 and `07-backend/decisions-to-make.md` B16.
+Phase 1 is now done after M4; phase 2 after M7. What stays: the module boundary of P36 (FE-039's
+extension points, `openapi-pricing.yaml` linted and its types generated, the core-only build,
+"the app builds with no module" in M4's exit criteria). The mock's pricing plugin, if any of it
+exists, is left as it is.
 
 ### 2026-11-13 — M3 Versions, exports, sharing, notifications (frontend agent)
 - **Built:** FE-029…FE-037, 966a5b7..151e16e (plus the record commits).

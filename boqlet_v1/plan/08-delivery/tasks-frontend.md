@@ -1,6 +1,6 @@
 # Frontend tasks (`apps/app`, `apps/mock-api`, `packages/api`)
 
-**Owner: the frontend agent**, in phase 1 (M0–M4, MP1) and phase 3 (M8a, M8); see
+**Owner: the frontend agent**, in phase 1 (M0–M4) and phase 3 (M8a, M8); see
 `milestones.md`. In phase 1 the mock talks to the existing proof-of-concept engine API
 (`engine/ifc_boq/api.py`) and fakes engine features that don't exist yet
 (`06-frontend/mock-api.md`, "Engine fakes"). The frontend agent never edits `engine/`; a needed
@@ -291,7 +291,8 @@ applied without reload, conflict toast on the same line, per-user undo.
 
 ## Pricing module (removable, P36): `packages/pricing-ui`
 
-Built after M3 against the mock's pricing plugin. Nothing in M0–M4 depends on it.
+**For a later phase (P48):** MP1 is not built in phase 1; skip FE-P1…FE-P7 until the owner
+schedules them. When built, against the mock's pricing plugin. Nothing in M0–M4 depends on it.
 
 ### FE-P1 Module skeleton
 Package, `register.ts` (routes, tabs, actions, badges, nav, settings section, i18n namespace

@@ -6,7 +6,7 @@ During phase 1 the frontend agent's mock faked these features on top of the proo
 engine API; `06-frontend/mock-api.md` "Engine fakes" lists each fake and the task that replaces
 it. When a task lands, switch the mock to the real behaviour and delete its fake. Suggested
 order: EN-001 (worker + HTTP transport; switch the mock to it), EN-004, EN-003, EN-007, EN-013,
-EN-010, EN-011, EN-012, EN-005, EN-002, EN-008, EN-006; EN-009 in M6; EN-P1 with MP2.
+EN-010, EN-011, EN-012, EN-005, EN-002, EN-008, EN-006; EN-009 in M6; EN-P1 with MP2, in a later phase (P48).
 
 Rules (from CLAUDE.md): types first (`packages/types/src` → `npm run codegen`), no measuring
 logic in rules and no rule logic in measuring, formulas only in `expr.py`, deterministic
@@ -184,6 +184,8 @@ question ids, keep the Duplex acceptance test green. Worker code holds **no engi
   API's sweeper (simulated) and success on retry.
 
 ## Pricing module (removable, P36)
+
+**For a later phase (P48):** EN-P1 is built with MP2, not in phase 2.
 
 ### EN-P1 Pricing workbooks
 - **Specs:** F11, F20, engine-worker.md `pricing.*`.

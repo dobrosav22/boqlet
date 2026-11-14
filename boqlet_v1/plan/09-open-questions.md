@@ -3,7 +3,7 @@
 What the plan assumes but nobody has confirmed, and the questions still open. The owner decides
 when each is closed. **None of these blocks phase 1** (the frontend on the mock); the
 "Needed by" list below says which ones block a later step. Settled decisions are in
-`plan/README.md` (P01–P47).
+`plan/README.md` (P01–P48).
 
 ## Needed by (what blocks what)
 

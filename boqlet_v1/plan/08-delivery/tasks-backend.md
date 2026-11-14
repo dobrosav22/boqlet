@@ -2,7 +2,7 @@
 
 **Owner: the backend agent, in phase 2** (`milestones.md`), after the frontend agent's phase 1
 on the mock. Order: BE-000 → the engine tasks (`tasks-engine.md`, milestone ME) → M5 → M6 → M7
-(ending with BE-032, staging) → MP2 (optional). Paths are relative to the product root
+(ending with BE-032, staging) (MP2, the pricing module, is for a later phase, P48). Paths are relative to the product root
 `boqlet_v1/` (P44); FE-000 already moved the engine there. The contract and scenario suites written in phase 1 are the specification:
 make them pass against Java without changing them; a suite that looks wrong goes to the owner.
 
@@ -214,8 +214,8 @@ Run all v1 acceptance criteria on staging; record results in `plan/README.md` st
 
 ## Pricing module (removable, P36): backend module `pricing`
 
-A separate Gradle/Maven module and Flyway location (schema `pricing`). Start after M7 or in
-parallel once BE-031 exists. Implements `openapi-pricing.yaml`.
+**For a later phase (P48):** MP2 is not built in phase 2; skip BE-P1…BE-P4 until the owner
+schedules them. A separate Gradle/Maven module and Flyway location (schema `pricing`), after M7. Implements `openapi-pricing.yaml`.
 
 ### BE-P1 Vendors (F17)
 Vendor profiles, links with invitations, accept, leave, shared price list per link, module

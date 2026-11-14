@@ -17,7 +17,7 @@ product to build. When they disagree about the *product*, `plan/` wins. When the
 that file: it says how to start, what to decide yourself and what to ask, when to stop and how
 to hand over.
 
-1. Read this README (decisions P01–P47 are settled; don't reopen them),
+1. Read this README (decisions P01–P48 are settled; don't reopen them),
    `08-delivery/sessions.md`, and `10-build-log.md` "Current position" (where the build
    stands, the next task, and your role).
 2. `08-delivery/milestones.md`: phases, milestones, exit criteria.
@@ -135,6 +135,7 @@ decisions D01–D68 are in `docs/02-decisions.md` and still hold unless changed 
 | P45 | **Agents work on their own from task to task and milestone to milestone**, by `08-delivery/sessions.md`. They stop only for an owner decision that blocks every remaining task, at the end of a phase, or before an irreversible step. Implementation decisions and deviations are written in `10-build-log.md`, which, with its "Current position", is the handover between sessions and agents. |
 | P46 | **The build happens on the branch `v_1`**, made from `main`. `main` keeps the proof of concept and its live demo untouched until the release: FE-047 tags `main` as `poc-final` and merges `v_1` into it. CI runs on both branches; staging deploys from `v_1` until the release, production from `main` after it. |
 | P47 | **The backend belongs to its backend owner**: the person who runs phase 2 (the product owner or a backend developer they choose). BE-000 is their entry point: the agent analyses the backend plan and asks them about every backend decision, the open ones and the ones the plan already made (`07-backend/decisions-to-make.md`). The plan's backend choices are defaults. Their answers win over the backend plan, which BE-000 rewrites to match. They may change the HTTP contracts when the backend needs it, by `05-api/contract-changes.md`: contract, suites, mock and the smallest app fix in one commit, every change listed, and the frontend adapted in phase 3 (FE-041). Not theirs alone: product behaviour (the product decisions and business rules, what users can do or see) and the engine rules; changes there go to the product owner. |
+| P48 | **The pricing module is for a later phase** (2026-11-14). MP1 (pricing on the mock, FE-P1…FE-P7) and MP2 (EN-P1, BE-P1…BE-P4) are not built in phases 1 and 2; the owner schedules them later. Phase 1 ends after M4, phase 2 after M7. The module boundary (P36) stays: the extension points (FE-039), `openapi-pricing.yaml`, the core-only build and the module-removed checks are still built and kept green. v1 criterion 6 ("only if the module ships in v1") is not part of release 1 unless the owner brings the module forward. |
 
 ## Where the code lives (P44)
 
@@ -186,6 +187,6 @@ merges `v_1` into it.
 | Domain, features, flows (01–03) | Written |
 | Architecture, API (04–05) | Written; `openapi.yaml` (core) and `openapi-pricing.yaml` (pricing module) cover every endpoint; the core never references the module (`04-architecture/modules.md`) |
 | Frontend, backend specs (06–07) | Written; backend decisions open on purpose |
-| Delivery (08) | Phases, milestones, task lists, session rules and build log written (P37–P40, P44, P45) |
+| Delivery (08) | Phases, milestones, task lists, session rules and build log written (P37–P40, P44, P45); the pricing module (MP1, MP2) is for a later phase (P48) |
 | Design (06) | Design guidelines decided (P43); wordmark SVG still to come from the owner |
 | **Build** | **Phase 1 in progress.** M0 (consolidation, contract, scaffolding) done 2026-11-12; M1 (core loop) done 2026-11-13, except the sample project's content (docs/11); M2 (Library and setup) done 2026-11-13, except v1 criterion 12's test with a person new to the app; M3 (versions, exports, sharing, notifications) done 2026-11-13, with v1 criterion 13's live co-editing left to FE-040 and criterion 4's walk-through by a person; next M4, FE-038. Live position: `10-build-log.md` |

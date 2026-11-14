@@ -66,7 +66,7 @@ walked through by hand otherwise (M).
 5. **Versions (A).** A saved version cannot be changed by anyone, including an org owner
    (`409 revision_locked`); a confirmed BoQ refuses every write (`409 boq_confirmed`) until it
    is reopened; with approval switched on, saving needs an approval (F09).
-6. **Pricing module (A + M), only if the module ships in v1.** A firm imports a pricebook, prices
+6. **Pricing module (A + M), only if the module ships in v1** (it is for a later phase, P48). A firm imports a pricebook, prices
    the Duplex BoQ from it and from a vendor's shared list, sends two sections to two vendors,
    one answers in the browser from their pricebook and one by Excel; the comparison shows both
    offers and the estimate. With the module removed from the build, criteria 1–5 and 7–17 still
