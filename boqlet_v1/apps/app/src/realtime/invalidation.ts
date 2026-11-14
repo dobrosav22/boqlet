@@ -21,10 +21,11 @@ const LISTS: Record<string, (projectId?: string) => QueryKey[]> = {
   user: () => [keys.me(), ["members"]],
   project: () => [["projects"]],
   model: (p) => [p ? keys.models(p) : ["models"], ["modelVersions"]],
-  modelVersion: (p) => [p ? keys.models(p) : ["models"], ["modelVersions"], ["model"]],
-  boq: (p) => [p ? keys.boqs(p) : ["boqs"], ["revisions"]],
-  revision: () => [["boq"], ["revisions"], ["revisionExports"]],
-  run: () => [["runs"]],
+  // "Needs you" (F02 §5) follows reviews, runs, BoQs and new model versions.
+  modelVersion: (p) => [p ? keys.models(p) : ["models"], ["modelVersions"], ["model"], ["attention"]],
+  boq: (p) => [p ? keys.boqs(p) : ["boqs"], ["revisions"], ["attention"]],
+  revision: () => [["boq"], ["revisions"], ["revisionExports"], ["attention"]],
+  run: () => [["runs"], ["attention"]],
   // Decisions belong to the project: its decisions, and every run's questions (joined with them).
   decision: (p) => [p ? keys.decisions(p) : ["decisions"], ["questions"]],
   // A preset's lists, versions and where it is used. A draft's document is keyed by its ETag, which
@@ -56,6 +57,8 @@ export function invalidationsFor({ event, data }: RealtimeEvent): QueryKey[] {
       }
       // A finished export is listed with its version (S12g).
       if (data.type === "export_xlsx") out.push(["revisionExports"]);
+      // A failed job, or a run that needs input, is in "Needs you" (F02 §5).
+      out.push(["attention"]);
       return out;
     }
     case "entity.changed": {
@@ -67,7 +70,7 @@ export function invalidationsFor({ event, data }: RealtimeEvent): QueryKey[] {
       return out;
     }
     case "notification.created":
-      return [keys.notifications()];
+      return [keys.notifications(), ["attention"]];
     // A saved edit in a BoQ someone has open (F06 §14): its edits and manual lines.
     case "boq.line_edited": {
       const boqId = str(data.boqId);

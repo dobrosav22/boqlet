@@ -171,3 +171,19 @@ test("F09 §4 withdraw a review to change the version (BR-23)", async ({ page })
   await expect(page.getByTestId("review-strip")).toHaveCount(0);
   await expect(page.getByTestId("generate")).toBeVisible();
 });
+
+test("F02-AC5: the approver's dashboard shows the review request in Needs you within 5 seconds, without a reload", async ({ page }) => {
+  const { lead, approver, url } = await approvalOrg();
+  await signInAsUser(page, approver);
+  await page.goto(url.split("/projects/")[0]!);
+  await expect(page.getByTestId("needs-you")).toBeVisible();
+  await expect(page.locator('[data-testid="needs-you-item"][data-kind="review_requested"]')).toHaveCount(0);
+  await expect(page.locator("html")).toHaveAttribute("data-realtime", "open");
+
+  const boq = await apiAs<{ currentRevision: { id: string } }>(lead, "GET", `/boqs/${url.split("/boqs/")[1]}`);
+  const submitted = Date.now();
+  await apiAs(lead, "POST", `/revisions/${boq.currentRevision.id}/submit`, { reviewerIds: [approver.id], notModelledConfirmed: true });
+  const item = page.locator('[data-testid="needs-you-item"][data-kind="review_requested"]');
+  await expect(item).toContainText("Review Tender BoQ", { timeout: 5_000 });
+  expect(Date.now() - submitted).toBeLessThan(5_000);
+});

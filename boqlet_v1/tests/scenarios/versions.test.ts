@@ -209,6 +209,10 @@ describe("review and approval (F09 §4, approvalRequired on)", () => {
     expect(res.data).toMatchObject({ status: "in_review", submittedBy: { id: lead.id }, reviewers: [{ id: approver.id }] });
     expect(res.data!.reviewComments![0]).toMatchObject({ text: "Please check the walls" });
     expect(await kinds(approver)).toContain("revision.review_requested");
+    // F02 §5, F02-AC5: the review is in the approver's "Needs you", not in the submitter's.
+    const needs = async (u: TestUser) => (await as(u).GET("/orgs/{orgId}/attention", { params: { path: { orgId } } })).data!;
+    expect(await needs(approver)).toEqual(expect.arrayContaining([expect.objectContaining({ kind: "review_requested", params: expect.objectContaining({ boq: expect.any(String) }), url: expect.stringContaining("tab=review") })]));
+    expect((await needs(lead)).map((i) => i.kind)).not.toContain("review_requested");
     expect((await working(approver)).permissions).toMatchObject({ approve: true, comment: true });
     // Generating isn't an edit: refused while in review.
     expect((await as(lead).POST("/revisions/{revisionId}/runs", { params: { path: { revisionId: revision.id } } })).error).toMatchObject({ code: "revision_in_review" });
@@ -241,6 +245,10 @@ describe("review and approval (F09 §4, approvalRequired on)", () => {
     expect(res.data).toMatchObject({ status: "draft" });
     expect(res.data!.reviewComments!.at(-1)).toMatchObject({ outcome: "changes_requested", text: "Walls under 1 % look off" });
     expect(await kinds(lead)).toContain("revision.changes_requested");
+    // F02 §5: the submitter's "Needs you" has the changes requested; the approver's review is gone.
+    const needs = async (u: TestUser) => ((await as(u).GET("/orgs/{orgId}/attention", { params: { path: { orgId } } })).data ?? []).map((i) => i.kind);
+    expect(await needs(lead)).toContain("changes_requested");
+    expect(await needs(approver)).not.toContain("review_requested");
   });
 
   it("in_review → approved → issued by someone other than the submitter", async () => {

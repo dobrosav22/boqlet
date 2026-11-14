@@ -9,7 +9,14 @@
     "emptyTitle": "Start your first project",
     "emptyBody": "A project holds one building's models, bills of quantities and decisions. Create one, or explore a sample built from a real model.",
     "createFirst": "Create your first project",
-    "trySample": "Try with a sample project"
+    "trySample": "Try with a sample project",
+    "attention": {
+      "review_requested": "Review {boq} {revision}",
+      "changes_requested": "Changes requested on {boq} {revision}",
+      "needs_input": "{boq} needs answers",
+      "new_model_version": "{model} v{version} is ready for {boq}",
+      "job_failed": "A {type} job failed"
+    }
   },
   "card": {
     "sample": "Sample",

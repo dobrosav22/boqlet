@@ -4,6 +4,7 @@
  */
 import { limitHit, limitRefused, usageNow } from "../limits.js";
 import { randomBytes } from "node:crypto";
+import { attentionFor } from "../attention.js";
 import { audit, auditCsv, auditView, filterAudit } from "../audit.js";
 import { now, nowIso } from "../clock.js";
 import { emit } from "../events.js";
@@ -355,7 +356,7 @@ export const orgHandlers: Handlers = {
   },
 
   getAttention({ user, params }) {
-    memberOrg(user!, params.orgId!);
-    return json([]); // "Needs you" is filled by FE-006 and later tasks.
+    const { org } = memberOrg(user!, params.orgId!);
+    return json(attentionFor(org.id, user!.id));
   },
 };

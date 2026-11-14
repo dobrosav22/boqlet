@@ -52,7 +52,9 @@ function Dashboard({ unfinished }: { unfinished: boolean }) {
         <ul className="flex flex-col divide-y divide-border">
           {attention.data?.map((item) => (
             <li key={`${item.kind}-${item.url}`} className="flex items-center gap-4 py-2">
-              <span className="flex-1">{item.title}</span>
+              <span className="flex-1" data-testid="needs-you-item" data-kind={item.kind}>
+                {t.has(`attention.${item.kind}`) ? t(`attention.${item.kind}`, (item.params ?? {}) as Record<string, string | number>) : item.title}
+              </span>
               <span className="text-muted-foreground">{item.projectName}</span>
               {item.at && <span className="text-muted-foreground tabular-nums">{relativeTime(item.at)}</span>}
               <Button variant="outline" render={<Link href={item.url} />} nativeButton={false}>

@@ -96,9 +96,10 @@ Things the product build doesn't do yet, with the task that deals with each.
 - The sample project (FL-1 step 5) is created empty: its Duplex model, BoQ and answered questions need
   a parse and a run when the sample is created. Questions exist since FE-010; filling the sample is
   still open (with the seed's Duplex BoQ, mock-api.md "Seed data").
-- The dashboard's "Needs you" list is always empty: its items (reviews, runs needing input, new model
-  versions, failed jobs) arrive with their features; F02-AC5 (a review request within 5 s) is checked
-  in FE-031.
+- The dashboard's "Needs you" list (filled at the end of phase 1, after FE-040; it had stayed empty): reviews
+  assigned to me, changes requested on what I submitted, my runs that need input, newer model versions for
+  BoQs I created, my jobs failed in the last 7 days. Computed by the mock on each request; refreshed on the
+  realtime events of reviews, runs, BoQs, model versions, jobs and notifications. Modules add no kinds yet.
 - Project cards count reviews as 0 until those exist (FE-031).
 - Project default presets can't be chosen in the project's settings yet. A new project starts with the
   org's starred presets (FE-021, F02 §2), else As modelled and the global seed dictionary; per-BoQ
