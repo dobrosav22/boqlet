@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M4 (Admin console, extension points, co-editing) |
 | Role | Frontend agent |
-| Last task done | FE-037 Excel edits import (4e284ad); **M3 done** |
-| Next task | FE-038 Platform admin console (F19), M4 |
+| Last task done | FE-038 Platform admin console (280ee74) |
+| Next task | FE-039 Extension registries (P36, modules.md), M4 |
 | Waiting for the owner | — |
 | In progress (not committed) | — |
-| Notes for the next session | **MP1 and MP2 (the pricing module) are for a later phase (P48, the owner, 2026-11-14): skip them; phase 1 ends after M4, phase 2 after M7.** Read the M3 entry and the M3 decision entries (FE-037 … FE-029), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | **MP1 and MP2 (the pricing module) are for a later phase (P48, the owner, 2026-11-14): skip them; phase 1 ends after M4, phase 2 after M7.** Read the FE-038 entry, then the M3 entry and the M3 decision entries (FE-037 … FE-029), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,18 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-14 — M4 decisions: FE-038 (frontend agent)
+- **Built:** FE-038, 280ee74. Mock `handlers/admin.ts`, `org-status.ts` (the suspension guard in the router), `request-context.ts` (the refused operation for limit events); app `features/admin/`, `api/hooks/admin.ts`, routes under `app/(admin)/admin/`. Checked by `tests/contract/admin.test.ts` (3), `tests/scenarios/admin.test.ts` (11), `e2e/admin.spec.ts` (6).
+- **Decisions taken:**
+  - Contract fixes: `Org.status` (`active`, `suspended`; data-model.md has it, the contract didn't), `adminListOrgs` gained `country` (F19 §3 lists it) and `stuckAt` (F19 §2 "click a step to list the orgs stuck at it"; "stuck at" = reached the step before, not this one), and `adminExportOrgs` takes the same filters and sort; the funnel step enum became the `AdminFunnelStep` schema.
+  - Suspended means read-only and no new jobs (data-model.md): every POST/PUT/PATCH/DELETE into the org answers `409 org_suspended` (a new code, in the 409 "blocked by state" family of conventions.md). The router resolves the org from the path parameters; `/admin/*`, `/me`, sessions and notifications are never refused. The app shows a banner in the org chrome and the global 409 toast translates the code.
+  - Audit: account changes (plan, trial, overrides, suspend, reactivate) go into the org's own log with `actorKind: platform_admin`; detail views, notes, tags and ended sessions only into the platform's (`orgId: null`), because notes and tags are internal (data-model.md "never shown to the org").
+  - Every `402` writes a limit event: `limitHit` (with the F13 notification) and the new `limitRefused` (per-action limits and features, no notification) both record it.
+  - The contract asks for a reason on every `PATCH /admin/orgs/{id}`, tags included; the tag dialog asks for one.
+  - The mock computes the overview and the funnel live (the nightly reporting table is the backend's choice); the funnel reads the records, not audit events. Users got a sign-up date (`userCreatedAt`; seeded users at seed time).
+  - No Vendors section (the pricing module's, P48) and no ops-dashboard links (BE-025) in Health.
+- **Known issues:** docs/11 "Platform admin". A dev-server warning from the notification bell's dropdown shows during e2e runs with the org chrome (pre-existing, not from this task).
 
 ### 2026-11-14 — Owner decision: the pricing module is for a later phase (frontend agent)
 
