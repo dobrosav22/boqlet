@@ -4,7 +4,7 @@
  * the engine's values (kept in `overridden` by the run) and the current edit is laid over them.
  * Manual lines saved since the run show as pending rows until the next run.
  */
-import type { LineOverride, LineOverrideInput, ManualItemRecord } from "@/api/hooks/edits";
+import type { EditBatch, LineOverride, LineOverrideInput, ManualItemRecord } from "@/api/hooks/edits";
 import type { RunLine } from "@/api/hooks/sheet";
 
 export type EditField = "quantity" | "description" | "unit" | "codes" | "excluded" | "order";
@@ -196,4 +196,32 @@ export function batchFor(changes: ReadonlyMap<string, LineOverrideInput | null>,
     removeOverrideLineKeys: [...changes.keys()].filter((k) => !current.has(k)),
   };
   return { apply, undo };
+}
+
+/** One undoable edit: what it applied (to re-apply it) and its inverse. */
+export interface UndoBatch {
+  apply: EditBatch;
+  undo: EditBatch;
+}
+
+/**
+ * Someone else saved these lines (F06 §14, BR-29: the later edit wins): my undo no longer touches them
+ * (Ctrl+Z undoes only my own edits), and what I had applied to them comes back, so I can put it back.
+ * Entries left with nothing to undo are dropped.
+ */
+export function takeLinesFromUndo<E extends { kind: string }>(stack: readonly (E | ({ kind: "batch" } & UndoBatch))[], keys: ReadonlySet<string>) {
+  const mine = new Map<string, LineOverrideInput | null>();
+  const next: (E | ({ kind: "batch" } & UndoBatch))[] = [];
+  for (const entry of stack) {
+    if (entry.kind !== "batch" || !("apply" in entry)) {
+      next.push(entry);
+      continue;
+    }
+    for (const o of entry.apply.overrides ?? []) if (keys.has(o.lineKey)) mine.set(o.lineKey, o);
+    for (const k of entry.apply.removeOverrideLineKeys ?? []) if (keys.has(k)) mine.set(k, null);
+    const keep = (b: EditBatch): EditBatch => ({ overrides: (b.overrides ?? []).filter((o) => !keys.has(o.lineKey)), removeOverrideLineKeys: (b.removeOverrideLineKeys ?? []).filter((k) => !keys.has(k)) });
+    const undo = keep(entry.undo);
+    if (undo.overrides!.length || undo.removeOverrideLineKeys!.length) next.push({ ...entry, apply: keep(entry.apply), undo });
+  }
+  return { stack: next, mine };
 }

@@ -101,8 +101,10 @@ event: job.progress
 data: {"jobId":"…","type":"run","subjectType":"run","subjectId":"…","projectId":"…","stage":"rules","pct":60}
 
 ```
-Events: `job.progress`, `job.finished`, `notification.created`, `entity.changed`
-(payloads in `04-architecture/storage-jobs-realtime.md`). Reconnect with `Last-Event-ID`.
+Events: `job.progress`, `job.finished`, `notification.created`, `entity.changed`,
+`boq.line_edited`, `boq.presence` (payloads in `04-architecture/storage-jobs-realtime.md`; the last
+two also as `BoqLineEdited` and `BoqPresence` in the contract). Presence is reported with
+`PUT /boqs/{boqId}/presence` (every 20 s while the BoQ is open, ends 45 s after the last call). Reconnect with `Last-Event-ID`.
 Heartbeat comments every 25 s. Clients treat events as hints to refetch.
 The response carries `Cache-Control: no-cache, no-transform` and `X-Accel-Buffering: no`:
 without `no-transform`, compressing proxies (the Next dev rewrite among them) buffer the stream and

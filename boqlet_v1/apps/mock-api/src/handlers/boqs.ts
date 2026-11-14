@@ -3,6 +3,7 @@
  * inputs, generating runs through the engine as `run` jobs, run history, pending changes, archive.
  * Saving versions, confirming and review come with FE-031. Runs carry the project's decisions (FE-010).
  */
+import { manualView, overrideView } from "./adjustments.js";
 import { limitHit, limitRefused, usageNow } from "../limits.js";
 import { gzipSync } from "node:zlib";
 import { audit } from "../audit.js";
@@ -292,7 +293,9 @@ export function revisionView(revision: RevisionRec, userId: string) {
     ...(revision.issuedBy ? { issuedBy: userRef(revision.issuedBy), issuedAt: revision.issuedAt } : {}),
     ...(revision.issueNote ? { issueNote: revision.issueNote } : {}),
     ...(revision.status === "issued" ? { openQuestionsAtSave: revision.openQuestionsAtSave ?? null } : {}),
-    ...(revision.frozen ? { frozen: { runId: revision.frozen.runId, exportIds: revision.frozen.exportIds } } : {}),
+    ...(revision.frozen
+      ? { frozen: { runId: revision.frozen.runId, exportIds: revision.frozen.exportIds, adjustments: { overrides: revision.frozen.adjustments.overrides.map(overrideView), manualItems: revision.frozen.adjustments.manualItems.map(manualView) } } }
+      : {}),
     permissions: revisionPermissions(project, boq, revision, userId),
   };
 }

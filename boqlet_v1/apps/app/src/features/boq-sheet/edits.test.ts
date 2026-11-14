@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { LineOverride, ManualItemRecord } from "@/api/hooks/edits";
 import type { RunLine } from "@/api/hooks/sheet";
-import { batchFor, effectiveLines, engineValues, orderSection, restoreField, withChange, type CodeLists } from "./edits";
+import { batchFor, effectiveLines, engineValues, orderSection, restoreField, takeLinesFromUndo, withChange, type CodeLists } from "./edits";
 
 const S = "acme";
 const lists: CodeLists = new Map([
@@ -88,5 +88,28 @@ describe("edits as replacements", () => {
     );
     expect(apply).toEqual({ overrides: [{ lineKey: "b", excluded: true, reason: "r" }], removeOverrideLineKeys: ["a"] });
     expect(undo).toEqual({ overrides: [{ lineKey: "a", description: "Old" }], removeOverrideLineKeys: ["b"] });
+  });
+});
+
+describe("takeLinesFromUndo (F06 §14, BR-29)", () => {
+  const batch = (keys: string[]) => ({
+    kind: "batch" as const,
+    apply: { overrides: keys.map((k) => ({ lineKey: k, quantity: 5 })), removeOverrideLineKeys: [] },
+    undo: { overrides: [], removeOverrideLineKeys: keys },
+  });
+
+  it("drops another person's lines from my undo and returns what I had applied to them", () => {
+    const stack = [batch(["a"]), { kind: "manualAdded" as const, recordId: "m1" }, batch(["a", "b"])];
+    const { stack: next, mine } = takeLinesFromUndo(stack, new Set(["a"]));
+    expect(next.map((e) => e.kind)).toEqual(["manualAdded", "batch"]);
+    expect((next[1] as ReturnType<typeof batch>).undo.removeOverrideLineKeys).toEqual(["b"]);
+    expect(mine.get("a")).toEqual({ lineKey: "a", quantity: 5 });
+  });
+
+  it("leaves the stack as it was when none of my edits touch those lines", () => {
+    const stack = [batch(["a"])];
+    const { stack: next, mine } = takeLinesFromUndo(stack, new Set(["z"]));
+    expect(next).toEqual(stack);
+    expect(mine.size).toBe(0);
   });
 });

@@ -8,6 +8,8 @@ import { conflict } from "./http.js";
 import { db } from "./store.js";
 
 const WRITES = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+/** Writes that change nothing of the org's: being in a BoQ (presence). */
+const ALWAYS = new Set(["putBoqPresence", "leaveBoqPresence"]);
 
 /** The org a request's path parameters point into, if any. */
 export function orgOfParams(params: Record<string, string>): string | undefined {
@@ -40,8 +42,8 @@ export function orgOfParams(params: Record<string, string>): string | undefined 
 export const isSuspended = (orgId: string | undefined) => !!orgId && db().orgs.find((o) => o.id === orgId)?.status === "suspended";
 
 /** Throws `409 org_suspended` for a write into a suspended org. */
-export function checkOrgWritable(method: string, tags: string[], params: Record<string, string>) {
-  if (!WRITES.has(method) || tags.includes("admin")) return;
+export function checkOrgWritable(method: string, tags: string[], params: Record<string, string>, operationId = "") {
+  if (!WRITES.has(method) || tags.includes("admin") || ALWAYS.has(operationId)) return;
   const orgId = orgOfParams(params);
   if (isSuspended(orgId)) throw conflict("org_suspended", "The organisation is suspended and read-only.", { orgId });
 }

@@ -1414,7 +1414,7 @@ paths:
     get:
       tags: [events]
       operationId: streamEvents
-      description: Server-Sent Events. Event names and payloads in conventions.md (`job.progress`, `job.finished`, `notification.created`, `entity.changed`).
+      description: Server-Sent Events. Event names and payloads in conventions.md (`job.progress`, `job.finished`, `notification.created`, `entity.changed`, `boq.line_edited` (BoqLineEdited), `boq.presence` (BoqPresence)).
       parameters:
         - { name: Last-Event-ID, in: header, schema: { type: string } }
       responses:
@@ -1486,6 +1486,31 @@ paths:
         "204": { description: Signed out }
 
   # ───────────────────────────── line edits in bulk, Excel round-trip (F06, F12) ─────────────────────────────
+  /boqs/{boqId}/presence:
+    parameters: [{ $ref: "#/components/parameters/BoqId" }]
+    put:
+      tags: [adjustments]
+      operationId: putBoqPresence
+      description: >-
+        I have this BoQ open (F06 §14, P31), and the line I'm editing if any. Sent on opening, on
+        changing the line, and every 20 s; presence ends 45 s after the last call or on DELETE.
+        Changes reach everyone with the BoQ open as SSE `boq.presence`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lineKey: { type: [string, "null"], description: "the line being edited; null or missing for none" }
+      responses:
+        "200": { description: Who has the BoQ open now, content: { application/json: { schema: { $ref: "#/components/schemas/BoqPresence" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [adjustments]
+      operationId: leaveBoqPresence
+      responses:
+        "204": { description: Left }
   /boqs/{boqId}/overrides/batch:
     parameters: [{ $ref: "#/components/parameters/BoqId" }]
     post:
@@ -2102,6 +2127,30 @@ components:
             properties:
               week: { type: string }
               counts: { type: array, items: { type: integer } }
+    BoqPresence:
+      type: object
+      required: [boqId, users]
+      description: The SSE event `boq.presence` carries the same shape.
+      properties:
+        boqId: { type: string, format: uuid }
+        users:
+          type: array
+          items:
+            type: object
+            required: [userId, name]
+            properties:
+              userId: { type: string, format: uuid }
+              name: { type: string }
+              lineKey: { type: [string, "null"] }
+    BoqLineEdited:
+      type: object
+      required: [boqId, lineKeys, by, at]
+      description: "SSE `boq.line_edited` (F06 §14): a saved edit of these lines, to everyone with the BoQ open."
+      properties:
+        boqId: { type: string, format: uuid }
+        lineKeys: { type: array, items: { type: string } }
+        by: { $ref: "#/components/schemas/UserRef" }
+        at: { type: string, format: date-time }
     AdminFunnelStep:
       type: string
       enum: [signed_up, org_created, setup_done, first_model_ready, first_boq, first_saved_version, first_export_or_share]
@@ -2881,6 +2930,12 @@ components:
           properties:
             runId: { type: string, format: uuid }
             exportIds: { type: array, items: { type: string, format: uuid } }
+            adjustments:
+              type: object
+              description: "The line edits and manual lines as they were saved (BR-25): a saved version's sheet shows these, never the working version's (F09 §3, F06 §13)"
+              properties:
+                overrides: { type: array, items: { $ref: "#/components/schemas/LineOverride" } }
+                manualItems: { type: array, items: { $ref: "#/components/schemas/ManualItemRecord" } }
         permissions: { $ref: "#/components/schemas/Permissions" }
     Boq:
       type: object

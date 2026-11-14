@@ -8,7 +8,11 @@ import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import type { Boq, Run } from "@/api/hooks/boqs";
-import { useEditLines, useManualItems, useOverrides, useRemoveManualItem, useSaveManualItem, type EditBatch, type LineOverrideInput, type ManualItemRecord } from "@/api/hooks/edits";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEditLines, useManualItems, useOverrides, useRemoveManualItem, useSaveManualItem, type LineOverride, type LineOverrideInput, type ManualItemRecord } from "@/api/hooks/edits";
+import { keys as queryKeys } from "@/api/keys";
+import { useBoqPresence } from "@/features/boqs/presence";
+import { onLineEdited } from "@/realtime/boq-events";
 import { useExportRun } from "@/api/hooks/exports";
 import { useMe } from "@/api/hooks/me";
 import { useLines } from "@/api/hooks/sheet";
@@ -23,13 +27,14 @@ import { ModelViewer } from "@/features/viewer/model-viewer";
 import { showIn3dHref, viewerModels } from "@/features/viewer/viewer-tab";
 import { cn } from "@/lib/utils";
 import { ManualLineDialog, ReasonDialog } from "./edit-dialogs";
-import { batchFor, effectiveLines, restoreField, withChange, type CodeLists, type EditField, type SheetLine } from "./edits";
+import { batchFor, effectiveLines, restoreField, takeLinesFromUndo, withChange, type CodeLists, type EditField, type SheetLine, type UndoBatch } from "./edits";
 import { LineDetailPanel } from "./line-detail";
 import { LineEdits, type LineActions } from "./line-edits";
 import { SystemRulesHint } from "@/features/setup/system-rules-hint";
 import { buildRows, displayUnit, facets, filterLines, linesInGroup, topGroups, UNCLASSIFIED, type GroupRow, type Row, type SheetFilters, type SourceFilter, shownDescription } from "./model";
 import { SourceTag } from "./source-tag";
-import { useCodeLists } from "./use-code-lists";
+import { useCodeLists, useCodeListSeparators } from "./use-code-lists";
+import { positionNumbers } from "./positions";
 import { NotInModelsNotice } from "./not-in-models";
 import { WarningsBar } from "./warnings-bar";
 import { extensions } from "@/extensions";
@@ -79,7 +84,7 @@ interface RowApi {
   selectGroup: (id: string) => void;
 }
 
-type UndoEntry = { kind: "batch"; batch: EditBatch } | { kind: "manualAdded"; recordId: string };
+type UndoEntry = ({ kind: "batch" } & UndoBatch) | { kind: "manualAdded"; recordId: string };
 type Prompt = { title: string; summary: string; initial?: string; apply: (reason: string) => void };
 
 /**
@@ -95,7 +100,7 @@ type Prompt = { title: string; summary: string; initial?: string; apply: (reason
  * scroll re-renders neither the toolbar nor the rows already on screen (`LineRowView` is memoised
  * and gets only stable props).
  */
-export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; readOnly?: boolean }) {
+export function Sheet({ run, boq, readOnly = false, frozen }: { run: Run; boq: Boq; readOnly?: boolean; frozen?: { overrides?: LineOverride[]; manualItems?: ManualItemRecord[] } }) {
   const t = useTranslations("boqs.sheet");
   const te = useTranslations("boqs.edits");
   const tn = useTranslations("boqs.notInModels");
@@ -142,6 +147,10 @@ export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; read
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [manualDialog, setManualDialog] = useState<{ record?: ManualItemRecord; defaults?: { codes?: Record<string, string>; sortHint?: string } } | null>(null);
   const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
+  const undoRef = useRef(undoStack);
+  useLayoutEffect(() => {
+    undoRef.current = undoStack;
+  }, [undoStack]);
   // F07 §9: on screens 1280 px and wider the sheet and the model open side by side (resizable, collapsible).
   const hasModels = (run.snapshotVersions?.models?.length ?? 0) > 0;
   const [split, setSplit] = useState(() => typeof window !== "undefined" && window.matchMedia("(min-width: 1280px)").matches);
@@ -154,8 +163,18 @@ export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; read
   const anchor = useRef<string | null>(null);
 
   const current = useMemo(() => new Map((overrides.data ?? []).map((o) => [o.lineKey, o])), [overrides.data]);
-  const all = useMemo(() => effectiveLines(lines.data ?? [], overrides.data ?? [], manual.data ?? [], lists), [lines.data, overrides.data, manual.data, lists]);
+  // A saved version shows the edits it was saved with (BR-25), never the working version's.
+  const shownOverrides = frozen ? frozen.overrides : overrides.data;
+  const shownManual = frozen ? frozen.manualItems : manual.data;
+  const all = useMemo(() => effectiveLines(lines.data ?? [], shownOverrides ?? [], shownManual ?? [], lists), [lines.data, shownOverrides, shownManual, lists]);
   const byKey = useMemo(() => new Map(all.map((l) => [l.key, l])), [all]);
+  const byKeyRef = useRef(byKey);
+  useLayoutEffect(() => {
+    byKeyRef.current = byKey;
+  }, [byKey]);
+  // F06 §13: numbers follow what the sheet shows, so they renumber at once as lines are edited.
+  const separators = useCodeListSeparators(run);
+  const positions = useMemo(() => positionNumbers(all, groupBy, groupBy ? separators.get(groupBy) : undefined), [all, groupBy, separators]);
   const options = useMemo(() => facets(all), [all]);
   const filtered = useMemo(() => filterLines(all, filters, groupBy), [all, filters, groupBy]);
   const groups = useMemo(() => topGroups(all, groupBy), [all, groupBy]);
@@ -190,6 +209,7 @@ export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; read
     const col = (id: string, header: string, meta: Omit<ColumnMeta, "id">): ColumnDef<SheetLine> => ({ id, header, meta: { id, ...meta }, enableHiding: !!meta.optional });
     const engine = (l: SheetLine, field: EditField, text: string) => (l.edit?.fields.includes(field) ? te("engineHover", { value: text }) : undefined);
     return [
+      col("positionNo", t("col.positionNo"), { width: "5.5rem", cell: (l) => <span className="tabular-nums" data-testid="position-no">{positions.get(l.key) ?? ""}</span> }),
       col("item", t("col.item"), {
         width: "8rem",
         editable: groupBy ? "item" : undefined,
@@ -214,7 +234,7 @@ export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; read
       // One column per extra classification (F06 §2), off by default.
       ...systems.filter((s) => s.id !== groupBy).map((s) => col(`code:${s.id}`, s.name, { width: "8rem", optional: true, cell: (l) => l.codes[s.id]?.code })),
     ];
-  }, [groupBy, systems, num, t, te, toConfirm, badges]);
+  }, [groupBy, systems, num, t, te, toConfirm, badges, positions]);
 
   // TanStack Table owns the columns and their visibility; the rows are the sheet's own (groups + lines).
   // It returns functions the React Compiler can't memoise, so this component is left uncompiled.
@@ -248,6 +268,51 @@ export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; read
     [t, te],
   );
 
+  // ───────── live co-editing (F06 §14, BR-29) ─────────
+
+  const tp = useTranslations("boqs.presence");
+  const presence = useBoqPresence();
+  const setPresenceLine = presence?.setLineKey;
+  // The line I'm editing goes to the others; theirs get a marker here.
+  useEffect(() => setPresenceLine?.(editing?.key ?? null), [editing?.key, setPresenceLine]);
+  const markers = useMemo(() => new Map((presence?.others ?? []).flatMap((u) => (u.lineKey ? [[u.lineKey, tp("marker", { name: u.name })] as const] : []))), [presence?.others, tp]);
+  const queryClient = useQueryClient();
+  const myId = me.data?.user.id;
+  const keepMineRef = useRef<(key: string, mine: LineOverrideInput | null) => void>(() => {});
+  // Someone else saved a line I had edited: the later edit wins; I'm told, with their value, and may put mine back.
+  useEffect(
+    () =>
+      onLineEdited(async (e) => {
+        if (e.boqId !== boq.id || e.by.id === myId || readOnly) return;
+        const { stack, mine } = takeLinesFromUndo(undoRef.current, new Set(e.lineKeys));
+        if (!mine.size) return;
+        setUndoStack(stack as UndoEntry[]);
+        await queryClient.refetchQueries({ queryKey: queryKeys.overrides(boq.id) });
+        const now = new Map((queryClient.getQueryData<LineOverride[]>(queryKeys.overrides(boq.id)) ?? []).map((o) => [o.lineKey, o]));
+        for (const [key, my] of mine) {
+          const theirs = now.get(key);
+          const value =
+            theirs === undefined
+              ? te("theirRestored")
+              : theirs.excluded
+                ? te("theirExcluded")
+                : theirs.quantity !== undefined && theirs.quantity !== null
+                  ? te("theirValue", { value: `${num(theirs.quantity)} ${displayUnit(theirs.unit ?? byKeyRef.current.get(key)?.unit ?? "")}`.trim() })
+                  : theirs.description
+                    ? te("theirValue", { value: theirs.description })
+                    : te("theirValue", { value: Object.values(theirs.codes ?? {}).join(", ") });
+          toast(te("changedBy", { name: e.by.name }), {
+            id: `coedit-${key}`,
+            description: value,
+            duration: 15_000,
+            action: { label: te("keepMine"), onClick: () => keepMineRef.current(key, my) },
+          });
+        }
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [boq.id, myId, readOnly, queryClient],
+  );
+
   // ───────── edits ─────────
 
   const pushUndo = (entry: UndoEntry) => setUndoStack((s) => [...s.slice(-(UNDO_DEPTH - 1)), entry]);
@@ -256,8 +321,11 @@ export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; read
   const commit = (changes: Map<string, LineOverrideInput | null>) => {
     if (!changes.size) return;
     const { apply, undo } = batchFor(changes, current);
-    editLines.mutate(apply, { onSuccess: () => pushUndo({ kind: "batch", batch: undo }) });
+    editLines.mutate(apply, { onSuccess: () => pushUndo({ kind: "batch", apply, undo }) });
   };
+  useLayoutEffect(() => {
+    keepMineRef.current = (key, mine) => commit(new Map([[key, mine]]));
+  });
   const change = (key: string, patch: Partial<LineOverrideInput>) => commit(new Map([[key, withChange(current.get(key), key, patch)]]));
   const changeMany = (keys: Iterable<string>, patch: (key: string) => Partial<LineOverrideInput>) => commit(new Map([...keys].map((k) => [k, withChange(current.get(k), k, patch(k))])));
 
@@ -265,7 +333,7 @@ export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; read
     const entry = undoStack[undoStack.length - 1];
     if (!entry) return;
     setUndoStack((s) => s.slice(0, -1));
-    if (entry.kind === "batch") editLines.mutate(entry.batch);
+    if (entry.kind === "batch") editLines.mutate(entry.undo);
     else removeManual.mutate(entry.recordId);
   };
 
@@ -289,7 +357,7 @@ export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; read
       // Sent as it is: without a quantity edit the API refuses it with the reason (409 unit_needs_quantity).
       const next = { ...(withChange(o, key, {}) ?? { lineKey: key }), unit };
       const { apply, undo } = batchFor(new Map([[key, next]]), current);
-      editLines.mutate(apply, { onSuccess: () => pushUndo({ kind: "batch", batch: undo }) });
+      editLines.mutate(apply, { onSuccess: () => pushUndo({ kind: "batch", apply, undo }) });
     } else if (column === "quantity") {
       const text = value.trim();
       const quantity = text === "" ? null : Number(text.replace(/\s/g, "").replace(",", "."));
@@ -632,6 +700,7 @@ export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; read
               checkLabel={te("select")}
               checkAllLabel={te("selectAll")}
               pendingLabel={te("pending")}
+              editingBy={markers}
             />
           </div>
           <div
@@ -694,6 +763,7 @@ export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; read
               checkLabel={te("select")}
               checkAllLabel={te("selectAll")}
               pendingLabel={te("pending")}
+              editingBy={markers}
             />
           </div>
           {renderDetail(undefined)}
@@ -805,6 +875,7 @@ function SheetGrid({
   checkLabel,
   checkAllLabel,
   pendingLabel,
+  editingBy,
 }: {
   rows: Row[];
   columns: ColumnMeta[];
@@ -827,6 +898,8 @@ function SheetGrid({
   checkLabel: string;
   checkAllLabel: string;
   pendingLabel: string;
+  /** Lines others are editing (F06 §14), line key → the marker's text. */
+  editingBy: ReadonlyMap<string, string>;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   // Like TanStack Table, the virtualizer returns functions the React Compiler can't memoise.
@@ -911,6 +984,7 @@ function SheetGrid({
               api={api}
               checkLabel={checkLabel}
               pendingLabel={pendingLabel}
+              editingBy={editingBy.get(row.id)}
             />
           );
         })}
@@ -1028,6 +1102,7 @@ const LineRowView = memo(function LineRowView({
   api,
   checkLabel,
   pendingLabel,
+  editingBy,
 }: {
   line: SheetLine;
   depth: number;
@@ -1043,6 +1118,7 @@ const LineRowView = memo(function LineRowView({
   api: RowApi;
   checkLabel: string;
   pendingLabel: string;
+  editingBy?: string;
 }) {
   const [over, setOver] = useState(false);
   const canEdit = editable && !line.pending;
@@ -1057,7 +1133,11 @@ const LineRowView = memo(function LineRowView({
         line.excluded && "text-muted-foreground line-through",
         line.pending && "italic",
         over && "shadow-[inset_0_-2px_0_var(--link)]",
+        // Someone else is editing this line (F06 §14): an orange marker, with the name on hover.
+        editingBy && "shadow-[inset_3px_0_0_var(--orange)]",
       )}
+      title={editingBy}
+      data-editing-by={editingBy}
       style={{ gridTemplateColumns: template, height: ROW, transform: `translateY(${top}px)` }}
       // The second click of a double-click (editing a cell) leaves the selection as it is.
       onClick={(e) => e.detail <= 1 && api.click(line.key)}
@@ -1154,8 +1234,11 @@ function CellInput({ initial, align, onCommit, onCancel }: { initial: string; al
       onFocus={(e) => e.target.select()}
       onBlur={() => finish(true)}
       onKeyDown={(e) => {
-        if (e.key === "Enter") finish(true);
-        else if (e.key === "Escape") finish(false);
+        // preventDefault: the same Enter must not submit the reason dialog that opens (it has the old reason).
+        if (e.key === "Enter") {
+          e.preventDefault();
+          finish(true);
+        } else if (e.key === "Escape") finish(false);
         e.stopPropagation();
       }}
       className={cn("h-7 w-full min-w-0 rounded-[var(--radius)] border border-[var(--link)] bg-background px-1.5 outline-none", align === "right" && "text-right tabular-nums")}

@@ -68,6 +68,11 @@ export function invalidationsFor({ event, data }: RealtimeEvent): QueryKey[] {
     }
     case "notification.created":
       return [keys.notifications()];
+    // A saved edit in a BoQ someone has open (F06 §14): its edits and manual lines.
+    case "boq.line_edited": {
+      const boqId = str(data.boqId);
+      return boqId ? [keys.overrides(boqId), keys.manualItems(boqId)] : [];
+    }
     default:
       return [];
   }

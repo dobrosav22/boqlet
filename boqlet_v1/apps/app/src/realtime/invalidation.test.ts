@@ -28,6 +28,7 @@ describe("invalidationsFor (architecture.md, data layer rule 4)", () => {
   it("refetches notifications and ignores what it doesn't know", () => {
     expect(invalidationsFor({ event: "notification.created", data: { id: "n" } })).toEqual([["notifications"]]);
     expect(invalidationsFor({ event: "boq.presence", data: {} })).toEqual([]);
+    expect(invalidationsFor({ event: "boq.line_edited", data: { boqId: "b1", lineKeys: ["l"] } })).toEqual([["overrides", "b1"], ["manualItems", "b1"]]);
     expect(invalidationsFor({ event: "entity.changed", data: {} })).toEqual([]);
   });
 });

@@ -8,6 +8,7 @@ import { useBoq, useRuns, type Run } from "@/api/hooks/boqs";
 import { useErrorMessage } from "@/components/errors/use-error-message";
 import { DimensionRule } from "@/components/dimension-rule";
 import { BoqHeader } from "@/features/boqs/boq-header";
+import { BoqPresenceProvider, PresenceAvatars } from "@/features/boqs/presence";
 import { useRevisions } from "@/api/hooks/diffs";
 import { ReviewTab } from "@/features/versions/review-tab";
 import { VersionsTab } from "@/features/versions/versions-tab";
@@ -66,6 +67,8 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
   const current = viewing ? viewing.currentRun : boq.data.currentRevision.currentRun;
   const href = (key: string) => `${base}?${new URLSearchParams({ tab: key, ...(viewing ? { version: viewing.id } : {}) }).toString()}`;
   return (
+    // F06 §14: everyone with the BoQ open sees who else is in it.
+    <BoqPresenceProvider boqId={boqId}>
     <div className="flex flex-col gap-6" data-testid="boq-workspace">
       <BoqHeader boq={boq.data} runs={runs.data} base={base} canArchive={can("archive")} approval={approval} />
       {viewing && (
@@ -99,10 +102,13 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
             <m.Label />
           </Link>
         ))}
+        <div className="ml-auto self-start">
+          <PresenceAvatars />
+        </div>
       </nav>
       {moduleTab && <moduleTab.Panel boqId={boqId} projectId={project.id} runId={current?.id ?? null} />}
       {tab === "review" && <ReviewTab boq={boq.data} runs={runs.data} base={base} />}
-      {tab === "sheet" && (current ? <Sheet key={`${current.id}|${viewing?.id ?? ""}`} run={current} boq={boq.data} readOnly={!!viewing} /> : <RunFigures run={current} />)}
+      {tab === "sheet" && (current ? <Sheet key={`${current.id}|${viewing?.id ?? ""}`} run={current} boq={boq.data} readOnly={!!viewing} {...(viewing ? { frozen: { overrides: viewing.frozen?.adjustments?.overrides ?? [], manualItems: viewing.frozen?.adjustments?.manualItems ?? [] } } : {})} /> : <RunFigures run={current} />)}
       {tab === "viewer" && <ViewerTab run={current} base={base} />}
       {tab === "changes" && <ChangesTab boq={boq.data} runs={runs.data} base={base} />}
       {tab === "log" && <LogTab key={current?.id ?? "none"} run={current} />}
@@ -111,6 +117,7 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
       {tab === "exports" && <ExportsTab boq={boq.data} />}
       {tab === "versions" && <VersionsTab boq={boq.data} runs={runs.data} base={base} canCompare={tabs.includes("changes")} />}
     </div>
+    </BoqPresenceProvider>
   );
 }
 

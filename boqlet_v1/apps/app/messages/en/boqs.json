@@ -143,6 +143,7 @@
     "expand": "Expand {name}",
     "collapse": "Collapse {name}",
     "col": {
+      "positionNo": "No.",
       "item": "Item",
       "description": "Description",
       "unit": "Unit",
@@ -445,7 +446,13 @@
     "bulkLabel": "Edit the selected lines",
     "selected": "{count, plural, one {# line selected} other {# lines selected}}",
     "moveTo": "Move to a {system} section",
-    "clearSelection": "Clear selection"
+    "clearSelection": "Clear selection",
+    "changedBy": "{name} changed this line just now",
+    "changedLine": "{name} changed line {line} just now",
+    "keepMine": "Keep mine",
+    "theirValue": "Now: {value}",
+    "theirRestored": "Now: as the engine measured it",
+    "theirExcluded": "Now: excluded"
   },
   "manual": {
     "addTitle": "Add a line",
@@ -673,5 +680,11 @@
       "reasonNeeded": "Give a reason for every ticked quantity change and deletion.",
       "applied": "{count, plural, one {# change applied} other {# changes applied}}. Generate again to see them in the sheet."
     }
+  },
+  "presence": {
+    "label": "Also in this BoQ",
+    "editing": "{name} is editing a line",
+    "viewing": "{name} has this BoQ open",
+    "marker": "{name} is editing this line"
   }
 }

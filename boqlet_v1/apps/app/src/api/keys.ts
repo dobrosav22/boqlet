@@ -57,4 +57,5 @@ export const keys = {
   adminNotes: (orgId: string) => ["adminNotes", orgId] as const,
   adminUsers: (q: string) => ["adminUsers", q] as const,
   adminHealth: () => ["adminHealth"] as const,
+  presence: (boqId: string) => ["presence", boqId] as const,
 };

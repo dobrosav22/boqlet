@@ -9,6 +9,7 @@ import { getBlob } from "../blobs.js";
 import { HttpError, notFound } from "../http.js";
 import { visibleProject } from "../projects.js";
 import { json, type Handlers } from "../router.js";
+import { orderedForNumbers, positionNumbers } from "../positions.js";
 import { db, type RunRec, type UserRec } from "../store.js";
 
 /** Results are immutable once written, so they are cached by run id (a few, most recent). */
@@ -34,8 +35,43 @@ export function runFor(user: UserRec, runId: string) {
   return run;
 }
 
-/** A line as the contract's `RunLine`: the engine's line plus its place in the run. */
-const runLine = (line: BoqLine, sortIndex: number) => ({ ...line, sortIndex });
+/** A line as the contract's `RunLine`: the engine's line plus its place in the run and its position number. */
+const runLine = (line: BoqLine, sortIndex: number, positions: Map<string, string>) => ({ ...line, sortIndex, ...(positions.has(line.key) ? { positionNo: positions.get(line.key)! } : {}) });
+
+/** The code list's separator for a system of the run (its classification version's `codeList.separator`). */
+function separatorOf(run: RunRec, system: string): string | undefined {
+  for (const id of run.request.inputs.classificationVersionIds ?? []) {
+    const doc = db().presetVersions.find((v) => v.id === id)?.doc as { codeList?: { id?: string; separator?: string } | null } | undefined;
+    if (doc?.codeList && (doc.codeList.id === system || `mock-${id}` === system)) return doc.codeList.separator;
+  }
+  return undefined;
+}
+
+/**
+ * Position numbers of a run's lines (F06 §13) in the `groupBy` system, or the run's first
+ * classification: line order with the run's moves, excluded lines without a number. A run never
+ * changes, so a saved version's numbers stay as they were (BR-28).
+ */
+const positionsCache = new Map<string, Map<string, string>>();
+function runPositions(run: RunRec, result: BoqResult, groupBy: string | undefined): Map<string, string> {
+  const system = groupBy ?? run.classifications?.[0]?.id ?? null;
+  const cacheKey = `${run.id}|${system ?? ""}`;
+  const hit = positionsCache.get(cacheKey);
+  if (hit) return hit;
+  const edits = new Map((run.request.adjustments?.overrides ?? []).map((o) => [o.lineKey, o]));
+  const lines = orderedForNumbers(result.lines.map((l) => ({ key: l.key, line: l, sortAfter: edits.get(l.key)?.sortAfter })));
+  const positions = positionNumbers(
+    lines.map(({ key, line }) => ({
+      key,
+      code: system ? (line.codes[system]?.code ?? null) : null,
+      excluded: !!edits.get(key)?.excluded || !!(line as { overridden?: { fields?: string[] } }).overridden?.fields?.includes("excluded"),
+    })),
+    { grouped: !!system, ...(system ? { separator: separatorOf(run, system) } : {}) },
+  );
+  positionsCache.set(cacheKey, positions);
+  if (positionsCache.size > 32) positionsCache.delete(positionsCache.keys().next().value!);
+  return positions;
+}
 
 /** Names a model can be filtered by: our model id, its name, or the engine's id for its version. */
 function modelAliases(run: RunRec, modelId: string): Set<string> {
@@ -82,6 +118,7 @@ export const lineHandlers: Handlers = {
     const result = await runResult(run);
     const filtered = filterLines(run, result.lines, query);
     const groupBy = query.groupBy as string | undefined;
+    const positions = runPositions(run, result, groupBy);
     if (groupBy && query.level !== undefined) {
       // Server-side grouping (large runs, F06 edge cases): group rows at `level`, lines of one group on request.
       const level = Number(query.level);
@@ -101,7 +138,7 @@ export const lineHandlers: Handlers = {
       const inGroup = prefix.length ? filtered.filter(({ line }) => pathOf(line, groupBy).slice(0, prefix.length).join("/") === prefix.join("/")) : [];
       const { slice, nextCursor } = page(inGroup, query, 5000, 20000);
       return json({
-        items: slice.map(({ line, i }) => runLine(line, i)),
+        items: slice.map(({ line, i }) => runLine(line, i, positions)),
         groups: [...groups.values()].map((g) => ({
           path: g.path,
           code: g.code,
@@ -115,7 +152,7 @@ export const lineHandlers: Handlers = {
       });
     }
     const { slice, nextCursor } = page(filtered, query, 5000, 20000);
-    return json({ items: slice.map(({ line, i }) => runLine(line, i)), total: filtered.length, nextCursor });
+    return json({ items: slice.map(({ line, i }) => runLine(line, i, positions)), total: filtered.length, nextCursor });
   },
 
   async getLine({ user, params, query }) {
@@ -124,7 +161,7 @@ export const lineHandlers: Handlers = {
     const index = result.lines.findIndex((l) => l.key === query.key);
     if (index < 0) throw notFound("line");
     const line = result.lines[index]!;
-    return json({ ...runLine(line, index), log: result.log.filter((e) => e.lineKey === line.key) });
+    return json({ ...runLine(line, index, runPositions(run, result, query.groupBy as string | undefined)), log: result.log.filter((e) => e.lineKey === line.key) });
   },
 
   async listWarnings({ user, params }) {

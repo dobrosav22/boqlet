@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { keys } from "@/api/keys";
 import { authAdapter, SIGNED_OUT_REASONS, signedOut, useSession } from "@/auth";
+import { publishLineEdited, type LineEdited } from "./boq-events";
 import { invalidationsFor } from "./invalidation";
 import { localJobs } from "./local-jobs";
 import { connectRealtime } from "./sse";
@@ -31,7 +32,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           client.setQueryData(keys.jobProgress(e.data.jobId), e.data);
           return;
         }
+        // F06 §14: who has a BoQ open, as the server tells it.
+        if (e.event === "boq.presence" && typeof e.data.boqId === "string") {
+          client.setQueryData(keys.presence(e.data.boqId), e.data);
+          return;
+        }
         for (const queryKey of invalidationsFor(e)) void client.invalidateQueries({ queryKey });
+        if (e.event === "boq.line_edited" && typeof e.data.boqId === "string") publishLineEdited(e.data as unknown as LineEdited);
         // A toast for each notification (F13), except a job's this tab shows itself (an export's toast).
         const jobId = (e.data.params as { jobId?: unknown } | undefined)?.jobId;
         if (e.event === "notification.created" && typeof e.data.kind === "string" && !(typeof jobId === "string" && localJobs.has(jobId))) {

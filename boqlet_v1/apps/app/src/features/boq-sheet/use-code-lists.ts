@@ -7,7 +7,7 @@ import { keys } from "@/api/keys";
 import type { Run } from "@/api/hooks/boqs";
 import type { CodeEntry, CodeLists } from "./edits";
 
-type ClassificationDoc = { codeList?: { id?: string; codes?: CodeEntry[] } | null };
+type ClassificationDoc = { codeList?: { id?: string; codes?: CodeEntry[]; separator?: string } | null };
 
 /**
  * The code lists of a run's classifications, by the system id its lines' `codes` use (shipped
@@ -32,6 +32,30 @@ export function useCodeLists(run: Run | undefined): CodeLists {
       const byCode = new Map(list.codes.map((c) => [c.code, c]));
       if (list.id) out.set(list.id, byCode);
       out.set(`mock-${ids[i]}`, byCode);
+    });
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stamp]);
+}
+
+/** Each system's code separator (`CodeList.separator`), for position numbers (F06 §13). Same queries as `useCodeLists`. */
+export function useCodeListSeparators(run: Run | undefined): ReadonlyMap<string, string> {
+  const ids = run?.snapshotVersions?.classificationVersionIds ?? [];
+  const results = useQueries({
+    queries: ids.map((id) => ({
+      queryKey: keys.presetVersion(id),
+      staleTime: Infinity,
+      queryFn: async () => (await api.GET("/preset-versions/{presetVersionId}", { params: { path: { presetVersionId: id } } })).data!,
+    })),
+  });
+  const stamp = results.map((r) => r.dataUpdatedAt).join(",");
+  return useMemo(() => {
+    const out = new Map<string, string>();
+    results.forEach((r, i) => {
+      const list = (r.data?.doc as ClassificationDoc | undefined)?.codeList;
+      if (!list?.separator) return;
+      if (list.id) out.set(list.id, list.separator);
+      out.set(`mock-${ids[i]}`, list.separator);
     });
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps

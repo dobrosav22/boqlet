@@ -144,7 +144,7 @@ export function apiRouter(spec: Spec, handlers: Handlers) {
       if (!handler) {
         return json({ code: "not_implemented", message: `The mock does not implement ${op.operationId} yet.` }, 501);
       }
-      checkOrgWritable(op.method.toUpperCase(), (op.raw.tags as string[] | undefined) ?? [], params);
+      checkOrgWritable(op.method.toUpperCase(), (op.raw.tags as string[] | undefined) ?? [], params, op.operationId);
       const response = await runInRequest({ operationId: op.operationId, ...(user ? { userId: user.id } : {}) }, () =>
         handler({ c, op, user, ...(session ? { session } : {}), params, query, body }),
       );

@@ -4,6 +4,7 @@
  * BoQ and apply on the next run (the fakes in `engine/fakes/line-edits.ts`); `checkPreset` runs the
  * engine's check, e.g. for a manual line's formula.
  */
+import { announceLineEdits, leavePresence, touchPresence } from "../presence.js";
 import { audit } from "../audit.js";
 import { nowIso } from "../clock.js";
 import { codeListsOf } from "../codes.js";
@@ -25,11 +26,11 @@ const userRef = (id: string) => {
   return u ? { id: u.id, name: u.name, email: u.email } : { id, name: "Unknown" };
 };
 
-const overrideView = (o: OverrideRec) => {
+export const overrideView = (o: OverrideRec) => {
   const { createdBy, ...rest } = o;
   return { ...rest, createdBy: userRef(createdBy) };
 };
-const manualView = (m: ManualItemRec) => {
+export const manualView = (m: ManualItemRec) => {
   const { createdBy, ...rest } = m;
   return { ...rest, createdBy: userRef(createdBy) };
 };
@@ -140,6 +141,7 @@ export const adjustmentHandlers: Handlers = {
     touch(boq, user!.id);
     audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "line.edited", subjectType: "boq", subjectId: boq.id, data: { boq: boq.name, lineKey: rec.lineKey, fields: Object.keys(rec).filter((k) => !["id", "boqId", "lineKey", "createdBy", "createdAt", "reason"].includes(k)) } });
     changed(project, boq, "override");
+    announceLineEdits(boq.id, [rec.lineKey], user!);
     return json(overrideView(rec));
   },
 
@@ -151,6 +153,7 @@ export const adjustmentHandlers: Handlers = {
     touch(boq, user!.id);
     audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "line.restored", subjectType: "boq", subjectId: boq.id, data: { boq: boq.name, lineKey: rec.lineKey } });
     changed(project, boq, "override");
+    announceLineEdits(boq.id, [rec.lineKey], user!);
     return noContent();
   },
 
@@ -174,6 +177,7 @@ export const adjustmentHandlers: Handlers = {
     audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "line.edited", subjectType: "boq", subjectId: boq.id, data: { boq: boq.name, lines: written.length, restored: remove.size, manualLines: added.length } });
     changed(project, boq, "override");
     if (added.length) changed(project, boq, "manualItem");
+    announceLineEdits(boq.id, [...written.map((o) => o.lineKey), ...remove, ...added.map((m) => m.item.id)], user!);
     return json({ overrides: written.map(overrideView), manualItems: added.map(manualView) });
   },
 
@@ -188,6 +192,7 @@ export const adjustmentHandlers: Handlers = {
     touch(boq, user!.id);
     audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "manual_line.added", subjectType: "boq", subjectId: boq.id, data: { boq: boq.name, id: rec.item.id } });
     changed(project, boq, "manualItem");
+    announceLineEdits(boq.id, [rec.item.id], user!);
     return json(manualView(rec), 201);
   },
 
@@ -204,6 +209,7 @@ export const adjustmentHandlers: Handlers = {
     touch(boq, user!.id);
     audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "manual_line.updated", subjectType: "boq", subjectId: boq.id, data: { boq: boq.name, id: rec.item.id } });
     changed(project, boq, "manualItem");
+    announceLineEdits(boq.id, [rec.item.id], user!);
     return json(manualView(rec));
   },
 
@@ -215,6 +221,20 @@ export const adjustmentHandlers: Handlers = {
     touch(boq, user!.id);
     audit({ orgId: project.orgId, projectId: project.id, actorId: user!.id, action: "manual_line.removed", subjectType: "boq", subjectId: boq.id, data: { boq: boq.name, id: rec.item.id } });
     changed(project, boq, "manualItem");
+    announceLineEdits(boq.id, [rec.item.id], user!);
+    return noContent();
+  },
+
+  /** F06 §14: I have the BoQ open (heartbeat), and the line I'm editing. Anyone who can see the BoQ. */
+  putBoqPresence({ user, params, body }) {
+    const { boq } = boqFor(user!, params.boqId!);
+    const lineKey = (body as { lineKey?: string | null } | undefined)?.lineKey ?? null;
+    return json(touchPresence(boq.id, user!, lineKey));
+  },
+
+  leaveBoqPresence({ user, params }) {
+    const { boq } = boqFor(user!, params.boqId!);
+    leavePresence(boq.id, user!.id);
     return noContent();
   },
 

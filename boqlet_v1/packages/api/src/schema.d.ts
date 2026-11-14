@@ -1717,7 +1717,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Server-Sent Events. Event names and payloads in conventions.md (`job.progress`, `job.finished`, `notification.created`, `entity.changed`). */
+        /** @description Server-Sent Events. Event names and payloads in conventions.md (`job.progress`, `job.finished`, `notification.created`, `entity.changed`, `boq.line_edited` (BoqLineEdited), `boq.presence` (BoqPresence)). */
         get: operations["streamEvents"];
         put?: never;
         post?: never;
@@ -1805,6 +1805,25 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["closeCurrentSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/boqs/{boqId}/presence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                boqId: components["parameters"]["BoqId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** @description I have this BoQ open (F06 §14, P31), and the line I'm editing if any. Sent on opening, on changing the line, and every 20 s; presence ends 45 s after the last call or on DELETE. Changes reach everyone with the BoQ open as SSE `boq.presence`. */
+        put: operations["putBoqPresence"];
+        post?: never;
+        delete: operations["leaveBoqPresence"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2422,6 +2441,26 @@ export interface components {
                 week?: string;
                 counts?: number[];
             }[];
+        };
+        /** @description The SSE event `boq.presence` carries the same shape. */
+        BoqPresence: {
+            /** Format: uuid */
+            boqId: string;
+            users: {
+                /** Format: uuid */
+                userId: string;
+                name: string;
+                lineKey?: string | null;
+            }[];
+        };
+        /** @description SSE `boq.line_edited` (F06 §14): a saved edit of these lines, to everyone with the BoQ open. */
+        BoqLineEdited: {
+            /** Format: uuid */
+            boqId: string;
+            lineKeys: string[];
+            by: components["schemas"]["UserRef"];
+            /** Format: date-time */
+            at: string;
         };
         /** @enum {string} */
         AdminFunnelStep: "signed_up" | "org_created" | "setup_done" | "first_model_ready" | "first_boq" | "first_saved_version" | "first_export_or_share";
@@ -3241,6 +3280,11 @@ export interface components {
                 /** Format: uuid */
                 runId?: string;
                 exportIds?: string[];
+                /** @description The line edits and manual lines as they were saved (BR-25): a saved version's sheet shows these, never the working version's (F09 §3, F06 §13) */
+                adjustments?: {
+                    overrides?: components["schemas"]["LineOverride"][];
+                    manualItems?: components["schemas"]["ManualItemRecord"][];
+                };
             };
             permissions: components["schemas"]["Permissions"];
         };
@@ -7352,6 +7396,56 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Signed out */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    putBoqPresence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                boqId: components["parameters"]["BoqId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description the line being edited; null or missing for none */
+                    lineKey?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Who has the BoQ open now */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BoqPresence"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    leaveBoqPresence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                boqId: components["parameters"]["BoqId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Left */
             204: {
                 headers: {
                     [name: string]: unknown;
