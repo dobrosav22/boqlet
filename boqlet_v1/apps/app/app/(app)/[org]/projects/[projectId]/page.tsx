@@ -8,6 +8,7 @@ import { DimensionRule } from "@/components/dimension-rule";
 import { useOrg } from "@/features/orgs/org-context";
 import { useProjectScope } from "@/features/projects/project-context";
 import { ActivityList } from "@/features/projects/activity-list";
+import { extensions } from "@/extensions";
 
 /** S07: models, BoQs and recent activity of the project (F02 §6). */
 export default function ProjectOverviewPage() {
@@ -84,6 +85,10 @@ export default function ProjectOverviewPage() {
           <ActivityList projectId={project.id} limit={10} />
         </section>
       )}
+      {/* Module cards (`project.overviewCards`, P36). */}
+      {extensions("project.overviewCards").map((c) => (
+        <c.Card key={c.id} projectId={project.id} />
+      ))}
     </div>
   );
 }

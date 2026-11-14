@@ -32,6 +32,13 @@ export const DEFAULT_ORG_SETTINGS: OrgRec["settings"] = {
   defaultLanguage: "en",
 };
 
+/**
+ * Addresses the app's own routes use (`/admin`, `/account`, …) and a few kept for later: an org there
+ * would be unreachable. A module's area path (`area.routes`, P36) is added by the module's backend.
+ */
+export const RESERVED_SLUGS = new Set(["admin", "account", "api", "app", "invite", "notifications", "onboarding", "s", "session-conflict", "sign-in", "sign-up", "settings", "help", "support", "docs", "status", "www", "static", "public", "areas"]);
+const slugTaken = (slug: string) => RESERVED_SLUGS.has(slug) || db().orgs.some((o) => o.slug === slug);
+
 const ownersOf = (orgId: string) => db().memberships.filter((m) => m.orgId === orgId && m.role === "owner");
 const userRef = (id: string) => {
   const u = db().users.find((x) => x.id === id);
@@ -151,7 +158,7 @@ export const orgHandlers: Handlers = {
   createOrg({ user, body }) {
     const { name, slug, settings } = body as { name: string; slug: string; settings?: OrgRec["settings"] };
     if (!name.trim()) throw new HttpError(400, "invalid_body", "The name can't be empty.");
-    if (db().orgs.some((o) => o.slug === slug)) throw conflict("slug_taken", `The address ${slug} is taken.`, { slug });
+    if (slugTaken(slug)) throw conflict("slug_taken", `The address ${slug} is taken.`, { slug });
     const at = nowIso();
     const org: OrgRec = { id: newId(), name: name.trim(), slug, planId: "free", settings: { ...DEFAULT_ORG_SETTINGS, ...settings }, createdAt: at };
     db().orgs.push(org);
@@ -169,7 +176,7 @@ export const orgHandlers: Handlers = {
   updateOrg({ user, params, body }) {
     const { org } = requireOrgAction(user!, params.orgId!, "editOrgSettings");
     const { name, slug, settings } = body as { name?: string; slug?: string; settings?: OrgRec["settings"] };
-    if (slug !== undefined && slug !== org.slug && db().orgs.some((o) => o.slug === slug)) throw conflict("slug_taken", `The address ${slug} is taken.`, { slug });
+    if (slug !== undefined && slug !== org.slug && slugTaken(slug)) throw conflict("slug_taken", `The address ${slug} is taken.`, { slug });
     // Review and approval is a plan feature (F09 §4, 05-plans-and-limits.md `approvalWorkflow`).
     if (settings?.approvalRequired === true && !org.settings?.approvalRequired && planLimits(org).approvalWorkflow !== true) throw limitRefused(org.id, "approvalWorkflow", 0, 0);
     const before = { name: org.name, slug: org.slug };

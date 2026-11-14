@@ -211,3 +211,16 @@ build flag `MODULE_PRICING` is set. Core code never imports from a module; modul
 components, hooks and the generated core client. A lint rule (`no-restricted-imports`) forbids
 `@ifc-boq/pricing-ui` anywhere but `src/modules.ts`. CI builds the app with and without the
 module.
+
+The extension points (FE-039) are typed registries in `src/extensions/registry.ts`, read through
+`@/extensions` (importing it runs `src/modules.ts` first): `nav.orgItems` (left navigation, after
+the core's items), `boq.workspaceTabs` (`?tab=<id>`, after the core's tabs, not on a saved version
+opened read-only), `sheet.selectionActions` (in the sheet's bulk bar), `sheet.lineBadges` (a hook
+per module, called once per sheet; badges after the line's description), `settings.orgSections`
+(`/{org}/settings/{path}`, served by `settings/[section]`), `project.overviewCards`, `area.routes`
+(a first URL segment outside any org: next.config rewrites `/{area}/…` to `/areas/{area}/…`, before the
+`[org]` segment, for the areas of the modules in the build; `AreaHost` renders the area), `notifications.kinds` (text from the module's namespace). Labels and panels are
+components, so a module renders its own namespace and queries. Registering one key twice throws.
+`src/extensions/testing/test-module.tsx` registers one entry on every point for the unit tests;
+the app never imports it. The build flag `MODULE_PRICING=1` stops the build until the module exists
+(P48).

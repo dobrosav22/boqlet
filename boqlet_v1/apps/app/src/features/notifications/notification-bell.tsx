@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useMarkAllRead, useMarkRead, useNotifications, type Notification } from "@/api/hooks/notifications";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useRelativeTime } from "@/i18n/use-relative-time";
 import { cn } from "@/lib/utils";
 import { useNotificationText } from "./use-notification-text";
 
 /** The bell (F13, screens.md "Global chrome"): unread count, the newest notifications, mark read. */
 export function NotificationBell() {
   const t = useTranslations("notifications");
-  const format = useFormatter();
+  const relative = useRelativeTime();
   const router = useRouter();
   const text = useNotificationText();
   const list = useNotifications();
@@ -59,7 +60,7 @@ export function NotificationBell() {
         {items.map((n) => (
           <DropdownMenuItem key={n.id} onClick={() => open(n)} className="flex flex-col items-start gap-0.5" data-testid="notification-item" data-read={n.readAt ? "true" : "false"}>
             <span className={cn("whitespace-normal", !n.readAt && "font-semibold")}>{text(n)}</span>
-            <span className="text-muted-foreground">{format.relativeTime(new Date(n.createdAt))}</span>
+            <span className="text-muted-foreground">{relative(n.createdAt)}</span>
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />

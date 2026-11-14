@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getCoreRowModel, useReactTable, type ColumnDef, type VisibilityState } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Box, ChevronDown, ChevronRight, Columns3, Download, GripVertical, Plus, Undo2 } from "lucide-react";
@@ -32,6 +32,7 @@ import { SourceTag } from "./source-tag";
 import { useCodeLists } from "./use-code-lists";
 import { NotInModelsNotice } from "./not-in-models";
 import { WarningsBar } from "./warnings-bar";
+import { extensions } from "@/extensions";
 
 /** Fixed row height (architecture.md performance budget: virtualised rows, fixed height). */
 const ROW = 32;
@@ -136,6 +137,7 @@ export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; read
   // "Open in the sheet" from the viewer (F07 §4) arrives as `?line=`.
   const [selected, setSelected] = useState<string | null>(() => searchParams.get("line"));
   const [checked, setChecked] = useState<ReadonlySet<string>>(new Set());
+  const badges = useModuleLineBadges(boq.id, run.id);
   const [editing, setEditing] = useState<{ key: string; column: EditableColumn } | null>(null);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [manualDialog, setManualDialog] = useState<{ record?: ManualItemRecord; defaults?: { codes?: Record<string, string>; sortHint?: string } } | null>(null);
@@ -195,7 +197,7 @@ export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; read
         engine: (l) => (groupBy && l.edit?.override.codes?.[groupBy] ? engine(l, "codes", l.edit.engine.codes[groupBy] ?? te("noCode")) : undefined),
       }),
       // The item text of the Group-by system when its code has one (P14, F06 §2); an edited description wins.
-      col("description", t("col.description"), { width: "minmax(16rem, 1fr)", editable: "description", cell: (l) => shownDescription(l, groupBy), engine: (l) => engine(l, "description", l.edit?.engine.description ?? "") }),
+      col("description", t("col.description"), { width: "minmax(16rem, 1fr)", editable: "description", cell: (l) => (badges[l.key] ? <>{shownDescription(l, groupBy)} {badges[l.key]}</> : shownDescription(l, groupBy)), engine: (l) => engine(l, "description", l.edit?.engine.description ?? "") }),
       col("unit", t("col.unit"), { width: "4.5rem", editable: "unit", cell: (l) => displayUnit(l.unit), engine: (l) => engine(l, "unit", displayUnit(l.edit?.engine.unit ?? "")) }),
       col("quantity", t("col.quantity"), {
         width: "8rem",
@@ -212,7 +214,7 @@ export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; read
       // One column per extra classification (F06 §2), off by default.
       ...systems.filter((s) => s.id !== groupBy).map((s) => col(`code:${s.id}`, s.name, { width: "8rem", optional: true, cell: (l) => l.codes[s.id]?.code })),
     ];
-  }, [groupBy, systems, num, t, te, toConfirm]);
+  }, [groupBy, systems, num, t, te, toConfirm, badges]);
 
   // TanStack Table owns the columns and their visibility; the rows are the sheet's own (groups + lines).
   // It returns functions the React Compiler can't memoise, so this component is left uncompiled.
@@ -594,6 +596,9 @@ export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; read
           onExclude={() => exclude(checkedKeys)}
           onRestore={() => commit(new Map(checkedKeys.filter((k) => current.has(k)).map((k) => [k, null])))}
           onClear={() => setChecked(new Set())}
+          actions={extensions("sheet.selectionActions").map((a) => (
+            <a.Action key={a.id} boqId={boq.id} runId={run.id} lineKeys={checkedKeys} />
+          ))}
         />
       )}
       {editError ? (
@@ -739,7 +744,7 @@ export function Sheet({ run, boq, readOnly = false }: { run: Run; boq: Boq; read
 }
 
 /** Bulk actions on the ticked lines (F06 §6): move to a section, exclude, restore. */
-function BulkBar({ count, lists, system, systemName, onMove, onExclude, onRestore, onClear }: { count: number; lists: CodeLists; system: string | null; systemName: string; onMove: (code: string) => void; onExclude: () => void; onRestore: () => void; onClear: () => void }) {
+function BulkBar({ count, lists, system, systemName, onMove, onExclude, onRestore, onClear, actions }: { count: number; lists: CodeLists; system: string | null; systemName: string; onMove: (code: string) => void; onExclude: () => void; onRestore: () => void; onClear: () => void; actions?: ReactNode }) {
   const t = useTranslations("boqs.edits");
   const list = system ? lists.get(system) : undefined;
   const items = useMemo(() => (list ? [...list.values()].map((c) => ({ value: c.code, label: c.code, hint: c.title })) : []), [list]);
@@ -753,11 +758,28 @@ function BulkBar({ count, lists, system, systemName, onMove, onExclude, onRestor
       <Button variant="outline" onClick={onRestore} data-testid="bulk-restore">
         {t("restoreEdits")}
       </Button>
+      {/* Module actions on the ticked lines (`sheet.selectionActions`, P36). */}
+      {actions}
       <Button variant="ghost" onClick={onClear}>
         {t("clearSelection")}
       </Button>
     </div>
   );
+}
+
+const NO_BADGES: Readonly<Record<string, ReactNode>> = {};
+
+/**
+ * Badges modules put on lines (`sheet.lineBadges`, P36): each module's hook, in registration order
+ * (fixed after startup, so the hooks are called in the same order on every render).
+ */
+function useModuleLineBadges(boqId: string, runId: string): Readonly<Record<string, ReactNode>> {
+  const all = extensions("sheet.lineBadges").map((b) => b.useBadges({ boqId, runId }));
+  if (all.length === 0) return NO_BADGES;
+  if (all.length === 1) return all[0]!;
+  const merged: Record<string, ReactNode> = {};
+  for (const map of all) for (const [key, badge] of Object.entries(map)) merged[key] = merged[key] ? <>{merged[key]} {badge}</> : badge;
+  return merged;
 }
 
 /** The virtualised body: header, rows, keyboard (arrows move the selection, Escape clears it). */

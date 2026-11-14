@@ -1,8 +1,10 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { extensions } from "@/extensions";
 import { useOrg } from "@/features/orgs/org-context";
 import type { OrgAction } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -18,7 +20,13 @@ export function SettingsNav({ org }: { org: string }) {
     <div className="flex flex-col gap-4">
       <h1 className="text-title">{t("title")}</h1>
       <nav aria-label={t("title")} className="flex gap-6 border-b border-border">
-        {SECTIONS.filter((s) => !s.action || can(s.action)).map(({ key: s }) => {
+        {[
+          ...SECTIONS.filter((s) => !s.action || can(s.action)).map(({ key }) => ({ key, label: t(`nav.${key}`) as ReactNode })),
+          // Module sections (`settings.orgSections`) after the core's.
+          ...extensions("settings.orgSections")
+            .filter((s) => !s.action || can(s.action))
+            .map((s) => ({ key: s.path, label: <s.Label /> })),
+        ].map(({ key: s, label }) => {
           const href = `/${org}/settings/${s}`;
           const active = pathname === href;
           return (
@@ -32,7 +40,7 @@ export function SettingsNav({ org }: { org: string }) {
                 active && "border-link text-foreground",
               )}
             >
-              {t(`nav.${s}`)}
+              {label}
             </Link>
           );
         })}

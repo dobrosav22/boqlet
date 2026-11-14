@@ -44,6 +44,16 @@ describe("F01 organisations", () => {
     expect(again.error).toMatchObject({ code: "slug_taken" });
   });
 
+  it("the app's own route names are never an org's address", async () => {
+    const { owner, org } = await newOwnerWithOrg();
+    for (const slug of ["admin", "account", "notifications", "onboarding", "invite", "sign-in"]) {
+      const created = await client(owner.token).POST("/orgs", { body: { name: "Shadowed", slug } });
+      expect({ slug, status: created.response.status }).toEqual({ slug, status: 409 });
+    }
+    const renamed = await client(owner.token).PATCH("/orgs/{orgId}", { params: { path: { orgId: org.id } }, body: { slug: "admin" } });
+    expect(renamed.response.status).toBe(409);
+  });
+
   it("only owners and admins change org settings", async () => {
     const { owner, org } = await newOwnerWithOrg();
     const member = await inviteAndJoin(owner, org.id);

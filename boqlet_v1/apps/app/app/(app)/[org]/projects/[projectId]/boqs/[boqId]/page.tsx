@@ -20,6 +20,7 @@ import { useOrg } from "@/features/orgs/org-context";
 import { QuestionsTab } from "@/features/questions/questions-tab";
 import { ViewerTab } from "@/features/viewer/viewer-tab";
 import { useProjectScope } from "@/features/projects/project-context";
+import { extensions } from "@/extensions";
 import { cn } from "@/lib/utils";
 
 const TABS = ["review", "sheet", "questions", "viewer", "changes", "log", "setup", "exports", "versions"] as const;
@@ -35,7 +36,8 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
   const { boqId } = use(params);
   const t = useTranslations("boqs");
   const message = useErrorMessage();
-  const { org } = useOrg();
+  const orgScope = useOrg();
+  const { org } = orgScope;
   const format = useFormatter();
   const { project, can } = useProjectScope();
   const search = useSearchParams();
@@ -52,14 +54,17 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
   const tabs = TABS.filter(
     (k) => (k !== "changes" || can("seeAudit") || can("editBoqs")) && (k !== "review" || status === "in_review" || status === "approved") && (!viewing || VERSION_TABS.includes(k)),
   );
-  const tab: Tab = requested && (tabs as readonly string[]).includes(requested) ? requested : "sheet";
+  // Module tabs (`boq.workspaceTabs`, P36) after the core's; not on a saved version opened read-only.
+  const moduleTabs = viewing ? [] : extensions("boq.workspaceTabs").filter((m) => !m.visible || m.visible({ ...orgScope, projectPermissions: project.permissions ?? {} }));
+  const moduleTab = moduleTabs.find((m) => m.id === requested);
+  const tab: Tab | null = moduleTab ? null : requested && (tabs as readonly string[]).includes(requested) ? requested : "sheet";
   const base = `/${org.slug}/projects/${project.id}/boqs/${boqId}`;
   const approval = org.settings?.approvalRequired === true;
 
   if (boq.isError) return <p role="alert" className="text-error">{message(boq.error)}</p>;
   if (!boq.data) return <div className="h-40" aria-busy="true" />;
   const current = viewing ? viewing.currentRun : boq.data.currentRevision.currentRun;
-  const href = (key: Tab) => `${base}?${new URLSearchParams({ tab: key, ...(viewing ? { version: viewing.id } : {}) }).toString()}`;
+  const href = (key: string) => `${base}?${new URLSearchParams({ tab: key, ...(viewing ? { version: viewing.id } : {}) }).toString()}`;
   return (
     <div className="flex flex-col gap-6" data-testid="boq-workspace">
       <BoqHeader boq={boq.data} runs={runs.data} base={base} canArchive={can("archive")} approval={approval} />
@@ -83,7 +88,19 @@ export default function BoqWorkspacePage({ params }: { params: Promise<{ boqId: 
             {t(`tabs.${key}`)}
           </Link>
         ))}
+        {moduleTabs.map((m) => (
+          <Link
+            key={m.id}
+            href={href(m.id)}
+            aria-current={moduleTab === m ? "page" : undefined}
+            className={cn("label-caps -mb-px border-b-2 border-transparent pb-2 text-muted-foreground hover:text-foreground", moduleTab === m && "border-link text-foreground")}
+            data-testid={`tab-${m.id}`}
+          >
+            <m.Label />
+          </Link>
+        ))}
       </nav>
+      {moduleTab && <moduleTab.Panel boqId={boqId} projectId={project.id} runId={current?.id ?? null} />}
       {tab === "review" && <ReviewTab boq={boq.data} runs={runs.data} base={base} />}
       {tab === "sheet" && (current ? <Sheet key={`${current.id}|${viewing?.id ?? ""}`} run={current} boq={boq.data} readOnly={!!viewing} /> : <RunFigures run={current} />)}
       {tab === "viewer" && <ViewerTab run={current} base={base} />}
