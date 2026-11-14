@@ -22,11 +22,11 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 |---|---|
 | Phase | 1 (frontend on the mock), milestone M4 (Admin console, extension points, co-editing) |
 | Role | Frontend agent |
-| Last task done | FE-039 Extension registries (23ab381) |
-| Next task | FE-040 Position numbers and live co-editing (F06 §13–14), M4 |
+| Last task done | FE-040 Position numbers and live co-editing (2662a36) |
+| Next task | Close M4 and phase 1: the shared suites' coverage of every core operation, the "Needs you" list (still empty, docs/11), the M4 entry and the phase summary |
 | Waiting for the owner | — |
 | In progress (not committed) | — |
-| Notes for the next session | **MP1 and MP2 (the pricing module) are for a later phase (P48, the owner, 2026-11-14): skip them; phase 1 ends after M4, phase 2 after M7.** Read the FE-039 and FE-038 entries, then the M3 entry and the M3 decision entries (FE-037 … FE-029), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
+| Notes for the next session | **MP1 and MP2 (the pricing module) are for a later phase (P48, the owner, 2026-11-14): skip them; phase 1 ends after M4, phase 2 after M7.** Read the FE-040, FE-039 and FE-038 entries, then the M3 entry and the M3 decision entries (FE-037 … FE-029), then the M2 entry, then the FE-026…FE-028, FE-022…FE-027 and FE-021 entries, then the M1 entry and the M1 decision entries below. Read the M0 entry below ("For the next agent"). In short: run npm in `boqlet_v1/`; `npm run dev:app` starts engine + mock + app; sign in at http://localhost:3000 as a seeded user; add mock handlers per operationId in `apps/mock-api/src/handlers/` and register them in `app.ts`; turn the scenario todos into tests as their tasks land. Whether Vercel builds previews of `v_1` was not checked (no Vercel access in the session). |
 
 ## Entry template
 
@@ -44,6 +44,17 @@ Not here: finished tasks one by one (`docs/11` "Done"), product decisions (the o
 ```
 
 ## Entries
+
+### 2026-11-14 — M4 decisions: FE-040 (frontend agent)
+- **Built:** FE-040, 2662a36. Mock `positions.ts`, `presence.ts`, presence handlers and `boq.line_edited` in `handlers/adjustments.ts`, `positionNo` in `handlers/lines.ts`; app `features/boq-sheet/positions.ts`, `features/boqs/presence.tsx`, `realtime/boq-events.ts`, the No. column, markers and the conflict notice in `sheet.tsx`. Checked by `tests/scenarios/co-editing.test.ts` (3), `e2e/co-editing.spec.ts` (F06-AC9, AC10) and unit tests.
+- **Decisions taken:**
+  - Position numbers are in the Group-by system the sheet shows (F06 §2 puts No. beside "Item (code in the Group-by system)"); the backend's `positionNo` uses `groupBy`, else the run's first classification. The section is the line's code; the separator is the code list's (`.` by default). The sheet numbers its own overlaid lines with the same rule (the backend rule is duplicated in the mock and the app, both tested on the same cases), because edits are laid over the run on the client and must renumber at once.
+  - Contract additions (a gap against F06 §14 and storage-jobs-realtime.md, which name `boq.presence` but gave the client no way to say it is in a BoQ): `PUT`/`DELETE /boqs/{boqId}/presence`, and the shapes `BoqPresence` and `BoqLineEdited` for the two events (redocly warns that `BoqLineEdited` is unused: SSE payloads can't be referenced). Presence writes are allowed in a suspended org.
+  - `BoqRevision.frozen.adjustments` (BR-25): a saved version opened read-only showed the working version's current edits (pre-existing bug); it now shows the edits it was saved with, so its sheet and numbers stay.
+  - The "undo for their own" of F06 §14 reads here as "Keep mine" in the notice: my value saved again, as the later edit. My undo entries for a line someone else changed are dropped (Ctrl+Z undoes only my own edits). Undo stacks are per tab.
+  - The marker shows while a person has a cell editor open on a line.
+  - Fixed: re-editing a quantity with Enter submitted the reason dialog that opened with the old reason (the cell editor's Enter now prevents its default).
+- **For the next agent:** a closed browser context doesn't run the page's `pagehide` reliably; e2e that need someone to leave a BoQ navigate away instead.
 
 ### 2026-11-14 — M4 decisions: FE-039 (frontend agent)
 - **Built:** FE-039, 23ab381. `apps/app/src/extensions/` (`registry.ts`, `index.ts`, `area-host.tsx`, `testing/test-module.tsx`, `extensions.test.tsx`), `src/modules.ts`, `settings/[section]` and `areas/[area]/[[...segments]]` routes; the core screens read the registries.
